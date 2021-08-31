@@ -40,7 +40,6 @@ class CBFFilter(BaseFilter):
         obs = self.obs_proc.proc(obs, proc_key='filter')
 
         # print(np.arctan2(obs[:, 1], obs[:, 0]))
-        # TODO: get rid of scaler or clean it
         ac_lim_high = scale.ac_old_bounds[1]
         ac = action2oldbounds(ac)
 
@@ -92,7 +91,6 @@ class CBFFilter(BaseFilter):
 
         ac_filtered = qp_from_np(P=P, q=q, G=G, h=h)
         ac_filtered = ac_filtered[:-1]              # last element is epsilon
-
 
         # extra_h = (f_hat + mu_f) + np.matmul((g_hat + mu_g).squeeze(axis=0), ac_filtered).T
         # logger.push_plot(data=cbf_value,
