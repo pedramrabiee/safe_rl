@@ -49,7 +49,7 @@ class ReplayBuffer:
                         info=self._info[inds])
 
     def sample(self, batch_size, device='cpu'):
-        """return samples as torch tensor"""
+        """return experience as torch tensor"""
         indices = self.get_random_indices(batch_size)
         return self.sample_by_indices(indices, device=device)
 

@@ -129,7 +129,8 @@ class Sampler:
                 if self._config.add_noise_when_buffering.is_true:
                     self._add_noise()
                 self.agent.push_to_buffer((self._obs_buf, self._ac_buf, self._rew_buf,
-                                           self._next_obs_buf, self._done_buf, self._info_buf))
+                                           self._next_obs_buf, self._done_buf, self._info_buf),
+                                          push_to_all=True)
                 self._reset_buffer_queue()
                 self._init_sample_round = False
                 pbar.close()
@@ -212,7 +213,6 @@ class Sampler:
         self._ac_buf, self._rew_buf, self._done_buf, self._info_buf =\
              None, None, None, []
 
-
     @property
     def episode_completed(self):
         return self._episode_counter
@@ -239,6 +239,6 @@ class Sampler:
         # TODO: FIX THIS: currently safe_reset is controlled using the toggle in config. You may need to print a warning
         # when safe_reset is off. So that, you'd remember for to turn it on for the envs that does not start safe automatically
         if not eval:
-            return self.safe_set.safe_reset() if self._config.safe_reset else self.env.reset()
-        return self.safe_set_eval.safe_reset() if self._config.safe_reset else self.env_eval.reset()
+            return self.safe_set.safe_reset() if self._config.env_spec_config.safe_reset else self.env.reset()
+        return self.safe_set_eval.safe_reset() if self._config.env_spec_config.safe_reset else self.env_eval.reset()
 

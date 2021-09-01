@@ -23,12 +23,12 @@ def make_env(env_id,
         # For the safety_gym collection, all the environment customization (e.g., timestep, max_episode_steps, etc.)
         # are done using config dictionary and MuJoCo model xml file
         from safety_gym.envs.engine import Engine
-        config = None
+        env_config = None
         if env_id == 'Point':
-            from configs.env_configs.safety_gym_envs.point_robot_configs import config
-        env = Engine(config)
+            from configs.env_configs.safety_gym_envs.point_robot_configs import env_config
+        env = Engine(env_config)
         if max_episode_time:
-            env.num_steps = int(max_episode_time * env.model.opt.timestep)
+            env.num_steps = int(max_episode_time / env.robot.sim.model.opt.timestep)
         max_episode_len = env.num_steps
 
     env = ActionScalerWrapper(env, ac_lim=ac_lim)

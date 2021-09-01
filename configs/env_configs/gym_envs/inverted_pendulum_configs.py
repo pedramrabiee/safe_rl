@@ -7,7 +7,12 @@ from utils import scale
 from utils.misc import e_and, e_not
 import torch
 from dynamics.nominal_dynamics import NominalDynamics
+from attrdict import AttrDict
 
+config = AttrDict(
+    do_obs_proc=False,
+    safe_reset=True
+)
 # Environment Parameters
 timestep = 0.01
 

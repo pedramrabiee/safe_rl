@@ -68,6 +68,7 @@ class AgentFactory:
     def instantiate_sf_agent(self):
         from agents.model_based.sf import SFAgent
         from buffers.replay_buffer import ReplayBuffer
+        from buffers.buffer_queue import BufferQueue
 
         agent_info = self._agent_info_from_env()
 
@@ -76,7 +77,8 @@ class AgentFactory:
                         ac_lim=dict(low=agent_info['ac_lim_low'],
                                     high=agent_info['ac_lim_high']),
                         timestep=agent_info['timestep'],
-                        replay_buffer=ReplayBuffer(self._config.buffer_size),
+                        replay_buffer=[ReplayBuffer(self._config.buffer_size),
+                                       BufferQueue(self._config.buffer_size)],
                         discrete_action=agent_info['discrete_action'],
                         obs_proc=self._config.setup['obs_proc'],
                         )
@@ -101,9 +103,7 @@ class AgentFactory:
             ac_lim=dict(low=agent_info['ac_lim_low'],
                         high=agent_info['ac_lim_high']),
             timestep=agent_info['timestep'],
-            replay_buffer=[ReplayBuffer(self._config.buffer_size),
-                           ReplayBuffer(self._config.buffer_size),
-                           ReplayBuffer(self._config.buffer_size)],
+            replay_buffer=ReplayBuffer(self._config.buffer_size),
             discrete_action=agent_info['discrete_action'],
             obs_proc=self._config.setup['obs_proc'],
         )

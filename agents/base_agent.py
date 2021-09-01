@@ -32,8 +32,12 @@ class BaseAgent:
     def step(self, obs, explore=False):
         raise NotImplementedError
 
-    def push_to_buffer(self, experience):
-        self.buffer.push(experience)
+    def push_to_buffer(self, experience, push_to_all=False):
+        if push_to_all:     # push experience to all buffers
+            for buffer in self._buffer:
+                buffer.push(experience)
+        else:               # push experience to current buffer (the one with curr_buf_id)
+            self.buffer.push(experience)
 
     def get_samples(self, inds, device='cpu'):
         return self.buffer.sample_by_indices(inds, device)

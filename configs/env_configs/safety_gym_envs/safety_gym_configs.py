@@ -12,7 +12,7 @@ max_speed = 10.0    # TODO: change this to max(max_speed, maximum speed observed
 
 # TODO: add num_samples for each set in config
 # TODO: add in_hazards somewhere
-# TODO: add repmat to make multiple samples per position based on different velocity and/or orientations
+# TODO: add repmat to make multiple experience per position based on different velocity and/or orientations
 # TODO: The indexing there is for the point robot
 
 

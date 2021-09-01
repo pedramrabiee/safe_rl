@@ -250,7 +250,8 @@ def save_config_as_py(save_path):
 def np_object2dict(x, ret_AttrDict=True):
     keys = x[0].keys()
     out = {k: [] for k in keys}
-    for i in range(x.shape[0]):
+    num_items = x.shape[0] if isinstance(x, np.ndarray) else len(x)
+    for i in range(num_items):
         for k in keys:
             out[k].append(x[i][k])
     for k in keys:
@@ -297,4 +298,10 @@ def isvec(x):
 def np_isvectorable(x):
     return x.squeeze().ndim == 1
 
-
+def apply_mask_to_dict_of_arrays(dict_of_arrays, mask):
+    out = {}
+    if not isinstance(mask, np.ndarray):
+        mask = np.asarray(mask, dtype=np.bool_)
+    for k in dict_of_arrays.keys():
+        out[k] = dict_of_arrays[k][mask, ...]
+    return AttrDict(out)

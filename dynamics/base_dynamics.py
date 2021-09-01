@@ -85,7 +85,7 @@ class BaseDynamics:
     def train(self, samples, train_dict=None):
         stats = train_dict.stats
         itr = train_dict.itr
-        # preprocess samples, _preproc will take care of nominal dynamics
+        # preprocess experience, _preproc will take care of nominal dynamics
         self._train_preproc(samples, stats)
 
         # run training loop
