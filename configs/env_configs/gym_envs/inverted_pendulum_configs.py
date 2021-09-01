@@ -117,7 +117,7 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
     def is_out_safe(self, obs):             # geometrically inside the outer safe section
         if torch.is_tensor(obs):
             obs = obs.numpy()
-        return e_and(self.is_geo_safe(obs), e_not(self.is_mid_safe(obs)))
+        return e_and(self.is_geo_safe(obs), e_not(self.is_mid_safe(obs)), e_not(self.is_in_safe(obs)))
 
     def is_unsafe(self, obs):
         if torch.is_tensor(obs):

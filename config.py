@@ -23,7 +23,7 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = False
         self.save_custom_figs_data = False
 
