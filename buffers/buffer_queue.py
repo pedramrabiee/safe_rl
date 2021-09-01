@@ -28,7 +28,7 @@ class BufferQueue(ReplayBuffer):
     def push_to_buffer(self, experience):
         """push experience to buffer, expect dictionary of numpy arrays"""
         for k in experience.keys():
-            if experience[k].size == 0:
+            if experience[k] is None:
                 continue
             if self.buffer[k] is None:
                 self.buffer[k] = experience[k][-self._max_size:]
