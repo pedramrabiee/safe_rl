@@ -4,7 +4,7 @@ import torch
 from utils.misc import torchify
 import numpy as np
 from utils import scale
-from utils.torch_utils import apply_mask_to_dict_of_tensors
+from utils.misc import np_object2dict
 from utils.schedule_utils import multi_stage_schedule
 from utils.misc import e_or
 from attrdict import AttrDict
@@ -13,6 +13,19 @@ from utils.safe_set import SafeSetFromCriteria, SafeSetFromData
 
 
 class SFTrainer(BaseTrainer):
+    def initialize(self):
+        # switch buffer to buffer 1
+        self.agent.curr_buf_id = 1
+        self.agent.buffer.initialize(attribute_names=['safe_samples', 'unsafe_samples',
+                                                      'deriv_samples', 'dyn_safe',
+                                                      'obs', 'next_obs', 'dyn_values'],
+                                     coupled_list=[['deriv_samples', 'dyn_safe'],
+                                                   ['obs', 'next_obs', 'dyn_values']]
+                                     )
+        # switch back buffer to buffer 0
+        self.agent.curr_buf_id = 0
+
+
     def _train(self, itr):
         # max_speed = self.env.max_speed      # TODO: this is not applicable to all environments. Change this
         version = self.agent.safety_filter.params.deriv_loss_version
@@ -47,7 +60,7 @@ class SFTrainer(BaseTrainer):
                 # stack unsafe datasets for the unsafe loss in pretraining
                 unsafe_samples = np.vstack((unsafe_samples, out_cond_unsafe_samples))
 
-                # deriv samples for the deriv loss in pretraining
+                # deriv experience for the deriv loss in pretraining
                 deriv_samples = out_cond_unsafe_samples if version == 1 else mid_cond_safe_samples
 
                 print(f'Sampling time: {time() - sample_initial_time}')
@@ -60,12 +73,18 @@ class SFTrainer(BaseTrainer):
                                                                only_nominal=True,
                                                                stats=None)
 
+
+                # add safe and unsafe samples to buffer
+                self.agent.curr_buf_id = 1
+                samples = dict(safe_samples=safe_samples,
+                               unsafe_samples=unsafe_samples,
+                               deriv_samples=deriv_samples,
+                               dyn_safe=nom_dyn)
+                self.agent.buffer.push_to_buffer(experience=samples)
+                self.agent.curr_buf_id = 0
+
                 # pretrain filter
-                self.agent.pre_train_filter(samples=dict(safe_samples=safe_samples,
-                                                         unsafe_samples=unsafe_samples,
-                                                         deriv_samples=deriv_samples,
-                                                         ),
-                                            pre_train_dict=dict(nom_dyn=nom_dyn))
+                self.agent.pre_train_filter(samples=AttrDict(torchify(samples, device=self.config.training_device)))
 
                 # logger.dump_plot_with_key(plt_key="loss_plots",
                 #                           filename='losses_itr_%d' % itr,
@@ -114,43 +133,64 @@ class SFTrainer(BaseTrainer):
         if self.config.sf_params.safety_filter_is_on and self.config.sf_params.filter_train_is_on and\
                 multi_stage_schedule(itr=itr, stages_dict=self.config.sf_params.filter_training_stages):
             to_train.append('filter')
-            filter_samples = self.sampler.sample(device=self.config.training_device,
-                                                 ow_batch_size=self.config.sf_params.filter_train_batch_size)
 
-            filter_samples = self._obs_proc_from_samples_by_key(filter_samples, proc_key='filter')
-            # safe samples
-            is_safe_mask = e_or(*self.safe_set.filter_sample_by_criteria(filter_samples.obs, ['in_safe', 'mid_safe', 'out_cond_safe']))
-            safe_samples = apply_mask_to_dict_of_tensors(filter_samples, is_safe_mask)
+            # prior to sampling from buffer, release and process items in the queue and add them to buffer
+            # switch to buffer 1
+            self.agent.curr_buf_id = 1
+            queue_items = self.agent.buffer.release_queue(to_tensor=False)
+            queue_items_dyn = np_object2dict(queue_items.info).dyn_out
+            queue_items = self._obs_proc_from_samples_by_key(queue_items, proc_key='filter')
 
-            # unsafe samples
-            is_unsafe_mask = e_or(*self.safe_set.filter_sample_by_criteria(filter_samples.obs, ['unsafe', 'out_cond_unsafe']))
-            unsafe_samples = apply_mask_to_dict_of_tensors(filter_samples, is_unsafe_mask)
+            # safe experience
+            is_safe_mask = e_or(
+                *self.safe_set.filter_sample_by_criteria(queue_items.obs, ['in_safe', 'mid_safe', 'out_cond_safe']))
+            # safe_samples = apply_mask_to_dict_of_tensors(queue_items, is_safe_mask)
+            # safe_samples = apply_mask_to_dict_of_arrays(queue_items, is_safe_mask)
+            safe_samples = queue_items.obs[np.asarray(is_safe_mask), ...]
 
-            # deriv samples mask
+            # unsafe experience
+            is_unsafe_mask = e_or(
+                *self.safe_set.filter_sample_by_criteria(queue_items.obs, ['unsafe', 'out_cond_unsafe']))
+            # unsafe_samples = apply_mask_to_dict_of_arrays(queue_items, is_unsafe_mask)
+            unsafe_samples = queue_items.obs[np.asarray(is_unsafe_mask), ...]
+
+            # deriv experience mask
             if version == 1:
-                deriv_mask = self.safe_set.filter_sample_by_criteria(filter_samples.obs, ['out_cond_unsafe'])
+                deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['out_cond_unsafe'])
 
             if version == 2:
-                deriv_mask = self.safe_set.filter_sample_by_criteria(filter_samples.obs, ['mid_cond_safe'])
+                deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['mid_cond_safe'])
 
-            # deriv samples
-            deriv_samples = apply_mask_to_dict_of_tensors(filter_samples, deriv_mask)
-            if deriv_samples.obs.size(0) > 0:
-                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples.obs)
+            # deriv experience
+            # deriv_samples = apply_mask_to_dict_of_arrays(queue_items, deriv_mask)
+            deriv_samples = queue_items.obs[np.asarray(deriv_mask), ...]
+            if deriv_samples.shape[0] > 0:
+                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples)
                 # TODO: this is only implemented with nominal dynamics, add predicted dyanamics to this
-                nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples.obs,
+                nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
                                                                ac=safe_ac,
                                                                only_nominal=True,
                                                                stats=None)
             else:
                 nom_dyn = None
+            self.agent.buffer.push_to_buffer(experience=dict(safe_samples=safe_samples,
+                                                             unsafe_samples=unsafe_samples,
+                                                             deriv_samples=deriv_samples,
+                                                             dyn_safe=nom_dyn,
+                                                             obs=queue_items.obs,
+                                                             next_obs=queue_items.next_obs,
+                                                             dyn_values=queue_items_dyn))
 
-            # make safe mask for the samples
-            samples['filter'] = dict(safe_samples=safe_samples,
-                                     unsafe_samples=unsafe_samples,
-                                     deriv_samples=deriv_samples,
-                                     dyns=nom_dyn)
-            samples['filter'] = AttrDict(**filter_samples, **samples['filter'])
+            # TODO: correct this
+            filter_samples = self.sampler.sample(device=self.config.training_device,
+                                                 ow_batch_size=self.config.sf_params.filter_train_batch_size)
+
+            # make safe mask for the experience     # TODO: correct this
+            samples['filter'] = AttrDict(filter_samples)
+            # switch back to buffer 0
+            self.agent.curr_buf_id = 0
+
+            # samples['filter'] = AttrDict(**filter_samples, **samples['filter'])
 
         optim_dict['to_train'] = to_train
 

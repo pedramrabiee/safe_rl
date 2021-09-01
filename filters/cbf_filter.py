@@ -103,27 +103,27 @@ class CBFFilter(BaseFilter):
 
     def pre_train(self, samples, pre_train_dict=None):
         # TODO: fix observation processor
-        self.safe_samples = torch.tensor(self.obs_proc.proc(samples['safe_samples'], proc_key='filter'), dtype=torch.float32)
-        self.unsafe_samples = torch.tensor(self.obs_proc.proc(samples['unsafe_samples'], proc_key='filter'), dtype=torch.float32)
-        self.deriv_samples = torch.tensor(self.obs_proc.proc(samples['deriv_samples'], proc_key='filter'), dtype=torch.float32)
-        self.dyns = pre_train_dict['nom_dyn']
+        # self.safe_samples = torch.tensor(self.obs_proc.proc(samples['safe_samples'], proc_key='filter'), dtype=torch.float32)
+        # self.unsafe_samples = torch.tensor(self.obs_proc.proc(samples['unsafe_samples'], proc_key='filter'), dtype=torch.float32)
+        # self.deriv_samples = torch.tensor(self.obs_proc.proc(samples['deriv_samples'], proc_key='filter'), dtype=torch.float32)
+        # self.dyns = pre_train_dict['nom_dyn']
 
         epoch = 0
         while True:
             self.filter_optimizer.zero_grad()
-            loss = self._compute_geometric_loss()
+            loss = self._compute_geometric_loss(samples)
             loss.backward()
             self.filter_optimizer.step()
 
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
             epoch += 1
-            if self._check_stop_criteria() or epoch > self.params.pretrain_max_epoch:
+            if self._check_stop_criteria(samples) or epoch > self.params.pretrain_max_epoch:
                 break
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
     def optimize_agent(self, samples, optim_dict=None):
-        # you need to break down the samples, to samples from safe set, unsafe set, and general samples
-        # update safety filter on samples
+        # you need to break down the experience, to experience from safe set, unsafe set, and general experience
+        # update safety filter on experience
         epoch = 0
         while True:
             # run one gradient descent
@@ -134,24 +134,24 @@ class CBFFilter(BaseFilter):
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
             epoch += 1
             # log
-            if self._check_stop_criteria() or epoch >= self.params.max_epoch:
+            if self._check_stop_criteria(samples) or epoch >= self.params.max_epoch:
                 break
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
     def _compute_geometric_loss(self, samples=None):
-        # FIXME: if one of them gets samples as observation the other should get the observation. Why do you need
+        # FIXME: if one of them gets experience as observation the other should get the observation. Why do you need
         #  anything other than the observation during training.
 
-        if samples is None:
-            safe_samples = self.safe_samples
-            unsafe_samples = self.unsafe_samples
-            deriv_samples = self.deriv_samples
-            dyns = self.dyns
-        else:
-            safe_samples = samples.safe_samples.obs
-            unsafe_samples = samples.unsafe_samples.obs
-            deriv_samples = samples.deriv_samples.obs
-            dyns = samples.dyns
+        # if samples is None:
+        #     safe_samples = self.safe_samples
+        #     unsafe_samples = self.unsafe_samples
+        #     deriv_samples = self.deriv_samples
+        #     dyns = self.dyns
+        # else:
+        safe_samples = samples.safe_samples
+        unsafe_samples = samples.unsafe_samples
+        deriv_samples = samples.deriv_samples
+        dyns = samples.dyn_safe
 
         # Safe loss
         safe_loss = torch.zeros(1, requires_grad=True)[0]
@@ -180,16 +180,13 @@ class CBFFilter(BaseFilter):
                self.params.deriv_loss_weight * deriv_loss
 
     def _compute_loss(self, samples, itr):
-        info = np_object2dict(samples.info)
+        dyn = samples.dyn_values
         ts = self._timestep
-
-        # TODO: Fix obs_proc
         next_obs = samples.next_obs
         obs = samples.obs
         if self.params.train_on_jacobian:
-            grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(
-                dim=0)  # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
-            deriv_loss = row_wise_dot(grad, torchify(info.dyn_out, device=obs.device))
+            grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0)  # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
+            deriv_loss = row_wise_dot(grad, torchify(dyn, device=obs.device))
             deriv_loss += self.params.eta * self.filter_net(obs)
         else:
             deriv_loss = (1/ts) * (self.filter_net(next_obs) + (self.params.eta * ts - 1) * self.filter_net(obs))
@@ -198,9 +195,9 @@ class CBFFilter(BaseFilter):
         loss += self._compute_geometric_loss(samples)
         return loss
 
-    def _check_stop_criteria(self):
-        h_unsafe = self.filter_net(self.unsafe_samples)
-        h_safe = self.filter_net(self.safe_samples)
+    def _check_stop_criteria(self, samples):
+        h_unsafe = self.filter_net(samples.unsafe_samples)
+        h_safe = self.filter_net(samples.safe_samples)
         # print(torch.max(h_unsafe))
         if torch.max(h_unsafe) > self.params.stop_criteria_eps:
         # or torch.min(h_safe) < -self.params.stop_criteria_eps:

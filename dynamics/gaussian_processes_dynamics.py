@@ -35,7 +35,7 @@ class GPDynamics(BaseDynamics):
             with gpytorch.settings.fast_pred_var():
                 # delta_norm = self.likelihood(self.model(torch.cat((obs_norm, ac_norm), dim=-1))).mean.detach().numpy() # uncomment to use mean values
                 delta_norm = self.likelihood(self.model(torch.cat((obs_norm, ac_norm), dim=-1))).sample().detach().numpy()
-                delta_unnorm = unnormalize(data=delta_norm, **stats.delta_obs) # TODO: check if it is correct to do this with samples, it used to be with mean
+                delta_unnorm = unnormalize(data=delta_norm, **stats.delta_obs) # TODO: check if it is correct to do this with experience, it used to be with mean
             return delta_unnorm
         else:
             with gpytorch.settings.fast_pred_var():

@@ -10,8 +10,7 @@ from utils import scale
 from utils.safe_set import get_safe_set
 from utils.process_observation import NeutralObsProc
 from copy import copy
-from safety_gym.envs.engine import Engine
-
+from configs.get_env_spec_config import get_env_spec_config
 
 class BaseTrainer:
     def __init__(self, setup, root_dir):
@@ -21,6 +20,7 @@ class BaseTrainer:
         else:
             self.config = load_config_from_py(setup.load_config_path)
 
+
         if (self.config.load_models and self.config.overwrite_config) or self.config.resume:
             new_config = get_loaded_config(project_dir=osp.join(self.config.results_dir,
                                                                 self.config.wandb_project_name),
@@ -28,6 +28,7 @@ class BaseTrainer:
             self._overwrite_config(new_config=new_config)
 
         self.config.setup = setup
+        self.config.env_spec_config = get_env_spec_config(setup['train_env'])
 
         # Set random.seed, np.random.seed, torch.manual_seed, torch.cuda.manual_seed_all
         seed = set_seed(self.config.seed)
@@ -50,7 +51,7 @@ class BaseTrainer:
 
         # instantiate observation processor
         # TODO: add boolean for this in config OR NOT (I can have the switch inside the agent themselves)
-        self.obs_proc = self.config.setup['obs_proc_cls'](self.env) if self.config.do_obs_proc else NeutralObsProc(self.env)
+        self.obs_proc = self.config.setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else NeutralObsProc(self.env)
         self.obs_proc.initialize()
         self.config.setup['obs_proc'] = self.obs_proc
 
@@ -126,8 +127,13 @@ class BaseTrainer:
 
             self._load()
 
+        # run custom trainer initialization
+        self.initialize()
+
         logger.log("Trainer initialized...")
 
+    def initialize(self):
+        pass
 
     def train(self):
         logger.log("Training started...")
@@ -143,7 +149,8 @@ class BaseTrainer:
                 self._save_checkpoint(itr)
 
             # evaluate based on num_evaluation_session
-            self._evaluate(itr)
+            if self.config.do_evaluation:
+                self._evaluate(itr)
 
     def evaluate(self):
         logger.log("Evaluation started...")

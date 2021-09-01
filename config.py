@@ -8,18 +8,16 @@ from attrdict import AttrDict
 
 class Config:
     def __init__(self):
-        self.setup = None
+        self.setup = None       # populated in base_trainer __init__
+        self.env_spec_config = None     # populated in base_trainer __init__: modify this in the config dictionary at the beginning of environment specific config file
 
         # ENVIRONMENT
         self.ac_lim = (-1.0, 1.0)
-        self.do_obs_proc = False                # central switch for making obs Process ON/OFF, this value is used in each get params method down below
         self.use_custom_env = True              # implement your customized(/modified) env in utils/make_env
-
 
         # UNCOMMENT line below for custom max_episode_len
         self.max_episode_time = 25.0
         self.max_episode_time_eval = 2.0
-
 
         # MODE
         self.resume = False
@@ -37,13 +35,11 @@ class Config:
         self.seed = 2 ** 32 + 475896325
         self.buffer_size = 1e6
 
-
         # TRAINING
         self.n_training_processes = 1
         self.training_device = 'cpu'
 
         # SAMPLER
-        self.safe_reset = True                               # to initialize agent in the safe set
         self.sampling_batch_size = 'all'                    # TODO: you need to remove this and move the sampling batch_size into method parameters. Like in the case of sf agent and trainer
         self.n_episode_initial_data_collection = 1
 
@@ -54,21 +50,20 @@ class Config:
                                                  noise_to_signal=0.01)
 
         # EVALUATION
-        self.do_evaluation = True
+        self.do_evaluation = False
         self.n_episodes_evaluation = 5
-        self.num_evaluation_sessions = 10    # number of evaluation sessions
+        self.num_evaluation_sessions = 1    # number of evaluation sessions
         self.n_video_save_per_evaluation = 2
         self.n_evaluation_processes = 1
         self.evaluation_device = 'cpu'
         self.n_serial_envs_evaluation = 8  # for use in DummyVecEnv, only used when n_sampler_processes = 1
         self.save_video = True and not self.debugging_mode  # do not need to save video on debugging mode
 
-
         # LOG AND SAVE
         self.results_dir = 'results'
         self.use_wandb = True  # Enable wandb
         self.wandb_project_name = "cbf"  # wandb project name
-        self.save_models = True and not self.debugging_mode    # Enable to save models every SAVE_FREQUENCY episodes (do not need to save on debugging mode)
+        self.save_models = False and not self.debugging_mode    # Enable to save models every SAVE_FREQUENCY episodes (do not need to save on debugging mode)
         self.save_buffer = False
         self.num_save_sessions = 10
         self.add_timestamp = True  # Add timestamp to console's
@@ -137,7 +132,6 @@ class Config:
                                      train_continuous_time=True,
                                      ),
             # Preprocess Observation
-            do_obs_proc=self.do_obs_proc,
             # set this to None, if you don't want to preprocess observation for dynamics training
             controller_cls=controller_cls,
             controller_params=self.get_controller_params(controller_cls),
@@ -208,14 +202,14 @@ class Config:
             filter_initial_training_batch_size=6000,
             # update frequencies
             mf_update_freq=1,
-            mb_update_freq=100,
+            mb_update_freq=10000,
             filter_update_freq=200,     # this option is not currently used in the sf_trainer, use filter_training_stages instead
             filter_training_stages=dict(stages=[5000, 10000, 20000],
                                         freq=[2500, 500, 1000]),
             # misc.
             safety_filter_is_on=True,
             filter_pretrain_is_on=True,
-            filter_train_is_on=True,
+            filter_train_is_on=False,
             dyn_train_is_on=False,
             mf_train_is_on=True,
 
@@ -241,16 +235,15 @@ class Config:
             filter_optim_kwargs=dict(lr=1e-4,
                                      weight_decay=0),
             # Preprocess Observation
-            do_obs_proc=self.do_obs_proc,
             k_epsilon=1e24,  # slack variable weight
             k_delta=1.6,  # for confidence interval k_delta * std
             eta=0.99,  # alpha function coeficient: alpha(x) = eta * h(x)
-            stop_criteria_eps=5e-4,  # stop criteria for unsafe samples loss all being negative
+            stop_criteria_eps=5e-4,  # stop criteria for unsafe experience loss all being negative
             max_epoch=10,
             gamma_dh=0.0,  # saftey threshold in loss
             gamma_safe=0.0,
             gamma_unsafe=0.0,
-            train_on_jacobian=False,
+            train_on_jacobian=True,
             use_trained_dyn=False,
             pretrain_max_epoch=1e4,
             safe_loss_weight=1.0,

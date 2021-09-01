@@ -6,13 +6,19 @@ from scipy.signal import lfilter
 import torch
 from scipy.spatial.transform import Rotation as R
 from dynamics.nominal_dynamics import NominalDynamics
+from attrdict import AttrDict
+
+config = AttrDict(
+    do_obs_proc=True,
+    safe_reset=False
+)
 
 w_0 = 0.1
 w_m = 0.1
 ext = 0.5
 max_speed = 10.0    # TODO: change this to max(max_speed, maximum speed observed in data)
 
-config = {
+env_config = {
     'robot_base': 'xmls/point_m.xml',
     'sensors_obs': ['accelerometer', 'velocimeter', 'gyro', 'magnetometer', 'framepos', 'framequat', 'framexaxis', 'frameangvel'],
     'task': 'goal',
@@ -121,7 +127,7 @@ class PointObsProc(ObsProc):
         # self._unproc_keys = ['buffer']
 
         # make buffer keys: keys from observation that needs to be saved in the buffer
-        sensor_keys = config['sensors_obs']
+        sensor_keys = env_config['sensors_obs']
         obs_keys = self.env.observation_space.spaces.keys()
         lidar_keys = list(filter(lambda x: 'lidar' in x, obs_keys))
         self._buffer_keys = [*sensor_keys, *lidar_keys]     # buffer_keys is the list of all the observation keys that we want to save in buffer\

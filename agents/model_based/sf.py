@@ -14,13 +14,13 @@ class SFAgent(BaseAgent):
         self.safety_filter = init_dict.safety_filter
 
         # Link buffers
-        self.mf_agent._buffer = self.buffer
-        self.mb_agent._buffer = self.buffer
+        # self.mf_agent._buffer = self.buffer
+        # self.mb_agent._buffer = self.buffer
         # when safety_filter has multiple buffer, link its first buffer to SFAgent's buffer
-        if isinstance(self.safety_filter._buffer, list):
-            self.safety_filter._buffer[0] = self.buffer
-        else:
-            self.safety_filter._buffer = self.buffer
+        # if isinstance(self.safety_filter._buffer, list):
+        #     self.safety_filter._buffer[0] = self.buffer
+        # else:
+        #     self.safety_filter._buffer = self.buffer
 
         # list models and optimizers
         self.models = [*self.mf_agent.models, *self.mb_agent.models, *self.safety_filter.models]
@@ -63,8 +63,6 @@ class SFAgent(BaseAgent):
             ac_filtered = ac_mf
         return ac_filtered, info
 
-
-
     def optimize_agent(self, samples, optim_dict=None):
         mf_loss = None
         mb_loss = None
@@ -83,8 +81,8 @@ class SFAgent(BaseAgent):
         # train filter on its frequency
         if 'filter' in to_train:
             logger.log('Training Filter...')
-            # ac_mf = self.mf_agent.act(samples.obs)
-            # dyn_bd = self.mb_agent.dynamics.predict(obs=samples.obs, ac=ac_mf, stats=self.mb_agent.stats, split_return=True)
+            # ac_mf = self.mf_agent.act(experience.obs)
+            # dyn_bd = self.mb_agent.dynamics.predict(obs=experience.obs, ac=ac_mf, stats=self.mb_agent.stats, split_return=True)
             filter_loss = self.safety_filter.optimize_agent(samples['filter'], optim_dict)
         return {"MFـLoss": mf_loss, "MB_Loss": mb_loss, "Filter_Loss": filter_loss}
 
