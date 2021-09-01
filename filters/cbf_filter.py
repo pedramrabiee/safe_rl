@@ -103,10 +103,6 @@ class CBFFilter(BaseFilter):
 
     def pre_train(self, samples, pre_train_dict=None):
         # TODO: fix observation processor
-        # self.safe_samples = torch.tensor(self.obs_proc.proc(samples['safe_samples'], proc_key='filter'), dtype=torch.float32)
-        # self.unsafe_samples = torch.tensor(self.obs_proc.proc(samples['unsafe_samples'], proc_key='filter'), dtype=torch.float32)
-        # self.deriv_samples = torch.tensor(self.obs_proc.proc(samples['deriv_samples'], proc_key='filter'), dtype=torch.float32)
-        # self.dyns = pre_train_dict['nom_dyn']
 
         epoch = 0
         while True:
@@ -139,15 +135,7 @@ class CBFFilter(BaseFilter):
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
     def _compute_geometric_loss(self, samples=None):
-        # FIXME: if one of them gets experience as observation the other should get the observation. Why do you need
-        #  anything other than the observation during training.
 
-        # if samples is None:
-        #     safe_samples = self.safe_samples
-        #     unsafe_samples = self.unsafe_samples
-        #     deriv_samples = self.deriv_samples
-        #     dyns = self.dyns
-        # else:
         safe_samples = samples.safe_samples
         unsafe_samples = samples.unsafe_samples
         deriv_samples = samples.deriv_samples
@@ -170,14 +158,14 @@ class CBFFilter(BaseFilter):
             deriv_loss = (self._append_zeros(self.params.gamma_safe - deriv_loss)).max(dim=-1).values.mean()
 
         # push loss plots
-        logger.push_plot(np.stack([safe_loss.detach().numpy(),
-                                   unsafe_loss.detach().numpy(),
-                                   deriv_loss.detach().numpy()]).reshape(1, -1),
-                         plt_key="loss_plots")
+        # logger.push_plot(np.stack([safe_loss.detach().numpy(),
+        #                            unsafe_loss.detach().numpy(),
+        #                            deriv_loss.detach().numpy()]).reshape(1, -1),
+        #                  plt_key="loss_plots")
 
         return self.params.safe_loss_weight * safe_loss +\
                self.params.unsafe_loss_weight * unsafe_loss + \
-               self.params.deriv_loss_weight * deriv_loss
+               self.params.safe_deriv_loss_weight * deriv_loss
 
     def _compute_loss(self, samples, itr):
         dyn = samples.dyn_values

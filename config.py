@@ -209,9 +209,10 @@ class Config:
             # misc.
             safety_filter_is_on=True,
             filter_pretrain_is_on=True,
-            filter_train_is_on=False,
+            filter_train_is_on=True,
             dyn_train_is_on=False,
             mf_train_is_on=True,
+            add_cbf_pretrain_data_to_buffer=True,
 
         )
         return self.sf_params
@@ -251,6 +252,7 @@ class Config:
             ss_safe_loss_weight=1.0,
             ss_unsafe_loss_weight=1.0,
             deriv_loss_weight=1.0,
+            safe_deriv_loss_weight=1.0,
             deriv_loss_version=2,
             # set this to None, if you don't want to preprocess observation for dynamics training
         )

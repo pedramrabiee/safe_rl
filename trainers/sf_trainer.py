@@ -75,13 +75,15 @@ class SFTrainer(BaseTrainer):
 
 
                 # add safe and unsafe samples to buffer
-                self.agent.curr_buf_id = 1
                 samples = dict(safe_samples=safe_samples,
                                unsafe_samples=unsafe_samples,
                                deriv_samples=deriv_samples,
                                dyn_safe=nom_dyn)
-                self.agent.buffer.push_to_buffer(experience=samples)
-                self.agent.curr_buf_id = 0
+
+                if self.config.sf_params.add_cbf_pretrain_data_to_buffer:
+                    self.agent.curr_buf_id = 1
+                    self.agent.buffer.push_to_buffer(experience=samples)
+                    self.agent.curr_buf_id = 0
 
                 # pretrain filter
                 self.agent.pre_train_filter(samples=AttrDict(torchify(samples, device=self.config.training_device)))
