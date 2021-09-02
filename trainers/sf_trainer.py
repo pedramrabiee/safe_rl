@@ -106,7 +106,8 @@ class SFTrainer(BaseTrainer):
                                           plt_kwargs=dict(alpha=0.7),
                                           columns=['safe loss', 'unsafe loss', 'derivative loss']
                                           )
-                self.custom_plotter.h_plotter(itr, self.agent.safety_filter.filter_net)
+                if hasattr(self.custom_plotter, 'h_plotter'):
+                    self.custom_plotter.h_plotter(itr, self.agent.safety_filter.filter_net)
             elif issubclass(type(self.safe_set), SafeSetFromData):
                 pass
 
@@ -201,7 +202,7 @@ class SFTrainer(BaseTrainer):
 
         _ = self.agent.optimize_agent(samples, optim_dict)
         # plot h curve
-        if 'filter' in to_train:
+        if 'filter' in to_train and hasattr(self.custom_plotter, 'h_plotter'):
             self.custom_plotter.h_plotter(itr, self.agent.safety_filter.filter_net)
 
         logger.dump_tabular(cat_key='iteration', log=False, wandb_log=True, csv_log=False)
