@@ -24,7 +24,7 @@ class Config:
         self.benchmark = False
         self.evaluation_mode = False
         self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
-        self.plot_custom_figs = False
+        self.plot_custom_figs = True
         self.save_custom_figs_data = False
 
         assert (self.resume + self.benchmark + self.evaluation_mode) < 2, 'Only one of resume, benchmark, or evaluation mode can be True'
@@ -199,7 +199,7 @@ class Config:
             mf_train_batch_size=128,
             mb_train_batch_size='all',
             filter_train_batch_size=1024,
-            filter_initial_training_batch_size=6000,
+            filter_initial_training_batch_size=100,
             # update frequencies
             mf_update_freq=1,
             mb_update_freq=10000,
@@ -239,7 +239,7 @@ class Config:
             k_epsilon=1e24,  # slack variable weight
             k_delta=1.6,  # for confidence interval k_delta * std
             eta=0.99,  # alpha function coeficient: alpha(x) = eta * h(x)
-            stop_criteria_eps=5e-4,  # stop criteria for unsafe experience loss all being negative
+            stop_criteria_eps=5e-3,  # stop criteria for unsafe experience loss all being negative
             max_epoch=10,
             gamma_dh=0.0,  # saftey threshold in loss
             gamma_safe=0.0,

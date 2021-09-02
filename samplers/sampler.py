@@ -11,13 +11,14 @@ class Sampler:
         self._episode_steps_per_itr = int(config.episode_steps_per_itr)
         self._config = config
 
-    def initialize(self, env, env_eval, agent, obs_proc, safe_set=None, safe_set_eval=None):
+    def initialize(self, env, env_eval, agent, obs_proc, custom_plotter, safe_set=None, safe_set_eval=None):
         self.env = env
         self.agent = agent
         self.env_eval = env_eval
         self.obs_proc = obs_proc
         self.safe_set = safe_set
         self.safe_set_eval = safe_set_eval
+        self.custom_plotter = custom_plotter
         logger.log('Sampler initialized...')
         self._init_sample_round = True
         self._episode_counter = 0
@@ -63,12 +64,9 @@ class Sampler:
                                done.reshape(1, -1),
                                info)
 
-
-            # FIXME: clean this: this is implemented to work for inverted pendulum
-            # theta = np.arctan2(obs[1], obs[0])
-            # state = np.array([theta, obs[2]])
-            # # logger.push_plot(np.concatenate((state.reshape(1, -1), ac.reshape(1, -1) * scale.ac_old_bounds[1]), axis=1), plt_key="sampler_plots")
-            # logger.push_plot(state.reshape(1, -1), plt_key="sampler_plots", row_append=True)
+            # sampler_push_obs append observation to the current timestep row.
+            # You need to call sampler_push_action somewhere (either here or inside the agent) before calling sampler_push_obs
+            self.custom_plotter.sampler_push_obs(obs)
             self._safety_violation_counter += int(not self.safe_set.is_geo_safe(self.obs_proc.proc(next_obs,
                                                                                                    proc_key='filter')))
             self._episode_return += rew
@@ -77,7 +75,7 @@ class Sampler:
                 self._episode_counter += 1
                 self._episode_time = 0
                 # reset environment
-                obs = self._env_reset()     # TODO: FIX THIS FOR SAFETY_GYM
+                obs = self._env_reset()
                 # reset agent
                 self.agent.reset()
                 self._returns.append(self._episode_return)
@@ -94,31 +92,15 @@ class Sampler:
                     self._safety_violations = []
                 self._episode_return = 0
                 self._safety_violation_counter = 0
-                # dump plots
-                # logger.dump_plot_with_key(plt_key="sampler_plots",
-                #                           filename='states_action_episode_%d' % self._episode_counter,
-                #                           custom_col_config_list=[[2], [3], [0, 1]],    # 0, 1: u's , 2: theta, 3: theta_dot
-                #                           columns=['u_mf', 'u_filtered', 'theta', 'theta_dot'],
-                #                           plt_info=dict(
-                #                               xlabel=r'Timestep',
-                #                               ylabel=[r'$\theta$',
-                #                                       r'$\dot \theta$',
-                #                                       r'$u$'],
-                #                               legend=[None,
-                #                                       None,
-                #                                       [r'$u_{\rm mf}$',
-                #                                        r'$u_{\rm filtered}$']
-                #                                       ]
-                #                           )
-                #                           )
-                # logger.dump_plot_with_key(plt_key="cbf_value",
-                #                           filename='cbf_value_episode_%d' % self._episode_counter,
-                #                           plt_info=dict(
-                #                               xlabel=r'Timestep',
-                #                               ylabel=r'$h$',
-                #                           ),
-                #                           )
 
+                # dump plots
+                self.custom_plotter.dump_sampler_plots(self._episode_counter)
+                if 'cbf_value' in logger._plot_queue.keys():
+                    logger.dump_plot_with_key(plt_key="cbf_value",
+                                              filename='cbf_value_episode_%d' % self._episode_counter,
+                                              plt_info=dict(
+                                                  xlabel=r'Timestep',
+                                                  ylabel=r'$h$'))
             else:
                 obs = next_obs
 
@@ -177,7 +159,7 @@ class Sampler:
                 pbar.close()
                 break
 
-    def sample(self, device='cpu', ow_batch_size=None): # ow_batch_size: overwrite batch size
+    def sample(self, device='cpu', ow_batch_size=None):     # ow_batch_size: overwrite batch size
         if ow_batch_size is None:
             return self.sample(device=device, ow_batch_size=self._config.sampling_batch_size)
         batch_size = self.buffer_size() if (ow_batch_size == 'all') else ow_batch_size
@@ -186,7 +168,7 @@ class Sampler:
 
     def _buffer_queue(self, obs, ac, rew, next_obs, done, info):
         """temporary replay buffer to minimize accessing to agents' buffer at each step of data collection"""
-        if isinstance(self._obs_buf, list): # for Dict observation-space from safety-gym (see _reset_buffer_queue below)
+        if isinstance(self._obs_buf, list):     # for Dict observation-space from safety-gym (see _reset_buffer_queue below)
             self._obs_buf.append(obs)
             self._next_obs_buf.append(next_obs)
         else:
@@ -236,8 +218,6 @@ class Sampler:
 
 
     def _env_reset(self, eval=False):
-        # TODO: FIX THIS: currently safe_reset is controlled using the toggle in config. You may need to print a warning
-        # when safe_reset is off. So that, you'd remember for to turn it on for the envs that does not start safe automatically
         if not eval:
             return self.safe_set.safe_reset() if self._config.env_spec_config.safe_reset else self.env.reset()
         return self.safe_set_eval.safe_reset() if self._config.env_spec_config.safe_reset else self.env_eval.reset()

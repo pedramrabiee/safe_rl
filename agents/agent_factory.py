@@ -38,6 +38,7 @@ class AgentFactory:
                         replay_buffer=params.replay_buffer_cls(self._config.buffer_size),
                         discrete_action=agent_info['discrete_action'],
                         obs_proc=self._config.setup['obs_proc'],
+                        custom_plotter=self._config.setup['custom_plotter']
                         )
 
         agent.initialize(params=params, init_dict=dict(bounds=agent_info['bounds'],
@@ -59,6 +60,7 @@ class AgentFactory:
                           replay_buffer=ReplayBuffer(self._config.buffer_size),
                           discrete_action=agent_info['discrete_action'],
                           obs_proc=self._config.setup['obs_proc'],
+                          custom_plotter=self._config.setup['custom_plotter']
                           )
 
         params = self._config.get_ddpg_params()
@@ -81,6 +83,7 @@ class AgentFactory:
                                        BufferQueue(self._config.buffer_size)],
                         discrete_action=agent_info['discrete_action'],
                         obs_proc=self._config.setup['obs_proc'],
+                        custom_plotter=self._config.setup['custom_plotter']
                         )
 
         params = self._config.get_sf_params()
@@ -106,6 +109,7 @@ class AgentFactory:
             replay_buffer=ReplayBuffer(self._config.buffer_size),
             discrete_action=agent_info['discrete_action'],
             obs_proc=self._config.setup['obs_proc'],
+            custom_plotter=self._config.setup['custom_plotter']
         )
 
         params = self._config.get_cbf_filter_params()

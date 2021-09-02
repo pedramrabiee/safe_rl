@@ -3,6 +3,7 @@ from rewards.get_reward_gen import get_reward_gen
 from trainers.trainer_factory import trainer_factory
 from attrdict import AttrDict
 from utils.process_observation import get_obsproc_cls
+from utils.custom_plotter import get_custom_plotter_cls
 from logger import logger
 
 if __name__ == "__main__":
@@ -21,6 +22,7 @@ if __name__ == "__main__":
 
     setup['reward_gen'] = get_reward_gen(setup['train_env'])
     setup['obs_proc_cls'] = get_obsproc_cls(setup['train_env'])
+    setup['custom_plotter_cls'] = get_custom_plotter_cls(setup['train_env'])
 
     root_dir = os.path.dirname(os.path.realpath(__file__))
 

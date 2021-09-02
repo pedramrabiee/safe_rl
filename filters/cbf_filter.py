@@ -26,8 +26,6 @@ class CBFFilter(BaseFilter):
         self.filter_net = MLPNetwork(in_dim=self._obs_dim, out_dim=1, **self.params.filter_net_kwargs)
         self.filter_optimizer = params.filter_optim_cls(self.filter_net.parameters(), **params.filter_optim_kwargs)
 
-        # self.filter_net_old = hard_copy(self.filter_net)
-
         self.models = [self.filter_net]
         self.optimizers = [self.filter_optimizer]
         self.models_dict = dict(filter_net=self.filter_net)
@@ -39,7 +37,6 @@ class CBFFilter(BaseFilter):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='filter')
 
-        # print(np.arctan2(obs[:, 1], obs[:, 0]))
         ac_lim_high = scale.ac_old_bounds[1]
         ac = action2oldbounds(ac)
 
@@ -92,11 +89,9 @@ class CBFFilter(BaseFilter):
         ac_filtered = qp_from_np(P=P, q=q, G=G, h=h)
         ac_filtered = ac_filtered[:-1]              # last element is epsilon
 
-        # extra_h = (f_hat + mu_f) + np.matmul((g_hat + mu_g).squeeze(axis=0), ac_filtered).T
-        # logger.push_plot(data=cbf_value,
-        #                  plt_key='cbf_value')
-        #
-        # logger.push_plot(np.concatenate((ac.reshape(1, -1), ac_filtered.reshape(1, -1)), axis=1), plt_key="sampler_plots")
+        # push plots
+        logger.push_plot(data=cbf_value, plt_key='cbf_value')
+        self.custom_plotter.filter_push_action((ac, ac_filtered))
 
         return action2newbounds(ac_filtered.T), extra
 
@@ -149,7 +144,7 @@ class CBFFilter(BaseFilter):
             safe_loss = self._normalize_loss(safe_loss).mean()
         # Unsafe loss
         if not unsafe_samples.size(0) == 0:
-            unsafe_loss = unsafe_loss(self._append_zeros(self.params.gamma_unsafe + self.filter_net(unsafe_samples))).max(dim=-1).values
+            unsafe_loss = (self._append_zeros(self.params.gamma_unsafe + self.filter_net(unsafe_samples))).max(dim=-1).values
             unsafe_loss = self._normalize_loss(unsafe_loss).mean()
         # Derivative loss 1
         if not deriv_samples.size(0) == 0:
@@ -159,11 +154,11 @@ class CBFFilter(BaseFilter):
             deriv_loss = (self._append_zeros(self.params.gamma_safe - deriv_loss)).max(dim=-1).values
             deriv_loss = self._normalize_loss(deriv_loss).mean()
 
-        # push loss plots
-        # logger.push_plot(np.stack([safe_loss.detach().numpy(),
-        #                            unsafe_loss.detach().numpy(),
-        #                            deriv_loss.detach().numpy()]).reshape(1, -1),
-        #                  plt_key="loss_plots")
+        # push loss plots, dumped in trainer
+        logger.push_plot(np.stack([safe_loss.detach().numpy(),
+                                   unsafe_loss.detach().numpy(),
+                                   deriv_loss.detach().numpy()]).reshape(1, -1),
+                         plt_key="loss_plots")
 
         return self.params.safe_loss_weight * safe_loss +\
                self.params.unsafe_loss_weight * unsafe_loss + \
@@ -200,50 +195,5 @@ class CBFFilter(BaseFilter):
         return torch.cat((x, torch.zeros_like(x)), dim=dim)
 
     def _normalize_loss(self, loss):
-        return torch.tanh(loss) if self.params.tanh_loss_normalization else loss
-
-    def plotter(self, itr, max_speed):
-        # FIXME: this only works for inverted pendulum env.
-        speeds = max_speed * np.linspace(-1.0, 1.0, num=9)
-        theta = np.linspace(-np.pi, np.pi, num=100).reshape(-1, 1)
-        # plt.figure()
-        for speed in speeds:
-            x = np.concatenate((np.cos(theta), np.sin(theta), np.ones_like(theta) * speed), axis=-1)
-            out = self.filter_net(torch.tensor(x, dtype=torch.float32)).detach().numpy()
-            plt.plot(theta, out, label=r'$\dot \theta$ = ' + str(speed))
-            plt.xlabel(r'$\theta$')
-            plt.ylabel(r'$h$')
-            plt.legend()
-
-        logger.dump_plot(filename='cbf_itr_%d' % itr,
-                         plt_key='cbf')
-
-        # plt.figure()
-        # mpl.use('TkAgg')  # or can use 'TkAgg', whatever you have/prefer
-        # plt.ion()
-        speeds = max_speed * np.linspace(-1.0, 1.0, num=100)
-
-        X, Y = np.meshgrid(theta, speeds)
-        # x = np.concatenate((np.cos(X), np.sin(X), Y))
-
-        out = np.zeros_like(X)
-        for i in range(X.shape[0]):
-            for j in range(X.shape[1]):
-                x = np.array([np.cos(X[i, j]), np.sin(X[i, j]), Y[i, j]]).reshape(1,-1)
-                out[i, j] = self.filter_net(torch.tensor(x, dtype=torch.float32)).detach().numpy().squeeze()
-
-        ax = plt.axes(projection='3d')
-        # ax.contour3D(X, Y, out, 50, cmap='binary')
-        ax.plot_surface(X, Y, out, rstride=1, cstride=1,
-                     cmap='viridis', edgecolor='none')
-        ax.set_xlabel(r'$\theta$')
-        ax.set_ylabel(r'$\dot \theta$')
-        ax.set_zlabel(r'$h$'),
-        ax.view_init(50, 40)
-
-        logger.dump_plot(filename='cbf_itr_%d_3D' % itr,
-                         plt_key='cbf')
-
-        # plt.ioff()
-
+        return torch.tanh(loss) if self.params.loss_tanh_normalization else loss
 

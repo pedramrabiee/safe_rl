@@ -2,7 +2,7 @@ from utils.misc import *
 from utils.torch_utils import itermap_on_dict, load_state_dict_from_dict
 
 class BaseAgent:
-    def __init__(self, agent_type, ac_dim, ac_lim, timestep, replay_buffer, obs_proc=None, discrete_action=False):
+    def __init__(self, agent_type, ac_dim, ac_lim, timestep, replay_buffer, custom_plotter,  obs_proc=None, discrete_action=False):
         self._agent_type = agent_type
         self._ac_dim = ac_dim
         self._ac_lim = ac_lim
@@ -11,6 +11,7 @@ class BaseAgent:
         self._discrete_action = discrete_action
         self._curr_buf_id = 0
         self.obs_proc = obs_proc
+        self.custom_plotter = custom_plotter
         self.models_dict = None
         self.optimizers_dict = None
 

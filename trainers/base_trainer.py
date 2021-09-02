@@ -12,6 +12,7 @@ from utils.process_observation import NeutralObsProc
 from copy import copy
 from configs.get_env_spec_config import get_env_spec_config
 
+
 class BaseTrainer:
     def __init__(self, setup, root_dir):
         # instantiate Config
@@ -54,6 +55,11 @@ class BaseTrainer:
         self.obs_proc = self.config.setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else NeutralObsProc(self.env)
         self.obs_proc.initialize()
         self.config.setup['obs_proc'] = self.obs_proc
+
+
+        # instantiate CustomPlotter
+        self.custom_plotter = self.config.setup['custom_plotter_cls'](self.obs_proc)
+        self.config.setup['custom_plotter'] = self.custom_plotter
 
         # instantiate safe_set
         self.safe_set = get_safe_set(env_id=setup.train_env.env_id,
@@ -108,6 +114,9 @@ class BaseTrainer:
                                           obs_proc=self.obs_proc,
                                           seed=eval_seed)
 
+
+
+
         # instantiate Sampler
         self.sampler = Sampler(self.config)
         # initialize sampler
@@ -115,6 +124,7 @@ class BaseTrainer:
                                 env_eval=self.env_eval,
                                 agent=self.agent,
                                 obs_proc=self.obs_proc,
+                                custom_plotter=self.custom_plotter,
                                 safe_set=self.safe_set,
                                 safe_set_eval=self.safe_set_eval)
 
@@ -129,6 +139,7 @@ class BaseTrainer:
 
         # run custom trainer initialization
         self.initialize()
+
 
         logger.log("Trainer initialized...")
 

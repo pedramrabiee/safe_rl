@@ -8,6 +8,12 @@ from utils.misc import e_and, e_not
 import torch
 from dynamics.nominal_dynamics import NominalDynamics
 from attrdict import AttrDict
+from utils.custom_plotter import CustomPlotter
+from logger import logger
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['text.usetex'] = True
+
 
 config = AttrDict(
     do_obs_proc=False,
@@ -237,3 +243,78 @@ class InvertedPendulumNominalDynV2(NominalDynamics):
             G = np.ones_like(f) * G
         G = np.expand_dims(G, axis=-1) # TODO: check for discrete case
         return (f, G) if split_return else f + np.matmul(G, ac).squeeze(-1)
+
+
+class InvertedPendulumCustomPlotter(CustomPlotter):
+    def sampler_push_obs(self, obs):
+        theta = np.arctan2(obs[1], obs[0])
+        state = np.array([theta, obs[2]])
+        # logger.push_plot(np.concatenate((state.reshape(1, -1), ac.reshape(1, -1) * scale.ac_old_bounds[1]), axis=1), plt_key="sampler_plots")
+        logger.push_plot(state.reshape(1, -1), plt_key="sampler_plots", row_append=True)
+
+    def filter_push_action(self, ac):
+        ac, ac_filtered = ac
+        logger.push_plot(np.concatenate((ac.reshape(1, -1), ac_filtered.reshape(1, -1)), axis=1), plt_key="sampler_plots")
+
+    def dump_sampler_plots(self, episode_num):
+        logger.dump_plot_with_key(plt_key="sampler_plots",
+                                  filename='states_action_episode_%d' % episode_num,
+                                  custom_col_config_list=[[2], [3], [0, 1]],    # 0, 1: u's , 2: theta, 3: theta_dot
+                                  columns=['u_mf', 'u_filtered', 'theta', 'theta_dot'],
+                                  plt_info=dict(
+                                      xlabel=r'Timestep',
+                                      ylabel=[r'$\theta$',
+                                              r'$\dot \theta$',
+                                              r'$u$'],
+                                      legend=[None,
+                                              None,
+                                              [r'$u_{\rm mf}$',
+                                               r'$u_{\rm filtered}$']
+                                              ]
+                                  )
+                                  )
+
+
+    def h_plotter(self, itr, filter_net):
+        speeds = max_speed * np.linspace(-1.0, 1.0, num=9)
+        theta = np.linspace(-np.pi, np.pi, num=100).reshape(-1, 1)
+        # plt.figure()
+        for speed in speeds:
+            x = np.concatenate((np.cos(theta), np.sin(theta), np.ones_like(theta) * speed), axis=-1)
+            out = filter_net(torch.tensor(x, dtype=torch.float32)).detach().numpy()
+            plt.plot(theta, out, label=r'$\dot \theta$ = ' + str(speed))
+            plt.xlabel(r'$\theta$')
+            plt.ylabel(r'$h$')
+            plt.legend()
+
+        logger.dump_plot(filename='cbf_itr_%d' % itr,
+                         plt_key='cbf')
+
+        # plt.figure()
+        # mpl.use('TkAgg')  # or can use 'TkAgg', whatever you have/prefer
+        # plt.ion()
+        speeds = max_speed * np.linspace(-1.0, 1.0, num=100)
+
+        X, Y = np.meshgrid(theta, speeds)
+        # x = np.concatenate((np.cos(X), np.sin(X), Y))
+
+        out = np.zeros_like(X)
+        for i in range(X.shape[0]):
+            for j in range(X.shape[1]):
+                x = np.array([np.cos(X[i, j]), np.sin(X[i, j]), Y[i, j]]).reshape(1,-1)
+                out[i, j] = filter_net(torch.tensor(x, dtype=torch.float32)).detach().numpy().squeeze()
+
+        ax = plt.axes(projection='3d')
+        # ax.contour3D(X, Y, out, 50, cmap='binary')
+        ax.plot_surface(X, Y, out, rstride=1, cstride=1,
+                     cmap='viridis', edgecolor='none')
+        ax.set_xlabel(r'$\theta$')
+        ax.set_ylabel(r'$\dot \theta$')
+        ax.set_zlabel(r'$h$'),
+        ax.view_init(50, 40)
+
+        logger.dump_plot(filename='cbf_itr_%d_3D' % itr,
+                         plt_key='cbf')
+
+        # plt.ioff()
+
