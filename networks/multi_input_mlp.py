@@ -12,6 +12,7 @@ class MultiInputMLP(nn.Module):
 
         super(MultiInputMLP, self).__init__()
         self.in1_dim = in1_dim
+        self.in2_dim= in2_dim
 
         # before 2nd input concatenation
         net1_num_layers = in2_cat_layer - 1

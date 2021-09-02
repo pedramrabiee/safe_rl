@@ -95,8 +95,6 @@ class CBFFilter(BaseFilter):
 
 
     def pre_train(self, samples, pre_train_dict=None):
-        # TODO: fix observation processor
-
         epoch = 0
         while True:
             self.filter_optimizer.zero_grad()
@@ -144,11 +142,9 @@ class CBFFilter(BaseFilter):
         if not unsafe_samples.size(0) == 0:
             unsafe_loss = (self._append_zeros(self.params.gamma_unsafe + self.filter_net(unsafe_samples))).max(dim=-1).values
             unsafe_loss = self._normalize_loss(unsafe_loss).mean()
-        # Derivative loss 1
+        # Derivative loss
         if not deriv_samples.size(0) == 0:
-            grad = get_grad(self.filter_net, deriv_samples, create_graph=True).squeeze(dim=0)  # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
-            deriv_loss = row_wise_dot(grad, torchify(dyns, device=deriv_samples.device))
-            deriv_loss += self.params.eta * self.filter_net(deriv_samples)
+            deriv_loss = self._compute_deriv_loss(deriv_samples, dyns)
             deriv_loss = (self._append_zeros(self.params.gamma_safe - deriv_loss)).max(dim=-1).values
             deriv_loss = self._normalize_loss(deriv_loss).mean()
 
@@ -168,9 +164,7 @@ class CBFFilter(BaseFilter):
         next_obs = samples.next_obs
         obs = samples.obs
         if self.params.train_on_jacobian:
-            grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0)  # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
-            deriv_loss = row_wise_dot(grad, torchify(dyn, device=obs.device))
-            deriv_loss += self.params.eta * self.filter_net(obs)
+            deriv_loss = self._compute_deriv_loss(obs, dyn)
         else:
             deriv_loss = (1/ts) * (self.filter_net(next_obs) + (self.params.eta * ts - 1) * self.filter_net(obs))
         loss = (self._append_zeros(self.params.gamma_dh - deriv_loss)).max(dim=-1).values
@@ -180,13 +174,10 @@ class CBFFilter(BaseFilter):
 
     def _check_stop_criteria(self, samples):
         h_unsafe = self.filter_net(samples.unsafe_samples)
-        h_safe = self.filter_net(samples.safe_samples)
-        # print(torch.max(h_unsafe))
-        if torch.max(h_unsafe) > self.params.stop_criteria_eps:
-        # or torch.min(h_safe) < -self.params.stop_criteria_eps:
+        h_dot_deriv_samples = self._compute_deriv_loss(samples.deriv_samples, samples.dyn_safe)
+        if torch.max(h_unsafe) > self.params.stop_criteria_eps or torch.min(h_dot_deriv_samples) < self.params.stop_criteria_eps:
             return False
         return True
-
 
     @staticmethod
     def _append_zeros(x, dim=-1):
@@ -195,3 +186,8 @@ class CBFFilter(BaseFilter):
     def _normalize_loss(self, loss):
         return torch.tanh(loss) if self.params.loss_tanh_normalization else loss
 
+    def _compute_deriv_loss(self, obs, dyn):
+        grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
+        deriv_loss = row_wise_dot(grad, torchify(dyn, device=obs.device))
+        deriv_loss += self.params.eta * self.filter_net(obs)
+        return deriv_loss
