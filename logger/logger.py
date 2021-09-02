@@ -11,6 +11,7 @@ import seaborn as sns
 import smtplib
 from email.message import EmailMessage
 from pandas import DataFrame
+import json
 
 matplotlib.rcParams['text.usetex'] = True
 
@@ -386,3 +387,10 @@ def _save_csv(data, path, filename, columns=None, index=False):
     file = osp.join(path, filename + '.csv')
     data_frame = DataFrame(data, columns=columns)
     data_frame.to_csv(file, index=index, header=False if columns is None else True)
+
+def dump_dict2json(dictionary, filename):
+    global logdir
+    file = osp.join(logdir, filename + '.json')
+    with open(file, "w") as f:
+        json.dump(dictionary, f, indent=4)
+    log(f'{filename}.json saved')

@@ -17,38 +17,34 @@ mpl.rcParams['text.usetex'] = True
 
 config = AttrDict(
     do_obs_proc=False,
-    safe_reset=True
+    safe_reset=True,
+    timestep=0.01,
+    # Safe set width
+    half_wedge_angle=1.0,
+    mid_safe_set_width=0.2,
+    outer_safe_set_width=0.2,
+    # Pendulum dynamics parameters
+    g=10.0,
+    m=1.0,
+    l=1.0,
+    max_torque=15.0,
+    max_speed=8.0
 )
-# Environment Parameters
-timestep = 0.01
-
-# Safe set width
-half_wedge_angle = 1.0
-mid_safe_set_width = 0.2
-outer_safe_set_width = 0.2
-
-# Pendulum dynamics parameters
-g = 10.0
-m = 1.0
-l = 1.0
-max_torque = 15.0  # default is 2.0
-max_speed = 8.0  # default is 8.0
-
 
 def inverted_pendulum_customize(env):
     # Settings
 
     # env.env.max_torque = max_torque  # you could also used env.unwrapped.max_torque
-    env.unwrapped.max_torque = max_torque
-    env.unwrapped.max_speed = max_speed  # you could also used env.unwrapped.max_speed
-    env.unwrapped.dt = timestep
+    env.unwrapped.max_torque = config.max_torque
+    env.unwrapped.max_speed = config.max_speed  # you could also used env.unwrapped.max_speed
+    env.unwrapped.dt = config.timestep
 
     env.action_space = Box(
-        low=-max_torque,
-        high=max_torque, shape=(1,),
+        low=-config.max_torque,
+        high=config.max_torque, shape=(1,),
         dtype=np.float32
     )
-    high = np.array([1., 1., max_speed], dtype=np.float32)
+    high = np.array([1., 1., config.max_speed], dtype=np.float32)
     env.observation_space = Box(
         low=-high,
         high=high,
@@ -76,23 +72,21 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
         super().__init__(env, obs_proc)
         obs_dim = self.obs_proc.obs_dim(proc_key='filter')   # TODO: check this, you may need to change it to safe_set
         max_speed = env.observation_space.high[2]
-        # max_speed = 60.0
 
-
-        safe_half_wedge_angle = half_wedge_angle - (mid_safe_set_width + outer_safe_set_width)
-        mid_half_wedge_angle = half_wedge_angle - outer_safe_set_width
+        safe_half_wedge_angle = config.half_wedge_angle - (config.mid_safe_set_width + config.outer_safe_set_width)
+        mid_half_wedge_angle = config.half_wedge_angle - config.outer_safe_set_width
 
         if obs_dim == 2: # TODO: add middle boundary and check inner and geo_safe_set
-            self.geo_safe_set = Tuple([Box(low=np.array([-half_wedge_angle, -max_speed]),
-                                           high=np.array([half_wedge_angle, max_speed]),
+            self.geo_safe_set = Tuple([Box(low=np.array([-config.half_wedge_angle, -max_speed]),
+                                           high=np.array([config.half_wedge_angle, max_speed]),
                                            dtype=np.float64)])
             self.in_safe_set = Tuple([Box(low=np.array([-safe_half_wedge_angle, -max_speed]),
                                           high=np.array([safe_half_wedge_angle, max_speed]),
                                           dtype=np.float64)])
         if obs_dim == 3:
             # outer boundary
-            self.geo_safe_set = Tuple([Box(low=np.array([np.cos(half_wedge_angle), -np.sin(half_wedge_angle), -max_speed]),
-                                           high=np.array([1.0, np.sin(half_wedge_angle), max_speed]),
+            self.geo_safe_set = Tuple([Box(low=np.array([np.cos(config.half_wedge_angle), -np.sin(config.half_wedge_angle), -max_speed]),
+                                           high=np.array([1.0, np.sin(config.half_wedge_angle), max_speed]),
                                            dtype=np.float64)])      # for wedge angle smaller than pi
 
             # inner boundary
@@ -163,6 +157,9 @@ class InvertedPendulumNominalDyn(NominalDynamics):
 
     def _predict(self, obs, ac, split_return=False):
         dt = self.timestep
+        g = config.g
+        m = config.m
+        l = config.l
 
         if obs.shape[-1] == 2:
             theta = obs[..., 0]
@@ -202,6 +199,9 @@ class InvertedPendulumNominalDynV2(NominalDynamics):
 
     def _predict(self, obs, ac, split_return=False):
         dt = self.timestep
+        g = config.g
+        m = config.m
+        l = config.l
 
         if obs.shape[-1] == 2:
             x1 = np.cos(obs[..., 0])
@@ -276,7 +276,7 @@ class InvertedPendulumCustomPlotter(CustomPlotter):
 
 
     def h_plotter(self, itr, filter_net):
-        speeds = max_speed * np.linspace(-1.0, 1.0, num=9)
+        speeds = config.max_speed * np.linspace(-1.0, 1.0, num=9)
         theta = np.linspace(-np.pi, np.pi, num=100).reshape(-1, 1)
         # plt.figure()
         for speed in speeds:
@@ -293,7 +293,7 @@ class InvertedPendulumCustomPlotter(CustomPlotter):
         # plt.figure()
         # mpl.use('TkAgg')  # or can use 'TkAgg', whatever you have/prefer
         # plt.ion()
-        speeds = max_speed * np.linspace(-1.0, 1.0, num=100)
+        speeds = config.max_speed * np.linspace(-1.0, 1.0, num=100)
 
         X, Y = np.meshgrid(theta, speeds)
         # x = np.concatenate((np.cos(X), np.sin(X), Y))

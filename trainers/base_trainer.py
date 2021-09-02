@@ -80,6 +80,9 @@ class BaseTrainer:
         if not self.config.debugging_mode:
             save_config_as_py(logger.logdir)
 
+        # save env config as json
+        logger.dump_dict2json(self.config.env_spec_config, 'env_spec_config')
+
         # instantiate evaluation environment
         if self.config.save_video:
             video_dict = {}

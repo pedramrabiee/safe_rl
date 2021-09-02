@@ -10,13 +10,12 @@ from attrdict import AttrDict
 
 config = AttrDict(
     do_obs_proc=True,
-    safe_reset=False
+    safe_reset=False,
+    w_0=0.1,
+    w_m=0.1,
+    ext=0.5,
+    max_speed=10.0
 )
-
-w_0 = 0.1
-w_m = 0.1
-ext = 0.5
-max_speed = 10.0    # TODO: change this to max(max_speed, maximum speed observed in data)
 
 env_config = {
     'robot_base': 'xmls/point_m.xml',
@@ -68,12 +67,12 @@ class PointRobotSafeSetFromData(SafetyGymSafeSetFromData):
 class PointRobotSafeSetFromCriteria(SafetyGymSafeSetFromCriteria):
     def _get_obs(self):
         xmin, ymin, xmax, ymax = self.env.placements_extents
-        xy = np.array([np.random.uniform(xmin - ext, xmax + ext),
-                       np.random.uniform(ymin - ext, ymax + ext)])
+        xy = np.array([np.random.uniform(xmin - config.ext, xmax + config.ext),
+                       np.random.uniform(ymin - config.ext, ymax + config.ext)])
         theta = np.random.uniform(low=-np.pi, high=np.pi)
         vec = np.array([np.cos(theta), np.sin(theta)])
         num_velocity = self.env.sim.model.nv
-        vel = np.random.uniform(low=-max_speed, high=max_speed, size=num_velocity)
+        vel = np.random.uniform(low=-config.max_speed, high=config.max_speed, size=num_velocity)
         # FIXME: fix the order of terms
         return np.hstack((xy, vec, vel))
 
