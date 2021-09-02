@@ -37,9 +37,9 @@ class NominalDynamics:
 def get_nominal_dyn_cls(train_env):
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
-            from configs.env_configs.gym_envs.inverted_pendulum_configs import InvertedPendulumNominalDynV2
+            from configs.env_configs.gym_envs.inverted_pendulum_configs import InvertedPendulumNominalDyn
             params = None
-            return InvertedPendulumNominalDynV2, params
+            return InvertedPendulumNominalDyn, params
         else:
             raise NotImplementedError
     elif train_env['env_collection'] == 'safety_gym':

@@ -162,48 +162,6 @@ class InvertedPendulumNominalDyn(NominalDynamics):
         l = config.l
 
         if obs.shape[-1] == 2:
-            theta = obs[..., 0]
-            theta_dot = obs[..., 1]
-        elif obs.shape[-1] == 3:
-            theta = np.arctan2(obs[..., 1], obs[..., 0])
-            theta_dot = obs[..., 2]
-
-        if not self.continous_time:
-            f = np.array([
-                -3 * g / (2 * l) * np.sin(theta + np.pi) * dt ** 2 + theta_dot * dt + theta,
-                theta_dot - 3 * g / (2 * l) * np.sin(theta + np.pi) * dt
-            ])
-            g = np.array([
-                3 / (m * l ** 2) * dt ** 2,
-                3 / (m * l ** 2) * dt
-            ])
-        else:
-            f = np.array([
-                theta_dot,
-                -3 * g / (2 * l) * np.sin(theta + np.pi)
-            ])
-            g = np.array([
-                0.0,
-                3 / (m * l ** 2)
-            ])
-        # Shape of f in single-dynamics case is 2 x batch_size,
-        # and in the ensemble case is 2 x ensemble_size x batch_size
-        # np.moveaxis(f, 0, -1) rearrange f in single case to batch_size x 2
-        # and in ensemble case to ensemble_size x batch_size x 2
-        return (np.moveaxis(f, 0, -1), g) if split_return else np.moveaxis(f, 0, -1) + g * ac
-
-class InvertedPendulumNominalDynV2(NominalDynamics):
-    def initialize(self, params, init_dict=None):
-        #TODO: You should link this with the params, so that if you are normalizing the observation or action, apply the same thing here
-        self.continous_time = init_dict['is_continuous']
-
-    def _predict(self, obs, ac, split_return=False):
-        dt = self.timestep
-        g = config.g
-        m = config.m
-        l = config.l
-
-        if obs.shape[-1] == 2:
             x1 = np.cos(obs[..., 0])
             x2 = np.sin(obs[..., 0])
             x3 = obs[..., 1]
@@ -213,35 +171,34 @@ class InvertedPendulumNominalDynV2(NominalDynamics):
             x3 = obs[..., 2]    # theta_dot
 
         if not self.continous_time:
-            f = np.array([
-                x1 - dt * x3 * x2 - (dt ** 2) * 3 * g / (2 * l) * x2 ** 2,
-                x2 + dt * x3 * x1 + (dt ** 2) * 3 * g / (2 * l) * x2 * x1,
-                x3 + dt * 3 * g / (2 * l) * x2
-            ])
-            G = 3 / (m * l ** 2) * dt * np.array([
+            f_func = lambda x1, x2, x3:\
+                np.array([
+                    x1 - dt * x3 * x2 - (dt ** 2) * 3 * g / (2 * l) * x2 ** 2,
+                    x2 + dt * x3 * x1 + (dt ** 2) * 3 * g / (2 * l) * x2 * x1,
+                    x3 + dt * 3 * g / (2 * l) * x2
+                ], dtype=np.float32)
+            G_func = lambda x1, x2: 3 / (m * l ** 2) * dt * np.array([
                 dt * x2,
                 dt * x1,
                 1.0
-            ])
+            ], dtype=np.float32)
+            G = np.stack(list(map(G_func, x1, x2)), axis=0)
         else:
-            f = np.array([
-                -x3 * x2,
-                x3 * x1,
-                3 * g / (2 * l) * x2
-            ])
+            f_func = lambda x1, x2, x3: \
+                np.array([
+                    -x3 * x2,
+                    x3 * x1,
+                    3 * g / (2 * l) * x2
+                ], dtype=np.float32)
             G = np.array([
                 0.0,
                 0.0,
                 3 / (m * l ** 2)
-            ])
-        # Shape of f in single-dynamics case is 3 x batch_size,
-        # and in the ensemble case is 3 x ensemble_size x batch_size
-        # np.moveaxis(f, 0, -1) rearrange f in single case to batch_size x 3
-        # and in ensemble case to ensemble_size x batch_size x 3
-        f = np.moveaxis(f, 0, -1)
-        if self.continous_time:     # FIXME: I think in discrete case the dimension of G is the same as f, so you need to moveaxis for that too
-            G = np.ones_like(f) * G
-        G = np.expand_dims(G, axis=-1) # TODO: check for discrete case
+            ], dtype=np.float32)
+            G = np.stack([G for _ in range(x1.shape[0])], axis=0)
+
+        f = np.stack(list(map(f_func, x1, x2, x3)), axis=0)
+        G = np.expand_dims(G, axis=-1)
         return (f, G) if split_return else f + np.matmul(G, ac).squeeze(-1)
 
 
