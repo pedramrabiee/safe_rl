@@ -23,7 +23,7 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = False
         self.save_custom_figs_data = False
 
@@ -212,7 +212,7 @@ class Config:
             filter_train_is_on=True,
             dyn_train_is_on=False,
             mf_train_is_on=True,
-            add_cbf_pretrain_data_to_buffer=True,
+            add_cbf_pretrain_data_to_buffer=False,
 
         )
         return self.sf_params
@@ -244,16 +244,17 @@ class Config:
             gamma_dh=0.0,  # saftey threshold in loss
             gamma_safe=0.0,
             gamma_unsafe=0.0,
-            train_on_jacobian=True,
+            train_on_jacobian=False,
             use_trained_dyn=False,
             pretrain_max_epoch=1e4,
             safe_loss_weight=1.0,
             unsafe_loss_weight=1.0,
             ss_safe_loss_weight=1.0,
             ss_unsafe_loss_weight=1.0,
-            deriv_loss_weight=1.0,
+            deriv_loss_weight=2.0,
             safe_deriv_loss_weight=1.0,
             deriv_loss_version=2,
+            loss_tanh_normalization=True
             # set this to None, if you don't want to preprocess observation for dynamics training
         )
         return self.cbf_params

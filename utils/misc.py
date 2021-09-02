@@ -44,7 +44,7 @@ def torchify(x, dtype=torch.float32, device='cpu', requires_grad=False):
     if isinstance(x, dict): # dict of torch.tensors
         out = {k: torchify(v, dtype, device, requires_grad) for k, v in x.items()}
         return out
-    if isinstance(x, np.ndarray) and isinstance(x[0], dict):
+    if isinstance(x, np.ndarray) and not(x.shape[0] == 0) and isinstance(x[0], dict):
         out = np.hstack([torchify(dic) for dic in x])
         return out
     out = torch.as_tensor(x, dtype=dtype, device=torch.device('cuda' if device == 'gpu' else 'cpu'))

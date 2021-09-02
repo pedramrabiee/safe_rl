@@ -107,7 +107,7 @@ class CBFFilter(BaseFilter):
         epoch = 0
         while True:
             self.filter_optimizer.zero_grad()
-            loss = self._compute_geometric_loss(samples)
+            loss = self._compute_pretrain_loss(samples)
             loss.backward()
             self.filter_optimizer.step()
 
@@ -129,12 +129,11 @@ class CBFFilter(BaseFilter):
             self.filter_optimizer.step()
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
             epoch += 1
-            # log
-            if self._check_stop_criteria(samples) or epoch >= self.params.max_epoch:
+            if epoch >= self.params.max_epoch:
                 break
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
-    def _compute_geometric_loss(self, samples=None):
+    def _compute_pretrain_loss(self, samples=None):
 
         safe_samples = samples.safe_samples
         unsafe_samples = samples.unsafe_samples
@@ -146,16 +145,19 @@ class CBFFilter(BaseFilter):
         unsafe_loss = torch.zeros(1, requires_grad=True)[0]
         deriv_loss = torch.zeros(1, requires_grad=True)[0]
         if not safe_samples.size(0) == 0:     # if the tensor is not empty
-            safe_loss = (self._append_zeros(self.params.gamma_safe - self.filter_net(safe_samples))).max(dim=-1).values.mean()
+            safe_loss = (self._append_zeros(self.params.gamma_safe - self.filter_net(safe_samples))).max(dim=-1).values
+            safe_loss = self._normalize_loss(safe_loss).mean()
         # Unsafe loss
         if not unsafe_samples.size(0) == 0:
-            unsafe_loss = (self._append_zeros(self.params.gamma_unsafe + self.filter_net(unsafe_samples))).max(dim=-1).values.mean()
+            unsafe_loss = unsafe_loss(self._append_zeros(self.params.gamma_unsafe + self.filter_net(unsafe_samples))).max(dim=-1).values
+            unsafe_loss = self._normalize_loss(unsafe_loss).mean()
         # Derivative loss 1
         if not deriv_samples.size(0) == 0:
             grad = get_grad(self.filter_net, deriv_samples, create_graph=True).squeeze(dim=0)  # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
             deriv_loss = row_wise_dot(grad, torchify(dyns, device=deriv_samples.device))
             deriv_loss += self.params.eta * self.filter_net(deriv_samples)
-            deriv_loss = (self._append_zeros(self.params.gamma_safe - deriv_loss)).max(dim=-1).values.mean()
+            deriv_loss = (self._append_zeros(self.params.gamma_safe - deriv_loss)).max(dim=-1).values
+            deriv_loss = self._normalize_loss(deriv_loss).mean()
 
         # push loss plots
         # logger.push_plot(np.stack([safe_loss.detach().numpy(),
@@ -178,9 +180,9 @@ class CBFFilter(BaseFilter):
             deriv_loss += self.params.eta * self.filter_net(obs)
         else:
             deriv_loss = (1/ts) * (self.filter_net(next_obs) + (self.params.eta * ts - 1) * self.filter_net(obs))
-        loss = (self._append_zeros(self.params.gamma_dh - self.params.deriv_loss_weight * deriv_loss)).max(dim=-1).values.mean()
-
-        loss += self._compute_geometric_loss(samples)
+        loss = (self._append_zeros(self.params.gamma_dh - deriv_loss)).max(dim=-1).values
+        loss = self.params.deriv_loss_weight * self._normalize_loss(loss).mean()
+        loss += self._compute_pretrain_loss(samples)
         return loss
 
     def _check_stop_criteria(self, samples):
@@ -196,6 +198,9 @@ class CBFFilter(BaseFilter):
     @staticmethod
     def _append_zeros(x, dim=-1):
         return torch.cat((x, torch.zeros_like(x)), dim=dim)
+
+    def _normalize_loss(self, loss):
+        return torch.tanh(loss) if self.params.tanh_loss_normalization else loss
 
     def plotter(self, itr, max_speed):
         # FIXME: this only works for inverted pendulum env.

@@ -61,7 +61,12 @@ class SFTrainer(BaseTrainer):
                 unsafe_samples = np.vstack((unsafe_samples, out_cond_unsafe_samples))
 
                 # deriv experience for the deriv loss in pretraining
-                deriv_samples = out_cond_unsafe_samples if version == 1 else mid_cond_safe_samples
+                if version == 1:
+                    deriv_samples = out_cond_unsafe_samples
+                if version == 2:
+                    deriv_samples = mid_cond_safe_samples
+                if version == 3:
+                    deriv_samples = safe_samples
 
                 print(f'Sampling time: {time() - sample_initial_time}')
 
@@ -162,6 +167,10 @@ class SFTrainer(BaseTrainer):
 
             if version == 2:
                 deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['mid_cond_safe'])
+
+            if version == 3:
+                deriv_mask = is_safe_mask
+
 
             # deriv experience
             # deriv_samples = apply_mask_to_dict_of_arrays(queue_items, deriv_mask)
