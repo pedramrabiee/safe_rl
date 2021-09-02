@@ -12,10 +12,10 @@ if __name__ == "__main__":
     # 'Point' from safety_gym
 
     setup = AttrDict(agent='sf',
-                     train_env=dict(env_id='Point',
-                                    env_collection='safety_gym'),
-                     eval_env=dict(env_id='Point',
-                                   env_collection='safety_gym'),
+                     train_env=dict(env_id='Pendulum-v0',
+                                    env_collection='gym'),
+                     eval_env=dict(env_id='Pendulum-v0',
+                                   env_collection='gym'),
                      load_config_path=None,  # enter the config.pickle file path (don't include config.pickle itself)
                      # if you wish to load the config file. otherwise, set it None
                      )

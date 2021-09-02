@@ -34,6 +34,7 @@ class CBFFilter(BaseFilter):
 
     @torch.no_grad()
     def filter(self, obs, ac, filter_dict=None):
+        # TODO: this method only works for single-obs single-ac (does not support mutliprocessing)
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='filter')
 
@@ -52,21 +53,18 @@ class CBFFilter(BaseFilter):
             std_f = np.zeros_like(std_f)
             std_g = np.zeros_like(std_g)
 
-        cbf_value = self.filter_net(obs_torch).detach().numpy().squeeze(0)
+        cbf_value = self.filter_net(obs_torch).detach().numpy().squeeze()
 
         # return filtered action by solving the QP problem
-        # TODO: check the matmul for different ac_dim
-        # TODO: self.params.eta * cbf_value has different dim than other term
+        ac_max = np.ones_like(ac) * ac_lim_high
+
         h1 = np.vdot(dh_dx, f_hat + mu_f) -\
-             self.params.k_delta * np.vdot(np.abs(dh_dx), std_f + np.matmul(std_g, ac_lim_high[:, np.newaxis] * np.ones([self._ac_dim, 1])).squeeze(axis=-1)) +\
+             self.params.k_delta * np.vdot(np.abs(dh_dx), std_f + (std_g * ac_max[:, np.newaxis]).sum(-1)) +\
              self.params.eta * cbf_value
-
-        #TODO: changed this from: extra = (f_hat + mu_f) + np.matmul((g_hat + mu_g).squeeze(0), ac).T check
-        extra = (f_hat + mu_f) + np.matmul((g_hat + mu_g), ac.T).squeeze(-1)
-
         h1 = h1.astype('float64')   # cvxopt matrix method won't work with float32
+        extra = (f_hat + mu_f) + ((g_hat + mu_g) * ac[:, np.newaxis]).sum(-1)
 
-        g = -np.matmul(dh_dx, (g_hat + mu_g).squeeze(axis=0))
+        g = -np.matmul(dh_dx, (g_hat + mu_g).squeeze(0))
 
         P = block_diag(2 * np.eye(self._ac_dim), self.params.k_epsilon)
         q = np.block([

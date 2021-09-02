@@ -21,7 +21,6 @@ class BaseTrainer:
         else:
             self.config = load_config_from_py(setup.load_config_path)
 
-
         if (self.config.load_models and self.config.overwrite_config) or self.config.resume:
             new_config = get_loaded_config(project_dir=osp.join(self.config.results_dir,
                                                                 self.config.wandb_project_name),
