@@ -37,7 +37,7 @@ class AffineInActionGaussianDynamics(GaussianDynamics):
                                       min_logvar_g=self.min_logvar_g)
 
     def _compute_output(self, inputs, split_return=False):
-        obs, ac = torch.split(inputs, self.obs_dim, dim=-1)
+        obs, ac = torch.split(inputs, [self.obs_dim, self.ac_dim], dim=-1)
         mu_f, mu_g, log_var_f, log_var_g = self.model(obs, ret_logvar=True)
 
         # bound log_var_f and log_var_g

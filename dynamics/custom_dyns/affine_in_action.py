@@ -17,8 +17,8 @@ class AffineInActionDynBase(nn.Module):
 
 class AffineInActionDeterministic(AffineInActionDynBase):
     def forward(self, x, split_return=False):
-        obs, ac = torch.split(x, self.obs_dim, dim=-1)
-        f, g = torch.split(self.pipeline(obs), self.obs_dim, dim=-1)
+        obs, ac = torch.split(x, [self.obs_dim, self.ac_dim], dim=-1)
+        f, g = torch.split(self.pipeline(obs), [self.obs_dim, self.obs_dim * self.ac_dim],  dim=-1)
         g = g.view(-1, self.obs_dim, self.ac_dim)
         if split_return:
             return f, g
@@ -29,7 +29,7 @@ class AffineInActionDeterministic(AffineInActionDynBase):
 class AffineInActionGaussian(AffineInActionDynBase):
     # def forward(self, x, split_return=False, ret_logvar=False):
     def forward(self, x, ret_logvar=False):
-        # obs, ac = torch.split(x, self.obs_dim, dim=-1)
+        # obs, ac = torch.split(x, [self.obs_dim, self.ac_dim], dim=-1)
         obs = x     #TODO: clean this
         mu, var = self.pipeline(obs)
 
@@ -56,7 +56,7 @@ class AffineInActionGP(GP):
 
     def forward(self, x, split_return=False):
         # TODO:  i removed ret_sample argument from this method and the forward method in GP since the forward method of the ExactGP can only return distribution
-        obs, ac = torch.split(x, self.obs_dim, dim=-1)
+        obs, ac = torch.split(x, [self.obs_dim, self.ac_dim], dim=-1)
         mvn = super().forward(obs)
         print(mvn)
         # you need the mvn before making it as multitakmultivariatenormal

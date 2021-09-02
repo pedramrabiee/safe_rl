@@ -33,7 +33,7 @@ class MultiInputMLP(nn.Module):
                                out_layer_initialize_small=out_layer_initialize_small)
 
     def forward(self, x):
-        x1, x2 = torch.split(x, self.in1_dim, dim=-1)
+        x1, x2 = torch.split(x, [self.in1_dim, self.in2_dim], dim=-1)
         x = self.net1(x1)
         x = torch.cat((x, x2), dim=-1)
         x = self.net2(x)
