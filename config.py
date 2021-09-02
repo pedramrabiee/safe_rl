@@ -249,11 +249,11 @@ class Config:
             pretrain_max_epoch=1e4,
             safe_loss_weight=1.0,
             unsafe_loss_weight=1.0,
-            ss_safe_loss_weight=1.0,
-            ss_unsafe_loss_weight=1.0,
             deriv_loss_weight=2.0,
             safe_deriv_loss_weight=1.0,
+            u_max_weight_in_deriv_loss=1.0,
             deriv_loss_version=2,
+
             loss_tanh_normalization=True
             # set this to None, if you don't want to preprocess observation for dynamics training
         )

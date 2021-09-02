@@ -69,7 +69,7 @@ class SFTrainer(BaseTrainer):
                 print(f'Sampling time: {time() - sample_initial_time}')
 
                 # query dynamics values for the deriv_samples to be used in deriv loss in pretraining
-                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples)
+                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
                 # TODO: this is only implemented with nominal dynamics, add predicted dyanamics to this
                 nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
                                                                ac=safe_ac,
@@ -168,11 +168,10 @@ class SFTrainer(BaseTrainer):
             if version == 3:
                 deriv_mask = is_safe_mask
 
-
             # deriv experience
             deriv_samples = queue_items.obs[np.asarray(deriv_mask), ...]
             if deriv_samples.shape[0] > 0:
-                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples)
+                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
                 # TODO: this is only implemented with nominal dynamics, add predicted dyanamics to this
                 nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
                                                                ac=safe_ac,
@@ -188,11 +187,10 @@ class SFTrainer(BaseTrainer):
                                                              next_obs=queue_items.next_obs,
                                                              dyn_values=queue_items_dyn))
 
-            # TODO: correct this
             filter_samples = self.sampler.sample(device=self.config.training_device,
                                                  ow_batch_size=self.config.sf_params.filter_train_batch_size)
 
-            # make safe mask for the experience     # TODO: correct this
+            # make safe mask for the experience
             samples['filter'] = AttrDict(filter_samples)
             # switch back to buffer 0
             self.agent.curr_buf_id = 0
