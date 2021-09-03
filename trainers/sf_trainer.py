@@ -31,7 +31,7 @@ class SFTrainer(BaseTrainer):
         # pretrain safety filter
         if itr == 0 and self.config.sf_params.safety_filter_is_on and self.config.sf_params.filter_pretrain_is_on:
             if issubclass(type(self.safe_set), SafeSetFromCriteria):
-                batch_size = self.config.sf_params.filter_initial_training_batch_size
+                batch_size = self.config.sf_params.filter_pretrain_sample_size
                 timer_begin = time()
                 # sample safe datasets
                 samples = self.safe_set.sample_by_criteria(criteria_keys=['in_safe',

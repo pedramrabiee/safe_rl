@@ -23,9 +23,9 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = True
-        self.save_custom_figs_data = True
+        self.save_custom_figs_data = False
 
         assert (self.resume + self.benchmark + self.evaluation_mode) < 2, 'Only one of resume, benchmark, or evaluation mode can be True'
 
@@ -199,7 +199,7 @@ class Config:
             mf_train_batch_size=128,
             mb_train_batch_size='all',
             filter_train_batch_size=1024,
-            filter_initial_training_batch_size=6000,
+            filter_pretrain_sample_size=6000,
             # update frequencies
             mf_update_freq=1,
             mb_update_freq=10000,
@@ -247,6 +247,7 @@ class Config:
             train_on_jacobian=False,
             use_trained_dyn=False,
             pretrain_max_epoch=1e5,
+            pretrain_batch_to_sample_ratio=0.05,
             # losses weights
             safe_loss_weight=1.0,
             unsafe_loss_weight=1.0,
@@ -254,7 +255,7 @@ class Config:
             safe_deriv_loss_weight=1.0,
             u_max_weight_in_deriv_loss=1.0,
             deriv_loss_version=2,
-            loss_tanh_normalization=True
+            loss_tanh_normalization=False
             # set this to None, if you don't want to preprocess observation for dynamics training
         )
         return self.cbf_params
