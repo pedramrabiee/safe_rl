@@ -389,8 +389,9 @@ def _save_csv(data, path, filename, columns=None, index=False):
     data_frame.to_csv(file, index=index, header=False if columns is None else True)
 
 def dump_dict2json(dictionary, filename):
-    global logdir
-    file = osp.join(logdir, filename + '.json')
-    with open(file, "w") as f:
-        json.dump(dictionary, f, indent=4)
-    log(f'{filename}.json saved')
+    global logdir, _config
+    if not _config.debugging_mode:
+        file = osp.join(logdir, filename + '.json')
+        with open(file, "w") as f:
+            json.dump(dictionary, f, indent=4)
+        log(f'{filename}.json saved')
