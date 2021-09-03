@@ -104,9 +104,9 @@ class CBFFilter(BaseFilter):
         max_epoch = self.params.pretrain_max_epoch / self.params.pretrain_batch_to_sample_ratio
         pbar = tqdm(total=max_epoch, desc='Filter Pretraining Progress')
         while True:
-            safe_samples = self._next_batch(train_gens['safe_samples'])[0]
-            unsafe_samples = self._next_batch(train_gens['unsafe_samples'])[0]
-            deriv_samples, dyn_safe = self._next_batch(train_gens['deriv_samples'])
+            safe_samples = next(iter(train_gens['safe_samples']))[0]
+            unsafe_samples = next(iter(train_gens['unsafe_samples']))[0]
+            deriv_samples, dyn_safe = next(iter(train_gens['deriv_samples']))
             sample = AttrDict(safe_samples=safe_samples,
                               unsafe_samples=unsafe_samples,
                               deriv_samples=deriv_samples,
@@ -215,7 +215,3 @@ class CBFFilter(BaseFilter):
         train_generator = {k: make_data_gen([v]) for k, v in samples.items() if k not in all_chained_keys}
         chained_generator = {item[0]: make_data_gen([samples[k] for k in item]) for item in chained_keys}
         return {**train_generator, **chained_generator}
-
-    @staticmethod
-    def _next_batch(generator):
-        return generator.__iter__().__next__()
