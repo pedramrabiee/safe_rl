@@ -7,6 +7,7 @@ import torch
 from scipy.spatial.transform import Rotation as R
 from dynamics.nominal_dynamics import NominalDynamics
 from attrdict import AttrDict
+from math import ceil
 
 config = AttrDict(
     do_obs_proc=True,
@@ -14,7 +15,8 @@ config = AttrDict(
     w_0=0.1,
     w_m=0.1,
     ext=0.5,
-    max_speed=10.0
+    max_speed=10.0,
+    sample_velocity_gaussian=True        # velocity distribution will be Gaussian with std = max_speed / 3
 )
 
 env_config = {
@@ -72,7 +74,10 @@ class PointRobotSafeSetFromCriteria(SafetyGymSafeSetFromCriteria):
         theta = np.random.uniform(low=-np.pi, high=np.pi)
         vec = np.array([np.cos(theta), np.sin(theta)])
         num_velocity = self.env.sim.model.nv
-        vel = np.random.uniform(low=-config.max_speed, high=config.max_speed, size=num_velocity)
+        if config.sample_velocity_gaussian:
+            vel = np.random.normal(loc=0, scale=config.max_speed / 3, size=num_velocity)
+        else:
+            vel = np.random.uniform(low=-config.max_speed, high=config.max_speed, size=num_velocity)
         # FIXME: fix the order of terms
         return np.hstack((xy, vec, vel))
 

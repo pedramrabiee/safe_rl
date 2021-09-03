@@ -13,6 +13,7 @@ from logger import logger
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
+from scipy.stats import truncnorm
 
 
 config = AttrDict(
@@ -28,7 +29,8 @@ config = AttrDict(
     m=1.0,
     l=1.0,
     max_torque=15.0,
-    max_speed=8.0
+    max_speed=8.0,
+    sample_velocity_gaussian=True       # velocity distribution will be truncated normal distribution
 )
 
 def inverted_pendulum_customize(env):
@@ -136,8 +138,9 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
 
     def _get_obs(self):
         max_speed = self.env.observation_space.high[2]
-        high = np.array([np.pi, max_speed])
-        theta, thetadot = np.random.uniform(low=-high, high=high)
+        theta = np.random.uniform(low=-np.pi, high=np.pi)
+        thetadot = truncnorm.rvs(-1, 1, scale=max_speed) if config.sample_velocity_gaussian \
+            else np.random.uniform(low=-max_speed, high=max_speed)
         return np.array([np.cos(theta), np.sin(theta), thetadot])
 
     def get_safe_action(self, obs):
