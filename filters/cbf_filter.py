@@ -10,10 +10,13 @@ from scipy.linalg import block_diag
 from utils.torch_utils import row_wise_dot
 from utils.misc import np_object2dict, torchify, hard_copy, polyak_update
 from logger import logger
-from matplotlib import pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
 from tqdm import tqdm
+from torch.utils.data import TensorDataset, DataLoader
+from itertools import chain
+from attrdict import AttrDict
+
 
 class CBFFilter(BaseFilter):
     def initialize(self, params, init_dict=None):
@@ -96,17 +99,27 @@ class CBFFilter(BaseFilter):
 
     def pre_train(self, samples, pre_train_dict=None):
         epoch = 0
-        pbar = tqdm(total=self.params.pretrain_max_epoch, desc='Filter Pretraining Progress')
+        chained_keys = [['deriv_samples', 'dyn_safe']]
+        train_gens = self._make_dataloader(samples, chained_keys=chained_keys)
+        max_epoch = self.params.pretrain_max_epoch / self.params.pretrain_batch_to_sample_ratio
+        pbar = tqdm(total=max_epoch, desc='Filter Pretraining Progress')
         while True:
+            safe_samples = next(iter(train_gens['safe_samples']))[0]
+            unsafe_samples = next(iter(train_gens['unsafe_samples']))[0]
+            deriv_samples, dyn_safe = next(iter(train_gens['deriv_samples']))
+            sample = AttrDict(safe_samples=safe_samples,
+                              unsafe_samples=unsafe_samples,
+                              deriv_samples=deriv_samples,
+                              dyn_safe=dyn_safe)
             self.filter_optimizer.zero_grad()
-            loss = self._compute_pretrain_loss(samples)
+            loss = self._compute_pretrain_loss(sample)
             loss.backward()
             self.filter_optimizer.step()
 
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
             epoch += 1
             pbar.update(1)
-            if self._check_stop_criteria(samples) or epoch > self.params.pretrain_max_epoch:
+            if self._check_stop_criteria(samples) or epoch > max_epoch:
                 pbar.close()
                 break
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
@@ -128,7 +141,6 @@ class CBFFilter(BaseFilter):
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
     def _compute_pretrain_loss(self, samples=None):
-
         safe_samples = samples.safe_samples
         unsafe_samples = samples.unsafe_samples
         deriv_samples = samples.deriv_samples
@@ -194,3 +206,12 @@ class CBFFilter(BaseFilter):
         deriv_loss = row_wise_dot(grad, torchify(dyn, device=obs.device))
         deriv_loss += self.params.eta * self.filter_net(obs)
         return deriv_loss
+
+    def _make_dataloader(self, samples, chained_keys=None):
+        all_chained_keys = list(chain(*chained_keys))
+        ratio = self.params.pretrain_batch_to_sample_ratio
+        min_batch_size = int(min([v.size(0) for _, v in samples.items()]) * ratio)
+        make_data_gen = lambda x: DataLoader(dataset=TensorDataset(*x), batch_size=min_batch_size, shuffle=True)
+        train_generator = {k: make_data_gen([v]) for k, v in samples.items() if k not in all_chained_keys}
+        chained_generator = {item[0]: make_data_gen([samples[k] for k in item]) for item in chained_keys}
+        return {**train_generator, **chained_generator}
