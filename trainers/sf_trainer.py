@@ -32,7 +32,7 @@ class SFTrainer(BaseTrainer):
         if itr == 0 and self.config.sf_params.safety_filter_is_on and self.config.sf_params.filter_pretrain_is_on:
             if issubclass(type(self.safe_set), SafeSetFromCriteria):
                 batch_size = self.config.sf_params.filter_initial_training_batch_size
-                sample_initial_time = time()
+                timer_begin = time()
                 # sample safe datasets
                 samples = self.safe_set.sample_by_criteria(criteria_keys=['in_safe',
                                                                           'mid_safe',
@@ -66,7 +66,7 @@ class SFTrainer(BaseTrainer):
                 if version == 3:
                     deriv_samples = safe_samples
 
-                print(f'Sampling time: {time() - sample_initial_time}')
+                logger.log(f'Safe set sampling time: {time() - timer_begin}', color='blue')
 
                 # query dynamics values for the deriv_samples to be used in deriv loss in pretraining
                 safe_ac = self.safe_set.get_safe_action(obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
@@ -89,7 +89,9 @@ class SFTrainer(BaseTrainer):
                     self.agent.curr_buf_id = 0
 
                 # pretrain filter
+                timer_begin = time()
                 self.agent.pre_train_filter(samples=AttrDict(torchify(samples, device=self.config.training_device)))
+                logger.log(f'Pretraining time: {time() - timer_begin}', color='blue')
 
                 # dump loss plots
                 logger.dump_plot_with_key(plt_key="loss_plots",

@@ -16,7 +16,7 @@ class Config:
         self.use_custom_env = True              # implement your customized(/modified) env in utils/make_env
 
         # UNCOMMENT line below for custom max_episode_len
-        self.max_episode_time = 25.0
+        self.max_episode_time = 5.0
         self.max_episode_time_eval = 2.0
 
         # MODE
@@ -25,13 +25,13 @@ class Config:
         self.evaluation_mode = False
         self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = True
-        self.save_custom_figs_data = False
+        self.save_custom_figs_data = True
 
         assert (self.resume + self.benchmark + self.evaluation_mode) < 2, 'Only one of resume, benchmark, or evaluation mode can be True'
 
         # TRAINER
         self.episode_steps_per_itr = 1      # number of timesteps to collect data between model updates
-        self.n_training_episode = 9
+        self.n_training_episode = 2
         self.seed = 2 ** 32 + 475896325
         self.buffer_size = 1e6
 
@@ -149,8 +149,8 @@ class Config:
             tau=0.001,
             gamma=0.99,
             exp_strategy_cls=OUNoise,
-            n_exploration_episode=1000,
-            exp_kwargs=dict(theta=0.15,
+            n_exploration_episode=self.n_training_episode,
+            exp_kwargs=dict(theta=0.15,         # exploration parameters
                             sigma=0.2,
                             mu=0.0),
             init_noise_scale=0.3,
@@ -199,7 +199,7 @@ class Config:
             mf_train_batch_size=128,
             mb_train_batch_size='all',
             filter_train_batch_size=1024,
-            filter_initial_training_batch_size=100,
+            filter_initial_training_batch_size=6000,
             # update frequencies
             mf_update_freq=1,
             mb_update_freq=10000,
@@ -209,7 +209,7 @@ class Config:
             # misc.
             safety_filter_is_on=True,
             filter_pretrain_is_on=True,
-            filter_train_is_on=True,
+            filter_train_is_on=False,
             dyn_train_is_on=False,
             mf_train_is_on=True,
             add_cbf_pretrain_data_to_buffer=False,
@@ -239,21 +239,21 @@ class Config:
             k_epsilon=1e24,  # slack variable weight
             k_delta=1.6,  # for confidence interval k_delta * std
             eta=0.99,  # alpha function coeficient: alpha(x) = eta * h(x)
-            stop_criteria_eps=5e-3,  # stop criteria for unsafe experience loss all being negative
+            stop_criteria_eps=5e-5,  # stop criteria for unsafe experience loss all being negative
             max_epoch=10,
             gamma_dh=0.0,  # saftey threshold in loss
             gamma_safe=0.0,
             gamma_unsafe=0.0,
             train_on_jacobian=False,
             use_trained_dyn=False,
-            pretrain_max_epoch=1e4,
+            pretrain_max_epoch=1e5,
+            # losses weights
             safe_loss_weight=1.0,
             unsafe_loss_weight=1.0,
-            deriv_loss_weight=2.0,
+            deriv_loss_weight=1.0,
             safe_deriv_loss_weight=1.0,
             u_max_weight_in_deriv_loss=1.0,
             deriv_loss_version=2,
-
             loss_tanh_normalization=True
             # set this to None, if you don't want to preprocess observation for dynamics training
         )

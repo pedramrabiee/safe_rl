@@ -13,7 +13,7 @@ from logger import logger
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
-
+from tqdm import tqdm
 
 class CBFFilter(BaseFilter):
     def initialize(self, params, init_dict=None):
@@ -96,6 +96,7 @@ class CBFFilter(BaseFilter):
 
     def pre_train(self, samples, pre_train_dict=None):
         epoch = 0
+        pbar = tqdm(total=self.params.pretrain_max_epoch, desc='Filter Pretraining Progress')
         while True:
             self.filter_optimizer.zero_grad()
             loss = self._compute_pretrain_loss(samples)
@@ -104,7 +105,9 @@ class CBFFilter(BaseFilter):
 
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
             epoch += 1
+            pbar.update(1)
             if self._check_stop_criteria(samples) or epoch > self.params.pretrain_max_epoch:
+                pbar.close()
                 break
         logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
