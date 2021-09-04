@@ -49,12 +49,14 @@ class BufferQueue(ReplayBuffer):
         return [v.shape[0] if v is not None else None for _, v in self.buffer.items()]
 
     def get_random_indices(self, batch_size):
-        buffer_size = self.buffer_size
+        buffer_sizes = self.buffer_size
         if not isinstance(batch_size, list):
-            batch_size = [batch_size for _ in range(len(buffer_size))]
-        indices = [np.random.choice(np.arange(buffer_size[i]),
-                                    size=min(batch_size[i], buffer_size[i]),
-                                    replace=False) for i in range(len(buffer_size))]
+            batch_size = [batch_size for _ in range(len(buffer_sizes))]
+
+        indices = [np.random.choice(np.arange(buffer_size),
+                                    size=min(batch_size[i], buffer_size),
+                                    replace=False) if buffer_size is not None else None
+                   for i, buffer_size in enumerate(buffer_sizes)]
         if self.coupled_list:
             for coupled_set in self.coupled_list:
                 for i in coupled_set:
@@ -62,4 +64,5 @@ class BufferQueue(ReplayBuffer):
         return indices
 
     def sample_by_indices(self, inds, device='cpu'):
-        return AttrDict({k: torchify(v[inds[i]], device=device) for i, (k, v) in enumerate(self.buffer.items())})
+        return AttrDict({k: torchify(v[inds[i]], device=device) if inds[i] is not None else torchify(np.array([]), device=device)
+                         for i, (k, v) in enumerate(self.buffer.items())})

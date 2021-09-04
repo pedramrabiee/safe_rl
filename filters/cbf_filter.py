@@ -117,12 +117,13 @@ class CBFFilter(BaseFilter):
             self.filter_optimizer.step()
 
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
+            logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
+
             epoch += 1
             pbar.update(1)
             if self._check_stop_criteria(samples) or epoch > max_epoch:
                 pbar.close()
                 break
-        logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
     def optimize_agent(self, samples, optim_dict=None):
         # you need to break down the experience, to experience from safe set, unsafe set, and general experience
@@ -135,10 +136,10 @@ class CBFFilter(BaseFilter):
             loss.backward()
             self.filter_optimizer.step()
             logger.add_tabular({"Loss/CBF_Filter": loss.cpu().data.numpy()}, cat_key="cbf_epoch")
+            logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
             epoch += 1
             if epoch >= self.params.max_epoch:
                 break
-        logger.dump_tabular(cat_key="cbf_epoch", log=False, wandb_log=True, csv_log=False)
 
     def _compute_pretrain_loss(self, samples=None):
         safe_samples = samples.safe_samples
@@ -174,18 +175,21 @@ class CBFFilter(BaseFilter):
                self.params.safe_deriv_loss_weight * deriv_loss
 
     def _compute_loss(self, samples, itr):
+        obs = samples.obs
+        next_obs = samples.next_obs
         dyn = samples.dyn_values
         ts = self._timestep
-        next_obs = samples.next_obs
-        obs = samples.obs
-        if self.params.train_on_jacobian:
-            deriv_loss = self._compute_deriv_loss(obs, dyn)
-        else:
-            deriv_loss = (1/ts) * (self.filter_net(next_obs) + (self.params.eta * ts - 1) * self.filter_net(obs))
-        loss = (self._append_zeros(self.params.gamma_dh - deriv_loss)).max(dim=-1).values
-        loss = self.params.deriv_loss_weight * self._normalize_loss(loss).mean()
-        loss += self._compute_pretrain_loss(samples)
-        return loss
+
+        if not obs.size(0) == 0:
+            if self.params.train_on_jacobian:
+                deriv_loss = self._compute_deriv_loss(obs, dyn)
+            else:
+                deriv_loss = (1/ts) * (self.filter_net(next_obs) + (self.params.eta * ts - 1) * self.filter_net(obs))
+            loss = (self._append_zeros(self.params.gamma_dh - deriv_loss)).max(dim=-1).values
+            loss = self.params.deriv_loss_weight * self._normalize_loss(loss).mean()
+            loss += self._compute_pretrain_loss(samples)
+            return loss
+        return self._compute_pretrain_loss(samples)
 
     def _check_stop_criteria(self, samples):
         h_unsafe = self.filter_net(samples.unsafe_samples)

@@ -21,7 +21,7 @@ config = AttrDict(
     safe_reset=True,
     timestep=0.01,
     # Safe set width
-    half_wedge_angle=1.0,
+    half_wedge_angle=1.5,
     mid_safe_set_width=0.2,
     outer_safe_set_width=0.2,
     # Pendulum dynamics parameters

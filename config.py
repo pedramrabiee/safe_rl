@@ -16,7 +16,7 @@ class Config:
         self.use_custom_env = True              # implement your customized(/modified) env in utils/make_env
 
         # UNCOMMENT line below for custom max_episode_len
-        self.max_episode_time = 5.0
+        self.max_episode_time = 2.0
         self.max_episode_time_eval = 2.0
 
         # MODE
@@ -31,7 +31,7 @@ class Config:
 
         # TRAINER
         self.episode_steps_per_itr = 1      # number of timesteps to collect data between model updates
-        self.n_training_episode = 2
+        self.n_training_episode = 19
         self.seed = 2 ** 32 + 475896325
         self.buffer_size = 1e6
 
@@ -199,20 +199,21 @@ class Config:
             mf_train_batch_size=128,
             mb_train_batch_size='all',
             filter_train_batch_size=1024,
-            filter_pretrain_sample_size=6000,
+            filter_pretrain_sample_size=500,
             # update frequencies
             mf_update_freq=1,
             mb_update_freq=10000,
             filter_update_freq=200,     # this option is not currently used in the sf_trainer, use filter_training_stages instead
-            filter_training_stages=dict(stages=[5000, 10000, 20000],
-                                        freq=[2500, 500, 1000]),
+            filter_training_stages=dict(stages=[400, 800, 1600],
+                                        freq=[400, 100, 200]),
+            ep_to_start_appending_cbf_deriv_loss_data=5,         # you shouldn't contaminate the data with the data collected under untrained RL policy during first episodes
             # misc.
             safety_filter_is_on=True,
             filter_pretrain_is_on=True,
-            filter_train_is_on=False,
+            filter_train_is_on=True,
             dyn_train_is_on=False,
             mf_train_is_on=True,
-            add_cbf_pretrain_data_to_buffer=False,
+            add_cbf_pretrain_data_to_buffer=True,
 
         )
         return self.sf_params
@@ -244,10 +245,10 @@ class Config:
             gamma_dh=0.0,  # saftey threshold in loss
             gamma_safe=0.0,
             gamma_unsafe=0.0,
-            train_on_jacobian=False,
+            train_on_jacobian=True,
             use_trained_dyn=False,
             pretrain_max_epoch=1e5,
-            pretrain_batch_to_sample_ratio=0.05,
+            pretrain_batch_to_sample_ratio=0.2,
             # losses weights
             safe_loss_weight=1.0,
             unsafe_loss_weight=1.0,
