@@ -11,7 +11,7 @@ from math import ceil
 
 config = AttrDict(
     do_obs_proc=True,
-    safe_reset=False,
+    safe_reset=True,        # if true, robot is located in in_safe set
     w_0=0.1,
     w_m=0.1,
     ext=0.5,

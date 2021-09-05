@@ -130,7 +130,7 @@ class SafeSetFromCriteria(SafeSet):
     def safe_reset(self):
         while True:
             obs = self.env.reset()
-            if self.is_in_safe(obs):
+            if self.is_in_safe(self.obs_proc.proc(obs, proc_key='filter')):
                 break
         return obs
 
