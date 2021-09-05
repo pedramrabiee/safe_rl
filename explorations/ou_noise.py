@@ -18,6 +18,6 @@ class OUNoise:
 
     def noise(self):
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * rng.randn(len(x))
+        dx = self.theta * (self.mu - x) + self.sigma * rng.normal(size=len(x))
         self.state = x + dx
         return self.state * self.scale

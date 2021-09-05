@@ -23,9 +23,9 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = True
-        self.save_custom_figs_data = False
+        self.save_custom_figs_data = True
 
         assert (self.resume + self.benchmark + self.evaluation_mode) < 2, 'Only one of resume, benchmark, or evaluation mode can be True'
 
@@ -50,7 +50,7 @@ class Config:
                                                  noise_to_signal=0.01)
 
         # EVALUATION
-        self.do_evaluation = True
+        self.do_evaluation = False
         self.n_episodes_evaluation = 5
         self.num_evaluation_sessions = 4    # number of evaluation sessions
         self.n_video_save_per_evaluation = 2
@@ -247,7 +247,7 @@ class Config:
             gamma_unsafe=0.0,
             train_on_jacobian=True,
             use_trained_dyn=False,
-            pretrain_max_epoch=1e5,
+            pretrain_max_epoch=1e1,
             pretrain_batch_to_sample_ratio=0.2,
             # losses weights
             safe_loss_weight=1.0,
