@@ -1,5 +1,7 @@
 from utils.misc import theta2vec
 import numpy as np
+import os.path as osp
+import shutil
 
 
 def polar2xy(r_list, theta):
@@ -232,3 +234,14 @@ def make_obstacles_location_dict(env):
             locations.update({'walls_locations': xy_from_pos(env.walls_pos)})
 
         return locations
+
+def save_mujoco_xml_file(xml_path, save_dir):
+    import safety_gym
+    BASE_DIR = osp.dirname(safety_gym.__file__)
+    source_file = osp.join(BASE_DIR, xml_path)
+    filename = xml_path[5:]     # path starts with xmls/
+    filename = osp.join(save_dir, filename)
+    shutil.copyfile(source_file, filename)
+
+
+

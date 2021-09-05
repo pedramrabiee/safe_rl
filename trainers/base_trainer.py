@@ -47,10 +47,13 @@ class BaseTrainer:
         self.train_iter = int(self.config.n_training_episode * env_info['max_episode_len'] / self.config.episode_steps_per_itr)
 
         if self.config.setup.train_env['env_collection'] == 'safety_gym':
+            # reset environment to create layout (to get obstacle positions)
             _ = self.env.reset()
+            # store obstacle position to use in evaluation environment
             if self.config.env_spec_config.use_same_layout_for_eval:
                 from utils.safety_gym_utils import make_obstacles_location_dict
                 self.obstacle_locations = make_obstacles_location_dict(self.env)
+
 
         # instantiate observation processor
         # TODO: add boolean for this in config OR NOT (I can have the switch inside the agent themselves)
@@ -81,6 +84,11 @@ class BaseTrainer:
         # save config as a pickle file
         if not self.config.debugging_mode:
             save_config_as_py(logger.logdir)
+            if self.config.setup.train_env['env_collection'] == 'safety_gym':
+                # save mujoco xml file
+                from utils.safety_gym_utils import save_mujoco_xml_file
+                save_mujoco_xml_file(xml_path=self.config.env_spec_config['robot_base'],
+                                     save_dir=logger.logdir)
 
         # save env config as json
         logger.dump_dict2json(self.config.env_spec_config, 'env_spec_config')
@@ -142,7 +150,6 @@ class BaseTrainer:
 
         # run custom trainer initialization
         self.initialize()
-
 
         logger.log("Trainer initialized...")
 

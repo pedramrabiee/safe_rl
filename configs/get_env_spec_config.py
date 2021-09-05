@@ -8,6 +8,8 @@ def get_env_spec_config(train_env):
     elif train_env['env_collection'] == 'safety_gym':
         if train_env['env_id'] == 'Point':
             from configs.env_configs.safety_gym_envs.point_robot_configs import config
+            from configs.env_configs.safety_gym_envs.point_robot_configs import env_config
+            config.update(env_config)
     else:
         raise NotImplementedError
     return config
