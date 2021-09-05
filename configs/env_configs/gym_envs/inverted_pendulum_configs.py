@@ -14,6 +14,7 @@ from matplotlib import pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['text.usetex'] = True
 from scipy.stats import truncnorm
+from utils.seed import rng
 
 
 config = AttrDict(
@@ -138,9 +139,9 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
 
     def _get_obs(self):
         max_speed = self.env.observation_space.high[2]
-        theta = np.random.uniform(low=-np.pi, high=np.pi)
+        theta = rng.uniform(low=-np.pi, high=np.pi)
         thetadot = truncnorm.rvs(-1, 1, scale=max_speed) if config.sample_velocity_gaussian \
-            else np.random.uniform(low=-max_speed, high=max_speed)
+            else rng.uniform(low=-max_speed, high=max_speed)
         return np.array([np.cos(theta), np.sin(theta), thetadot])
 
     def get_safe_action(self, obs):

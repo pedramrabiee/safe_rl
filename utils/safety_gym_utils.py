@@ -2,6 +2,7 @@ from utils.misc import theta2vec
 import numpy as np
 import os.path as osp
 import shutil
+from utils.seed import rng
 
 
 def polar2xy(r_list, theta):
@@ -53,7 +54,7 @@ def sample_on_rays_from_start_to_end(lidar_obs, num_samples,
         num_samples_per_ray = int(num_samples / num_acceptable_rays)
         for i in range(num_acceptable_rays):
             if lidar_dist[i] - end > 0:
-                sample_section = np.random.rand(num_samples_per_ray) * (end - start) + start
+                sample_section = rng.rand(num_samples_per_ray) * (end - start) + start
                 dist_on_ray = lidar_dist[i] - sample_section
                 samples += polar2xy(dist_on_ray, lidar_thetas[i])
 
@@ -76,7 +77,7 @@ def sample_on_rays_upto_stop(lidar_obs, num_samples,
     num_samples_per_ray = int(num_samples / num_rays)
     if min_lidar_dist - stop >= 0:
         for i in range(num_rays):
-            sample_section = np.random.rand(num_samples_per_ray) * (min_lidar_dist - stop) + stop
+            sample_section = rng.rand(num_samples_per_ray) * (min_lidar_dist - stop) + stop
             dist_on_ray = min_lidar_dist - sample_section
             samples += polar2xy(dist_on_ray, lidar_thetas[i])
 
@@ -95,7 +96,7 @@ def sample_on_rays_upto_obstacle(lidar_obs, num_samples, robot_pos, robot_mat):
 
     num_samples_per_ray = int(num_samples / num_rays)
     for i in range(num_rays):
-        dist_on_ray = np.random.rand(num_samples_per_ray) * lidar_dist[i]
+        dist_on_ray = rng.rand(num_samples_per_ray) * lidar_dist[i]
         samples += polar2xy(dist_on_ray, lidar_thetas[i])
 
     global_pos = egocen_pos2global_pos(pos=samples,
@@ -162,7 +163,7 @@ def get_normal_to_obstacles_from_lidar(lidar_obs, robot_pos, robot_mat, max_dist
 
 def is_in_hazards(env, robot_pos):
     if env.hazards_num > 0:
-        robot_pos = robot_pos[:-1]     # TODO: change this to site pos
+        robot_pos = robot_pos[:-1]
         hazards_size = env.hazards_size
         hazards_pos = np.array(env.hazards_pos)[:, :-1]
         dist_to_hazards = np.linalg.norm(hazards_pos - robot_pos, axis=-1)
@@ -172,7 +173,7 @@ def is_in_hazards(env, robot_pos):
 
 
 def sample_on_normal(direction, point, num_sample, start, end):
-    dist_on_dir = np.random.rand(num_sample) * (end - start) + start
+    dist_on_dir = rng.rand(num_sample) * (end - start) + start
     out = np.zeros((num_sample, 3))
     out[:, 0] = dist_on_dir * direction[0] + point[0]
     out[:, 1] = dist_on_dir * direction[1] + point[1]

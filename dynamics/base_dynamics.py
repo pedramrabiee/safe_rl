@@ -5,6 +5,7 @@ import torch
 from utils.misc import to_device, normalize, unnormalize
 from logger import logger
 from attrdict import AttrDict
+from utils.seed import rng
 
 class BaseDynamics:
     def __init__(self, obs_dim, ac_dim, out_dim, timestep, obs_proc=None):
@@ -186,7 +187,7 @@ class BaseDynamics:
             train_splits = []
             num_train = len(train_ids)
             for i in range(ensemble_size):
-                idx = np.random.choice(num_train, num_train, replace=True)
+                idx = rng.choice(num_train, num_train, replace=True)
                 for k in samples.keys():
                     train_data[k] = samples[k][idx, :] if k != 'info' else samples[k][idx]
                 train_splits.append(AttrDict(train_data))

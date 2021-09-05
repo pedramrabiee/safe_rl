@@ -4,6 +4,7 @@ from collections import OrderedDict
 from attrdict import AttrDict
 from utils.misc import torchify
 from buffers.replay_buffer import ReplayBuffer
+from utils.seed import rng
 
 class BufferQueue(ReplayBuffer):
     # init gets obs_proc, initializes attribute name strings as None, gets the pipeline
@@ -53,7 +54,7 @@ class BufferQueue(ReplayBuffer):
         if not isinstance(batch_size, list):
             batch_size = [batch_size for _ in range(len(buffer_sizes))]
 
-        indices = [np.random.choice(np.arange(buffer_size),
+        indices = [rng.choice(np.arange(buffer_size),
                                     size=min(batch_size[i], buffer_size),
                                     replace=False) if buffer_size is not None else None
                    for i, buffer_size in enumerate(buffer_sizes)]

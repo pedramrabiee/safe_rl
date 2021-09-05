@@ -1,5 +1,5 @@
 from config import Config
-from utils.seed import set_seed, set_env_seed
+from utils.seed import set_env_seed, get_seed
 from utils.make_env import make_env
 from agents.agent_factory import AgentFactory
 from utils.misc import *
@@ -11,7 +11,7 @@ from utils.safe_set import get_safe_set
 from utils.process_observation import NeutralObsProc
 from copy import copy
 from configs.get_env_spec_config import get_env_spec_config
-from safety_gym.envs.engine import Engine
+
 
 class BaseTrainer:
     def __init__(self, setup, root_dir):
@@ -30,8 +30,6 @@ class BaseTrainer:
         self.config.setup = setup
         self.config.env_spec_config = get_env_spec_config(setup['train_env'])
 
-        # Set random.seed, np.random.seed, torch.manual_seed, torch.cuda.manual_seed_all
-        seed = set_seed(self.config.seed)
 
         # instantiate training environment
         self.env, env_info = make_env(env_id=setup['train_env']['env_id'],
@@ -40,7 +38,7 @@ class BaseTrainer:
                                       max_episode_time=self.config.max_episode_time,
                                       use_custom_env=self.config.use_custom_env)
         # self.env.seed(seed)     # set environment seed
-        set_env_seed(self.env, seed)
+        set_env_seed(self.env, get_seed())
 
         # Get max episode length
         self.config.max_episode_len = env_info['max_episode_len']
@@ -70,7 +68,7 @@ class BaseTrainer:
         self.safe_set = get_safe_set(env_id=setup.train_env.env_id,
                                      env=self.env,
                                      obs_proc=self.obs_proc,
-                                     seed=seed)
+                                     seed=get_seed())
 
         # instantiate and initialize agent
         self.agent = self._initialize_agent(setup)
@@ -114,7 +112,7 @@ class BaseTrainer:
                                                 use_custom_env=self.config.use_custom_env,
                                                 make_env_dict=getattr(self, 'obstacle_locations', None))
 
-        eval_seed = seed + 123123
+        eval_seed = get_seed() + 123123
         set_env_seed(self.env_eval, eval_seed)
         # Get max episode length for evaluation
         self.config.max_episode_len_eval = env_eval_info['max_episode_len']

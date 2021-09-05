@@ -1,5 +1,5 @@
 import numpy as np
-
+from utils.seed import rng
 
 # from https://github.com/songrotek/DDPG/blob/master/ou_noise.py
 class OUNoise:
@@ -18,6 +18,6 @@ class OUNoise:
 
     def noise(self):
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
+        dx = self.theta * (self.mu - x) + self.sigma * rng.randn(len(x))
         self.state = x + dx
         return self.state * self.scale

@@ -9,6 +9,7 @@ from scipy.signal import lfilter
 import pickle
 import importlib
 import shutil
+from utils.seed import rng
 
 
 def hard_copy(source, requires_grad=False):
@@ -187,7 +188,7 @@ def train_valid_split(data_size, holdout_ratio):
     num_valid = int(holdout_ratio * data_size)
     num_train = data_size - num_valid
 
-    idx_perm = np.random.permutation(data_size)
+    idx_perm = rng.permutation(data_size)
     train_ids = idx_perm[:num_train]
     valid_ids = idx_perm[num_train:]
     return train_ids, valid_ids
@@ -215,7 +216,7 @@ def add_noise(data_inp, noise_to_signal=0.01):
     # larger magnitude number = could have larger magnitude noise
     std_of_noise = mean_data * noise_to_signal
     for j in range(mean_data.shape[0]):
-        data[:, j] = np.copy(data[:, j] + np.random.normal(
+        data[:, j] = np.copy(data[:, j] + rng.normal(
             0, np.absolute(std_of_noise[j]), (data.shape[0],)))
 
     return data

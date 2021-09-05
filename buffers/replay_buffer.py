@@ -1,7 +1,7 @@
 import numpy as np
 from attrdict import AttrDict
 from utils.misc import torchify, add_noise
-
+from utils.seed import rng
 
 class ReplayBuffer:
     def __init__(self, max_size=int(100)):
@@ -36,9 +36,9 @@ class ReplayBuffer:
         return self._rew.shape[0] if self._rew is not None else None
 
     def get_random_indices(self, batch_size):
-        return np.random.choice(np.arange(self.buffer_size),
-                                size=min(batch_size, self.buffer_size),
-                                replace=False)
+        return rng.choice(np.arange(self.buffer_size),
+                          size=min(batch_size, self.buffer_size),
+                          replace=False)
 
     def sample_by_indices(self, inds, device='cpu'):
         return AttrDict(obs=torchify(self._obs[inds], device=device),

@@ -1,9 +1,11 @@
 import os
-from rewards.get_reward_gen import get_reward_gen
 from trainers.trainer_factory import trainer_factory
 from attrdict import AttrDict
+from utils.seed import set_seed
 from utils.process_observation import get_obsproc_cls
 from utils.custom_plotter import get_custom_plotter_cls
+from rewards.get_reward_gen import get_reward_gen
+
 from logger import logger
 
 if __name__ == "__main__":
@@ -12,13 +14,16 @@ if __name__ == "__main__":
     # 'Point' from safety_gym
 
     setup = AttrDict(agent='sf',
-                     train_env=dict(env_id='Point',
-                                    env_collection='safety_gym'),
-                     eval_env=dict(env_id='Point',
-                                   env_collection='safety_gym'),
+                     train_env=dict(env_id='Pendulum-v0',
+                                    env_collection='gym'),
+                     eval_env=dict(env_id='Pendulum-v0',
+                                   env_collection='gym'),
                      load_config_path=None,  # enter the config.pickle file path (don't include config.pickle itself)
                      # if you wish to load the config file. otherwise, set it None
                      )
+
+    # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all
+    seed = set_seed()
 
     setup['reward_gen'] = get_reward_gen(setup['train_env'])
     setup['obs_proc_cls'] = get_obsproc_cls(setup['train_env'])

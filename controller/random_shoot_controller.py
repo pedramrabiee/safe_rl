@@ -1,6 +1,7 @@
 from controller.base_controller import BaseController
 import numpy as np
 from utils.misc import discount_cumsum
+from utils.seed import rng
 
 
 class RandomShootController(BaseController):
@@ -21,8 +22,8 @@ class RandomShootController(BaseController):
 
     def _control(self, obs, control_dict=None):
         if self.ensemble_size is None:
-            return np.random.uniform(low=self.bounds.new.ac.low, high=self.bounds.new.ac.high,
-                                     size=(self.num_particles, self.ac_dim))
+            return rng.uniform(low=self.bounds.new.ac.low, high=self.bounds.new.ac.high,
+                               size=(self.num_particles, self.ac_dim))
         else:
-            return np.random.uniform(low=self.bounds.new.ac.low, high=self.bounds.new.ac.high,
-                                     size=(self.num_particles, self.ac_dim))
+            return rng.uniform(low=self.bounds.new.ac.low, high=self.bounds.new.ac.high,
+                               size=(self.num_particles, self.ac_dim))

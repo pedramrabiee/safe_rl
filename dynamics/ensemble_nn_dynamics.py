@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from utils.misc import train_valid_split
 from torch.utils.data import TensorDataset, DataLoader
+from utils.seed import rng
 
 class EnsembleDynamics(BaseDynamics):
     def initialize(self, params, init_dict=None):
@@ -25,7 +26,7 @@ class EnsembleDynamics(BaseDynamics):
         delta = np.stack(delta, axis=0)
 
         if pred_dict is None:
-            return delta.mean(axis=0) + np.random.normal(loc=0, scale=1, size=delta.shape[-1]) * delta.std(axis=0)
+            return delta.mean(axis=0) + rng.normal(loc=0, scale=1, size=delta.shape[-1]) * delta.std(axis=0)
         elif pred_dict['return_all']:
             return delta
 

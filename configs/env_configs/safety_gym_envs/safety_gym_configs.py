@@ -3,6 +3,7 @@ from utils.safe_set import SafeSetFromData, SafeSetFromCriteria
 from utils.safety_gym_utils import *
 from utils.misc import e_or
 import torch
+from utils.seed import rng
 
 
 # TODO: add num_samples for each set in config
@@ -116,10 +117,10 @@ class SafetyGymSafeSetFromData(SafeSetFromData):
 
     def _get_velocity(self, batch_size):
         num_velocity = self.env.sim.model.nv
-        return np.random.uniform(low=-self.max_speed, high=self.max_speed, size=(batch_size, num_velocity))
+        return rng.uniform(low=-self.max_speed, high=self.max_speed, size=(batch_size, num_velocity))
 
     def _get_orientation(self, batch_size):
-        theta = np.random.uniform(low=-np.pi, high=np.pi, size=(batch_size, 1))
+        theta = rng.uniform(low=-np.pi, high=np.pi, size=(batch_size, 1))
         return np.hstack([np.cos(theta), np.sin(theta)])
 
 class SafetyGymSafeSetFromCriteria(SafeSetFromCriteria):

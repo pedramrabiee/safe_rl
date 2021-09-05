@@ -1,4 +1,5 @@
 import numpy as np
+from utils.seed import rng
 
 class RandNoise:
     def __init__(self, ac_dim, dist, dist_kwargs):
@@ -13,9 +14,9 @@ class RandNoise:
 
     def noise(self):
         if self.dist == 'normal':
-            return np.random.normal(**self.dist_kwargs, size=self.ac_dim)
+            return rng.normal(**self.dist_kwargs, size=self.ac_dim)
         elif self.dist == 'uniform':
-            return np.random.uniform(**self.dist_kwargs, size=self.ac_dim)
+            return rng.uniform(**self.dist_kwargs, size=self.ac_dim)
         elif self.dist == 'ignore':
             return np.zeros(self.ac_dim, dtype=np.float32)
 

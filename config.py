@@ -23,16 +23,16 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = True
         self.save_custom_figs_data = False
 
         assert (self.resume + self.benchmark + self.evaluation_mode) < 2, 'Only one of resume, benchmark, or evaluation mode can be True'
 
         # TRAINER
+        # To change random seed number refer to seed_ in utils.seed
         self.episode_steps_per_itr = 1      # number of timesteps to collect data between model updates
         self.n_training_episode = 39
-        self.seed = 2 ** 32 + 475896325
         self.buffer_size = 1e6
 
         # TRAINING
@@ -40,7 +40,7 @@ class Config:
         self.training_device = 'cpu'
 
         # SAMPLER
-        self.sampling_batch_size = 'all'                    # TODO: you need to remove this and move the sampling batch_size into method parameters. Like in the case of sf agent and trainer
+        self.sampling_batch_size = 'all'                    # you need to remove this and move the sampling batch_size into method parameters. Like in the case of sf agent and trainer
         self.n_episode_initial_data_collection = 1
 
         self.sampler_device = 'cpu'

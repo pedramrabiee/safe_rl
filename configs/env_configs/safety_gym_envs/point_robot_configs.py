@@ -7,7 +7,7 @@ import torch
 from scipy.spatial.transform import Rotation as R
 from dynamics.nominal_dynamics import NominalDynamics
 from attrdict import AttrDict
-from math import ceil
+from utils.seed import rng
 
 config = AttrDict(
     do_obs_proc=True,
@@ -86,15 +86,15 @@ class PointRobotSafeSetFromCriteria(SafetyGymSafeSetFromCriteria):
 
     def _get_obs(self):
         xmin, ymin, xmax, ymax = self.env.placements_extents
-        xy = np.array([np.random.uniform(xmin - config.ext, xmax + config.ext),
-                       np.random.uniform(ymin - config.ext, ymax + config.ext)])
-        theta = np.random.uniform(low=-np.pi, high=np.pi)
+        xy = np.array([rng.uniform(xmin - config.ext, xmax + config.ext),
+                       rng.uniform(ymin - config.ext, ymax + config.ext)])
+        theta = rng.uniform(low=-np.pi, high=np.pi)
         vec = np.array([np.cos(theta), np.sin(theta)])
         num_velocity = self.env.sim.model.nv
         if config.sample_velocity_gaussian:
-            vel = np.random.normal(loc=0, scale=self.max_speed / 3, size=num_velocity)
+            vel = rng.normal(loc=0, scale=self.max_speed / 3, size=num_velocity)
         else:
-            vel = np.random.uniform(low=-self.max_speed, high=self.max_speed, size=num_velocity)
+            vel = rng.uniform(low=-self.max_speed, high=self.max_speed, size=num_velocity)
         # FIXME: fix the order of terms
         return np.hstack((xy, vec, vel))
 
