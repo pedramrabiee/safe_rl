@@ -12,8 +12,9 @@ from math import ceil
 config = AttrDict(
     do_obs_proc=True,
     safe_reset=True,        # if true, robot is located in in_safe set
-    w_0=0.1,
+    w_o=0.1,
     w_m=0.1,
+    robot_keepout=0.15,
     ext=0.5,
     max_speed=10.0,
     sample_velocity_gaussian=True,        # velocity distribution will be Gaussian with std = max_speed / 3
@@ -41,6 +42,13 @@ env_config = {
 }
 
 class PointRobotSafeSetFromData(SafetyGymSafeSetFromData):
+    def __init__(self, env, obs_proc):
+        super().__init__(env, obs_proc)
+        self.w_o = config.w_o
+        self.w_m = config.w_m
+        self.robot_keepout = config.robot_keepout
+        self.max_speed = config.max_speed
+
     def get_safe_action(self, obs):
         # expect obs: [pos_x, pos_y, pos_z, cos(theta), sin(theta), vel_x, vel_y, theta_dot, pts_on_obstacle (x,y,z)))
         # TODO: this can be wrong. check the implementation in FromCriteria
@@ -69,6 +77,13 @@ class PointRobotSafeSetFromData(SafetyGymSafeSetFromData):
         return (r[:, :2] * v[:, :2]).sum(-1) > 0.0
 
 class PointRobotSafeSetFromCriteria(SafetyGymSafeSetFromCriteria):
+    def __init__(self, env, obs_proc):
+        super().__init__(env, obs_proc)
+        self.w_o = config.w_o
+        self.w_m = config.w_m
+        self.robot_keepout = config.robot_keepout
+        self.max_speed = config.max_speed
+
     def _get_obs(self):
         xmin, ymin, xmax, ymax = self.env.placements_extents
         xy = np.array([np.random.uniform(xmin - config.ext, xmax + config.ext),
@@ -77,9 +92,9 @@ class PointRobotSafeSetFromCriteria(SafetyGymSafeSetFromCriteria):
         vec = np.array([np.cos(theta), np.sin(theta)])
         num_velocity = self.env.sim.model.nv
         if config.sample_velocity_gaussian:
-            vel = np.random.normal(loc=0, scale=config.max_speed / 3, size=num_velocity)
+            vel = np.random.normal(loc=0, scale=self.max_speed / 3, size=num_velocity)
         else:
-            vel = np.random.uniform(low=-config.max_speed, high=config.max_speed, size=num_velocity)
+            vel = np.random.uniform(low=-self.max_speed, high=self.max_speed, size=num_velocity)
         # FIXME: fix the order of terms
         return np.hstack((xy, vec, vel))
 

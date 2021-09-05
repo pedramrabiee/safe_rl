@@ -5,11 +5,6 @@ from utils.misc import e_or
 import torch
 
 
-w_0 = 0.1
-w_m = 0.1
-ext = 0.5
-max_speed = 10.0    # TODO: change this to max(max_speed, maximum speed observed in data)
-
 # TODO: add num_samples for each set in config
 # TODO: add in_hazards somewhere
 # TODO: add repmat to make multiple experience per position based on different velocity and/or orientations
@@ -17,13 +12,20 @@ max_speed = 10.0    # TODO: change this to max(max_speed, maximum speed observed
 
 
 class SafetyGymSafeSetFromData(SafeSetFromData):
+    def __init__(self, env, obs_proc):
+        super().__init__(env, obs_proc)
+        self.w_o = None             # populated in the specific robot __init__ method
+        self.w_m = None             # populated in the specific robot __init__ method
+        self.robot_keepout = None   # populated in the specific robot __init__ method
+        self.max_speed = None       # populated in the specific robot __init__ method
+
     def make_in_safe(self, data):
         pos_samples = sample_on_rays_upto_stop(lidar_obs=data.lidar,
                                                num_samples=100,
                                                robot_pos=data.robot_pos,
                                                robot_mat=data.robot_mat,
                                                max_lidar_dist=3.0,
-                                               stop=w_0+w_m+0.02)
+                                               stop=self.w_o+self.w_m+0.02)
         pos_samples = np.vstack(pos_samples)
         theta_samples = self._get_orientation(batch_size=pos_samples.shape[0])
         vel_samples = self._get_velocity(batch_size=pos_samples.shape[0])
@@ -92,7 +94,7 @@ class SafetyGymSafeSetFromData(SafeSetFromData):
                                                                robot_pos=data.robot_pos,
                                                                robot_mat=data.robot_mat,
                                                                start=0.0 + 1e-12,
-                                                               end=w_0,
+                                                               end=self.w_o,
                                                                output_points_on_obstacle=True)
 
         pos_samples = np.vstack(pos_samples)
@@ -104,8 +106,8 @@ class SafetyGymSafeSetFromData(SafeSetFromData):
                                                                num_samples=10,
                                                                robot_pos=data.robot_pos,
                                                                robot_mat=data.robot_mat,
-                                                               start=w_0+1e-12,
-                                                               end=w_0+w_m,
+                                                               start=self.w_o+1e-12,
+                                                               end=self.w_o+self.w_m,
                                                                output_points_on_obstacle=True)
 
         pos_samples = np.vstack(pos_samples)
@@ -114,7 +116,7 @@ class SafetyGymSafeSetFromData(SafeSetFromData):
 
     def _get_velocity(self, batch_size):
         num_velocity = self.env.sim.model.nv
-        return np.random.uniform(low=-max_speed, high=max_speed, size=(batch_size, num_velocity))
+        return np.random.uniform(low=-self.max_speed, high=self.max_speed, size=(batch_size, num_velocity))
 
     def _get_orientation(self, batch_size):
         theta = np.random.uniform(low=-np.pi, high=np.pi, size=(batch_size, 1))
@@ -127,12 +129,17 @@ class SafetyGymSafeSetFromCriteria(SafeSetFromCriteria):
         # TODO: Add these items to the obstacle list and modify the criteria methods to work with these
         #  kind of obstacles too:
         #  walls: not circular
-        #  vases: not circular. you may need to consider a circle that encompases the vases
+        #  vases: not circular. you may need to consider a circle that encompasses the vases
         #  gremlins: these are moving objects. Not considered in the current RL-CBF implementations
         obstacles_names = ['hazards', 'pillars']
 
         # make a list of obstacles info
         self.obstacles = self._make_obstacles(obstacles_names)
+        self.w_o = None             # populated in the specific robot __init__ method
+        self.w_m = None             # populated in the specific robot __init__ method
+        self.robot_keepout = None   # populated in the specific robot __init__ method
+        self.max_speed = None       # populated in the specific robot __init__ method
+
 
     def _make_obstacles(self, obstacles_names):
         obst_pos = []
@@ -156,15 +163,17 @@ class SafetyGymSafeSetFromCriteria(SafeSetFromCriteria):
 
     def is_in_safe(self, obs):  # geometrically inside the inner safe section
         return self._check_criterion(obs,
-                                     lambda d: all(d - self.obstacles['size'] > w_0 + w_m))
+                                     lambda d: all(d - self.obstacles['size'] - self.robot_keepout - self.w_o - self.w_m > 0))
 
     def is_mid_safe(self, obs):  # geometrically inside the middle safe section
         return self._check_criterion(obs,
-                                     lambda d: all(d - self.obstacles['size'] > w_0) and any(d - self.obstacles['size'] <= w_0 + w_m))
+                                     lambda d: all(d - self.obstacles['size'] - self.robot_keepout - self.w_o > 0) and
+                                               any(d - self.obstacles['size'] - self.robot_keepout - self.w_o - self.w_m <= 0))
 
     def is_out_safe(self, obs):  # geometrically inside the outer safe section
         return self._check_criterion(obs,
-                                     lambda d: all(d - self.obstacles['size'] > 0) and any(d - self.obstacles['size'] <= w_0))
+                                     lambda d: all(d - self.obstacles['size'] - self.robot_keepout > 0) and
+                                               any(d - self.obstacles['size'] - self.robot_keepout - self.w_o <= 0))
 
     def is_unsafe(self, obs):
         return self._check_criterion(obs,

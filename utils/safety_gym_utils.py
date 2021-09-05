@@ -192,8 +192,8 @@ def sample_point_on_normal(lidar_obs,
                            output_points_on_obstacle=False):
 
     normals, pts_on_obstacle = get_normal_to_obstacles_from_lidar(lidar_obs, robot_pos, robot_mat,
-                                                         max_dist_to_find_normal=max_dist_to_find_normal,
-                                                         max_gap_between_pts_on_obstacle=max_gap_between_pts_on_obstacle)
+                                                                  max_dist_to_find_normal=max_dist_to_find_normal,
+                                                                  max_gap_between_pts_on_obstacle=max_gap_between_pts_on_obstacle)
 
     samples = []
     points = []
@@ -239,7 +239,7 @@ def save_mujoco_xml_file(xml_path, save_dir):
     import safety_gym
     BASE_DIR = osp.dirname(safety_gym.__file__)
     source_file = osp.join(BASE_DIR, xml_path)
-    filename = xml_path[5:]     # path starts with xmls/
+    filename = xml_path[5:]     # xml_path starts with xmls/
     filename = osp.join(save_dir, filename)
     shutil.copyfile(source_file, filename)
 
