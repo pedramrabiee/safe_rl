@@ -2,7 +2,8 @@ from copy import deepcopy
 import torch
 import datetime
 import os.path as osp
-import os, glob
+import os
+import glob
 import numpy as np
 from attrdict import AttrDict
 from scipy.signal import lfilter

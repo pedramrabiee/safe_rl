@@ -26,6 +26,8 @@ class Monitor(Wrapper):
         self._start(directory, video_callable, force, resume,
                     write_upon_reset, uid, mode)
 
+        self.step_called = False
+
     def step(self, action):
         self._before_step(action)
         observation, reward, done, info = self.env.step(action)
@@ -157,6 +159,8 @@ class Monitor(Wrapper):
         # self.stats_recorder.before_step(action)
 
     def _after_step(self, observation, reward, done, info):
+        self.step_called = True
+
         if not self.enabled: return done
         if isinstance(done, list):
             all_done = all(done)
@@ -185,11 +189,14 @@ class Monitor(Wrapper):
 
         # Reset the stat count
         # self.stats_recorder.after_reset(observation)
+        # Bump *after* all reset activity has finished
+        # to avoid increasing the episode number on each call on reset, we check whether
+        # step is called after the reset or not.
+        if self.step_called:    # check if step was called after the previous call on reset
+            self.episode_id += 1
+            self.step_called = False
 
         self.reset_video_recorder()
-
-        # Bump *after* all reset activity has finished
-        self.episode_id += 1
 
         self._flush()
 
@@ -230,7 +237,7 @@ class Monitor(Wrapper):
         self.close()
 
     def get_total_steps(self):
-        return self.stats_recorder.total_steps        
+        return self.stats_recorder.total_steps
 
     def get_episode_rewards(self):
         return self.stats_recorder.episode_rewards
