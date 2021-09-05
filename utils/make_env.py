@@ -8,7 +8,8 @@ def make_env(env_id,
              ac_lim=(-1.0, 1.0),
              video_dict=None,
              max_episode_time=None,
-             use_custom_env=False):
+             use_custom_env=False,
+             make_env_dict=None):
 
     env = None
     max_episode_len = None
@@ -26,6 +27,8 @@ def make_env(env_id,
         env_config = None
         if env_id == 'Point':
             from configs.env_configs.safety_gym_envs.point_robot_configs import env_config
+        if make_env_dict is not None:
+            env_config.update(make_env_dict)
         env = Engine(env_config)
         if max_episode_time:
             env.num_steps = int(max_episode_time / env.robot.sim.model.opt.timestep)

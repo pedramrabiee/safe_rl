@@ -11,7 +11,7 @@ from utils.safe_set import get_safe_set
 from utils.process_observation import NeutralObsProc
 from copy import copy
 from configs.get_env_spec_config import get_env_spec_config
-
+from safety_gym.envs.engine import Engine
 
 class BaseTrainer:
     def __init__(self, setup, root_dir):
@@ -46,8 +46,11 @@ class BaseTrainer:
         self.config.max_episode_len = env_info['max_episode_len']
         self.train_iter = int(self.config.n_training_episode * env_info['max_episode_len'] / self.config.episode_steps_per_itr)
 
-        # TODO: Add the condition for this
-        _ = self.env.reset()
+        if self.config.setup.train_env['env_collection'] == 'safety_gym':
+            _ = self.env.reset()
+            if self.config.env_spec_config.use_same_layout_for_eval:
+                from utils.safety_gym_utils import make_obstacles_location_dict
+                self.obstacle_locations = make_obstacles_location_dict(self.env)
 
         # instantiate observation processor
         # TODO: add boolean for this in config OR NOT (I can have the switch inside the agent themselves)
@@ -100,24 +103,22 @@ class BaseTrainer:
                                                 video_dict=video_dict,
                                                 ac_lim=self.config.ac_lim,
                                                 max_episode_time=self.config.max_episode_time_eval,
-                                                use_custom_env=self.config.use_custom_env)
+                                                use_custom_env=self.config.use_custom_env,
+                                                make_env_dict=getattr(self, 'obstacle_locations', None))
 
         eval_seed = seed + 123123
         set_env_seed(self.env_eval, eval_seed)
         # Get max episode length for evaluation
         self.config.max_episode_len_eval = env_eval_info['max_episode_len']
 
-        # TODO: Add the condition for this
-        _ = self.env_eval.reset()
+        if self.config.setup.train_env['env_collection'] == 'safety_gym':
+            _ = self.env_eval.reset()
 
         # instantiate safe_set for evaluation enviornment
         self.safe_set_eval = get_safe_set(env_id=setup.eval_env.env_id,
                                           env=self.env_eval,
                                           obs_proc=self.obs_proc,
                                           seed=eval_seed)
-
-
-
 
         # instantiate Sampler
         self.sampler = Sampler(self.config)

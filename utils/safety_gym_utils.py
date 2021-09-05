@@ -210,3 +210,25 @@ def sample_point_on_normal(lidar_obs,
     else:
         return samples
 
+def make_obstacles_location_dict(env):
+        if hasattr(env, 'robot'):
+            pass
+        elif hasattr(env.unwrapped, 'robot'):   # used in safety_gym environments
+            env = env.unwrapped
+
+        def xy_from_pos(pos):
+            return [p[:-1] for p in pos]
+
+        locations = {}
+        if env.hazards_num:
+            locations.update({'hazards_locations': xy_from_pos(env.hazards_pos)})
+        if env.vases_num:
+            locations.update({'vases_locations': xy_from_pos(env.vases_pos)})
+        if env.pillars_num:
+            locations.update({'pillars_locations': xy_from_pos(env.vases_pos)})
+        if env.gremlins_num:
+            locations.update({'gremlins_locations': xy_from_pos(env.gremlins_pos)})
+        if env.walls_num:
+            locations.update({'walls_locations': xy_from_pos(env.walls_pos)})
+
+        return locations

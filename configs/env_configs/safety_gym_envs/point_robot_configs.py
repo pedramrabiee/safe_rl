@@ -16,7 +16,8 @@ config = AttrDict(
     w_m=0.1,
     ext=0.5,
     max_speed=10.0,
-    sample_velocity_gaussian=True        # velocity distribution will be Gaussian with std = max_speed / 3
+    sample_velocity_gaussian=True,        # velocity distribution will be Gaussian with std = max_speed / 3
+    use_same_layout_for_eval=True
 )
 
 env_config = {
@@ -34,9 +35,10 @@ env_config = {
     'lidar_num_bins': 40,
     'render_lidar_size': 0.01,
     'hazards_keepout': 0.5,
-    'randomize_layout': False   # TODO: you may need to add another key to Engine to randomize_goals on each reset while keeping the layout the same
-}
+    'randomize_layout': True,
+    'fixed_obstacles': True
 
+}
 
 class PointRobotSafeSetFromData(SafetyGymSafeSetFromData):
     def get_safe_action(self, obs):
