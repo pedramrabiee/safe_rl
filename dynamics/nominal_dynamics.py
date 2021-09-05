@@ -34,7 +34,7 @@ class NominalDynamics:
         return x
 
 
-def get_nominal_dyn_cls(train_env):
+def get_nominal_dyn_cls(train_env, env):
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
             from configs.env_configs.gym_envs.inverted_pendulum_configs import InvertedPendulumNominalDyn
@@ -44,8 +44,8 @@ def get_nominal_dyn_cls(train_env):
             raise NotImplementedError
     elif train_env['env_collection'] == 'safety_gym':
         if train_env['env_id'] == 'Point':
-            from configs.env_configs.safety_gym_envs.point_robot_configs import PointRobotNominalDynamics
-            params = None
+            from configs.env_configs.safety_gym_envs.point_robot_configs import PointRobotNominalDynamics, get_env_params
+            params = get_env_params(env)
             return PointRobotNominalDynamics, params
     else:
         raise NotImplementedError

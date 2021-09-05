@@ -24,7 +24,7 @@ class AgentFactory:
         params = self._config.get_mb_params()
         train_env = self._config.setup['train_env']
 
-        nom_dyn_cls, nom_dyn_params = get_nominal_dyn_cls(train_env)
+        nom_dyn_cls, nom_dyn_params = get_nominal_dyn_cls(train_env, self._env)
         nominal_dyn_dict = dict(cls=nom_dyn_cls,
                                 params=nom_dyn_params)
         params['dynamics_params']['nominal_dyn_dict'] = nominal_dyn_dict

@@ -16,7 +16,7 @@ class Config:
         self.use_custom_env = True              # implement your customized(/modified) env in utils/make_env
 
         # UNCOMMENT line below for custom max_episode_len
-        self.max_episode_time = 2.0
+        self.max_episode_time = 5.0
         self.max_episode_time_eval = 2.0
 
         # MODE
@@ -31,7 +31,7 @@ class Config:
 
         # TRAINER
         self.episode_steps_per_itr = 1      # number of timesteps to collect data between model updates
-        self.n_training_episode = 19
+        self.n_training_episode = 39
         self.seed = 2 ** 32 + 475896325
         self.buffer_size = 1e6
 
@@ -50,9 +50,9 @@ class Config:
                                                  noise_to_signal=0.01)
 
         # EVALUATION
-        self.do_evaluation = False
+        self.do_evaluation = True
         self.n_episodes_evaluation = 5
-        self.num_evaluation_sessions = 1    # number of evaluation sessions
+        self.num_evaluation_sessions = 4    # number of evaluation sessions
         self.n_video_save_per_evaluation = 2
         self.n_evaluation_processes = 1
         self.evaluation_device = 'cpu'
@@ -204,9 +204,9 @@ class Config:
             mf_update_freq=1,
             mb_update_freq=10000,
             filter_update_freq=200,     # this option is not currently used in the sf_trainer, use filter_training_stages instead
-            filter_training_stages=dict(stages=[400, 800, 1600],
-                                        freq=[400, 100, 200]),
-            ep_to_start_appending_cbf_deriv_loss_data=5,         # you shouldn't contaminate the data with the data collected under untrained RL policy during first episodes
+            filter_training_stages=dict(stages=[2500, 5000, 7500],
+                                        freq=[2500, 2000, 2000]),
+            ep_to_start_appending_cbf_deriv_loss_data=4,         # you shouldn't contaminate the data with the data collected under untrained RL policy during first episodes
             # misc.
             safety_filter_is_on=True,
             filter_pretrain_is_on=True,
@@ -252,7 +252,7 @@ class Config:
             # losses weights
             safe_loss_weight=1.0,
             unsafe_loss_weight=1.0,
-            deriv_loss_weight=1.0,
+            deriv_loss_weight=0.1,
             safe_deriv_loss_weight=1.0,
             u_max_weight_in_deriv_loss=1.0,
             deriv_loss_version=2,
