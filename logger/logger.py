@@ -5,7 +5,7 @@ import os
 from utils.console import colorize
 from utils.misc import get_timestamp
 import csv
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import smtplib
@@ -13,7 +13,8 @@ from email.message import EmailMessage
 from pandas import DataFrame
 import json
 
-matplotlib.rcParams['text.usetex'] = True
+mpl.rcParams['agg.path.chunksize'] = 10000
+mpl.rcParams['text.usetex'] = True
 
 _sns_colormap = 'husl' # other options, husl, rocket, Paired, tab10
 _colormap = 'jet'

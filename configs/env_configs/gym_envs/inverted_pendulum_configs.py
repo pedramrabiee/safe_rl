@@ -12,6 +12,7 @@ from utils.custom_plotter import CustomPlotter
 from logger import logger
 from matplotlib import pyplot as plt
 import matplotlib as mpl
+mpl.rcParams['agg.path.chunksize'] = 10000
 mpl.rcParams['text.usetex'] = True
 from scipy.stats import truncnorm
 from utils.seed import rng

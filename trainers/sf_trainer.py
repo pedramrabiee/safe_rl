@@ -120,10 +120,10 @@ class SFTrainer(BaseTrainer):
         # during the episode < ep_to_start_appending_cbf_deriv_loss_data, avoid adding data to obs, next_obs, and
         # dyn_values, these data are used by cbf_filter to train on the deriv loss. This should be avoided since
         # during the first episodes mf policy is not trained well yet
-
-        if self.config.sf_params.ep_to_start_appending_cbf_deriv_loss_data == self.sampler.episode_completed and self.clear_deriv_data:
-            self._process_buffer_queue()
-            self.clear_deriv_data = False
+        if self.config.sf_params.safety_filter_is_on:
+            if self.config.sf_params.ep_to_start_appending_cbf_deriv_loss_data == self.sampler.episode_completed and self.clear_deriv_data:
+                self._process_buffer_queue()
+                self.clear_deriv_data = False
 
         # train
         self.agent.train_mode(device=self.config.training_device)

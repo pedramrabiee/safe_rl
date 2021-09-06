@@ -11,6 +11,7 @@ from utils.torch_utils import row_wise_dot
 from utils.misc import np_object2dict, torchify, hard_copy, polyak_update
 from logger import logger
 import matplotlib as mpl
+mpl.rcParams['agg.path.chunksize'] = 10000
 mpl.rcParams['text.usetex'] = True
 from tqdm import tqdm
 from torch.utils.data import TensorDataset, DataLoader
