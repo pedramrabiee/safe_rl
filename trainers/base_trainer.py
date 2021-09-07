@@ -11,7 +11,7 @@ from utils import scale
 from utils.safe_set import get_safe_set
 from utils.process_observation import NeutralObsProc
 from copy import copy
-from envs.get_env_spec_config import get_env_spec_config
+from envs_utils.get_env_spec_config import get_env_spec_config
 
 
 class BaseTrainer:

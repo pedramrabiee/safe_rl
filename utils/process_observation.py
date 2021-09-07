@@ -101,13 +101,13 @@ class NeutralObsProc(ObsProc):
 def get_obsproc_cls(train_env):
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
-            from envs.gym.pendulum.pendulum_utils import InvertedPendulumObsProc
+            from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumObsProc
             return InvertedPendulumObsProc
         else:
             raise NotImplementedError
     elif train_env['env_collection'] == 'safety_gym':
         if train_env['env_id'] == 'Point':
-            from envs.safety_gym.point_robot_utils import PointObsProc
+            from envs_utils.safety_gym.point_robot_utils import PointObsProc
             return PointObsProc
     else:
         raise NotImplementedError

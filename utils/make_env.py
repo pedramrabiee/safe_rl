@@ -48,7 +48,7 @@ def make_env(env_id,
 
 def customize_env(env_id, env):
     if env_id == 'Pendulum-v0':
-        from envs.gym.pendulum.pendulum_utils import inverted_pendulum_customize
+        from envs_utils.gym.pendulum.pendulum_utils import inverted_pendulum_customize
         return inverted_pendulum_customize(env)
     else:
         raise NotImplementedError

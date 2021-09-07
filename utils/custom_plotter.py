@@ -15,7 +15,7 @@ class CustomPlotter:
 def get_custom_plotter_cls(train_env):
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
-            from envs.gym.pendulum.pendulum_utils import InvertedPendulumCustomPlotter
+            from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumCustomPlotter
             return InvertedPendulumCustomPlotter
     else:
         return CustomPlotter

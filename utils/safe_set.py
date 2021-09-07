@@ -173,14 +173,14 @@ class SafeSetFromCriteria(SafeSet):
 def get_safe_set(env_id, env, obs_proc, seed):
     safe_set = None
     if env_id == 'Pendulum-v0':
-        from envs.gym.pendulum.pendulum_utils import InvertedPendulumSafeSet
+        from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumSafeSet
         safe_set = InvertedPendulumSafeSet(env, obs_proc)
         # set the Tuple seed
         safe_set.in_safe_set.seed(seed)
         safe_set.geo_safe_set.seed(seed)
     elif env_id == 'Point':
         # from envs.safety_gym.point_robot_utils import PointRobotSafeSetFromData
-        from envs.safety_gym.point_robot_utils import PointRobotSafeSetFromCriteria
+        from envs_utils.safety_gym.point_robot_utils import PointRobotSafeSetFromCriteria
         safe_set = PointRobotSafeSetFromCriteria(env, obs_proc)
          # TODO: Set seeds if needed
     else:
