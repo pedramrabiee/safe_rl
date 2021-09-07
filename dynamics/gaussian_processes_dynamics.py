@@ -3,7 +3,7 @@ import gpytorch
 from dynamics.base_dynamics import BaseDynamics
 from networks.gaussian_processes import GP
 from utils.misc import train_valid_split, normalize, unnormalize
-from dynamics.custom_dyns.affine_in_action import AffineInActionGP
+from dynamics.affine_in_action import AffineInActionGP
 
 class GPDynamics(BaseDynamics):
     def initialize(self, params, init_dict=None):

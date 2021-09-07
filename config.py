@@ -109,12 +109,9 @@ class Config:
 
     # Model-based
     def _get_mb_params(self):
-        from dynamics.gaussian_nn_dynamics import GaussianDynamics
-        from dynamics.deterministic_nn_dynamics import DeterministicDynamics
-        from dynamics.gaussian_processes_dynamics import GPDynamics
         from explorations.rand_noise import RandNoise
         from buffers.replay_buffer import ReplayBuffer
-        from dynamics.custom_dyns.affine_in_action import AffineInActionDeterministic, AffineInActionGaussian, AffineInActionGP
+        from dynamics.affine_in_action import AffineInActionGaussian
         from dynamics.affine_in_action_gaussian_dynamics import AffineInActionGaussianDynamics
 
 

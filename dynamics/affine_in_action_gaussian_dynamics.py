@@ -1,10 +1,9 @@
 from dynamics.gaussian_nn_dynamics import GaussianDynamics
 from dynamics.deterministic_nn_dynamics import DeterministicDynamics
-from dynamics.custom_dyns.affine_in_action import AffineInActionGaussian
+from dynamics.affine_in_action import AffineInActionGaussian
 from networks.gaussian_mlp import GaussianMLP
 from torch.nn import Parameter
 import torch
-import torch.nn.functional as F
 from utils.distribution_utils import bound_log_var
 from utils.losses import nll_loss
 
