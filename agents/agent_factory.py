@@ -21,7 +21,7 @@ class AgentFactory:
         from dynamics.nominal_dynamics import get_nominal_dyn_cls
 
         agent_info = self._agent_info_from_env()
-        params = self._config.get_mb_params()
+        params = self._config.get_agent_params('mb')
         train_env = self._config.setup['train_env']
 
         nom_dyn_cls, nom_dyn_params = get_nominal_dyn_cls(train_env, self._env)
@@ -50,7 +50,6 @@ class AgentFactory:
         from buffers.replay_buffer import ReplayBuffer
 
         agent_info = self._agent_info_from_env()
-        obs_proc = self._config.setup['obs_proc']
 
         agent = DDPGAgent(agent_type='DDPG',
                           ac_dim=agent_info['ac_dim'],
@@ -63,7 +62,7 @@ class AgentFactory:
                           custom_plotter=self._config.setup['custom_plotter']
                           )
 
-        params = self._config.get_ddpg_params()
+        params = self._config.get_agent_params('ddpg')
         agent.initialize(params)
         return agent
 
@@ -86,7 +85,7 @@ class AgentFactory:
                         custom_plotter=self._config.setup['custom_plotter']
                         )
 
-        params = self._config.get_sf_params()
+        params = self._config.get_agent_params('sf')
 
         agent.initialize(params, init_dict=AttrDict(mf_agent=self(params.mf),
                                                     mb_agent=self(params.mb),
@@ -112,7 +111,7 @@ class AgentFactory:
             custom_plotter=self._config.setup['custom_plotter']
         )
 
-        params = self._config.get_cbf_filter_params()
+        params = self._config.get_agent_params('cbf')
         agent.initialize(params)
 
         return agent

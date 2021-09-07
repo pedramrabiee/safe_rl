@@ -22,14 +22,13 @@ def make_env(env_id,
 
     elif collection == 'safety_gym':
         # For the safety_gym collection, all the environment customization (e.g., timestep, max_episode_steps, etc.)
-        # are done using config dictionary and MuJoCo model xml file
+        # are done using engine_config dictionary and MuJoCo model xml file
         from safety_gym.envs.engine import Engine
-        env_config = None
-        if env_id == 'Point':
-            from configs.env_configs.safety_gym_envs.point_robot_configs import env_config
+        from utils.safety_gym_utils import get_engine_config
+        engine_config = get_engine_config(env_id)
         if make_env_dict is not None:
-            env_config.update(make_env_dict)
-        env = Engine(env_config)
+            engine_config.update(make_env_dict)
+        env = Engine(engine_config)
         if max_episode_time:
             env.num_steps = int(max_episode_time / env.robot.sim.model.opt.timestep)
         max_episode_len = env.num_steps
@@ -49,7 +48,7 @@ def make_env(env_id,
 
 def customize_env(env_id, env):
     if env_id == 'Pendulum-v0':
-        from configs.env_configs.gym_envs.inverted_pendulum_configs import inverted_pendulum_customize
+        from envs.gym.pendulum.pendulum_utils import inverted_pendulum_customize
         return inverted_pendulum_customize(env)
     else:
         raise NotImplementedError

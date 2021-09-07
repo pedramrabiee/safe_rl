@@ -1,4 +1,5 @@
 from config import Config
+from config import get_config_override
 from utils.seed import set_env_seed, get_seed
 from utils.make_env import make_env
 from agents.agent_factory import AgentFactory
@@ -10,14 +11,68 @@ from utils import scale
 from utils.safe_set import get_safe_set
 from utils.process_observation import NeutralObsProc
 from copy import copy
-from configs.get_env_spec_config import get_env_spec_config
+from envs.get_env_spec_config import get_env_spec_config
 
 
 class BaseTrainer:
     def __init__(self, setup, root_dir):
+        # instantiate config, override config, add setup to config, and load env specific config
+        self.load_config(setup)
+
+        # initialize Logger
+        logger.initialize(self.config, root_dir)
+
+
+        # instantiate training environment, set train_iter
+        self.make_train_env(setup)
+
+        # instantiate observation processor
+        self.setup_obs_proc(setup)
+
+        # instantiate custom_plotter
+        self.setup_custom_plotter(setup)
+
+        # instantiate and initialize agent
+        self.agent = self.initialize_agent(setup)
+
+
+        # initialize scale
+        scale.initialize(self.env.action_bounds)
+
+        # instantiate evaluation environment
+        self.make_eval_env(setup)
+
+        # make safe_sets
+        self.make_safe_sets(setup)
+
+        # instantiate and initialize sampler
+        self.sampler = Sampler(self.config)
+        self.sampler.initialize(env=self.env,
+                                env_eval=self.env_eval,
+                                agent=self.agent,
+                                obs_proc=self.obs_proc,
+                                custom_plotter=self.custom_plotter,
+                                safe_set=self.safe_set,
+                                safe_set_eval=self.safe_set_eval)
+
+        # load params if model loading enables
+        self.load_model_params()
+
+        # save config, config override, env specific config, Mujoco xml file, Engine config
+        self.save_configs()
+
+        # run custom trainer initialization
+        self.initialize()
+
+        logger.log("Trainer initialized...")
+
+
+    def load_config(self, setup):
         # instantiate Config
+        self.config_override = get_config_override(setup['train_env'])
+
         if setup.load_config_path is None:
-            self.config = Config()
+            self.config = Config(self.config_override)
         else:
             self.config = load_config_from_py(setup.load_config_path)
 
@@ -31,7 +86,7 @@ class BaseTrainer:
         self.config.env_spec_config = get_env_spec_config(setup['train_env'])
 
 
-        # instantiate training environment
+    def make_train_env(self, setup):
         self.env, env_info = make_env(env_id=setup['train_env']['env_id'],
                                       collection=setup['train_env']['env_collection'],
                                       ac_lim=self.config.ac_lim,
@@ -42,7 +97,8 @@ class BaseTrainer:
 
         # Get max episode length
         self.config.max_episode_len = env_info['max_episode_len']
-        self.train_iter = int(self.config.n_training_episode * env_info['max_episode_len'] / self.config.episode_steps_per_itr)
+        self.train_iter = int(
+            self.config.n_training_episode * env_info['max_episode_len'] / self.config.episode_steps_per_itr)
 
         if self.config.setup.train_env['env_collection'] == 'safety_gym':
             # reset environment to create layout (to get obstacle positions)
@@ -52,45 +108,18 @@ class BaseTrainer:
                 from utils.safety_gym_utils import make_obstacles_location_dict
                 self.obstacle_locations = make_obstacles_location_dict(self.env)
 
-
-        # instantiate observation processor
-        # TODO: add boolean for this in config OR NOT (I can have the switch inside the agent themselves)
-        self.obs_proc = self.config.setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else NeutralObsProc(self.env)
+    def setup_obs_proc(self, setup):
+        self.obs_proc = setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else NeutralObsProc(self.env)
         self.obs_proc.initialize()
         self.config.setup['obs_proc'] = self.obs_proc
 
-
+    def setup_custom_plotter(self, setup):
         # instantiate CustomPlotter
-        self.custom_plotter = self.config.setup['custom_plotter_cls'](self.obs_proc)
+        self.custom_plotter = setup['custom_plotter_cls'](self.obs_proc)
         self.config.setup['custom_plotter'] = self.custom_plotter
 
-        # instantiate safe_set
-        self.safe_set = get_safe_set(env_id=setup.train_env.env_id,
-                                     env=self.env,
-                                     obs_proc=self.obs_proc,
-                                     seed=get_seed())
 
-        # instantiate and initialize agent
-        self.agent = self._initialize_agent(setup)
-
-        # initialize Logger
-        logger.initialize(self.config, root_dir)
-
-        # initialize scale
-        scale.initialize(self.env.action_bounds)
-
-        # save config as a pickle file
-        if not self.config.debugging_mode:
-            save_config_as_py(logger.logdir)
-            if self.config.setup.train_env['env_collection'] == 'safety_gym':
-                # save mujoco xml file
-                from utils.safety_gym_utils import save_mujoco_xml_file
-                save_mujoco_xml_file(xml_path=self.config.env_spec_config['robot_base'],
-                                     save_dir=logger.logdir)
-
-        # save env config as json
-        logger.dump_dict2json(self.config.env_spec_config, 'env_spec_config')
-
+    def make_eval_env(self, setup):
         # instantiate evaluation environment
         if self.config.save_video:
             video_dict = {}
@@ -112,32 +141,29 @@ class BaseTrainer:
                                                 use_custom_env=self.config.use_custom_env,
                                                 make_env_dict=getattr(self, 'obstacle_locations', None))
 
-        eval_seed = get_seed() + 123123
-        set_env_seed(self.env_eval, eval_seed)
+        self.eval_seed = get_seed() + 123123
+        set_env_seed(self.env_eval, self.eval_seed)
         # Get max episode length for evaluation
         self.config.max_episode_len_eval = env_eval_info['max_episode_len']
 
         if self.config.setup.train_env['env_collection'] == 'safety_gym':
             _ = self.env_eval.reset()
 
+    def make_safe_sets(self, setup):
+        # instantiate safe_set
+        self.safe_set = get_safe_set(env_id=setup.train_env.env_id,
+                                     env=self.env,
+                                     obs_proc=self.obs_proc,
+                                     seed=get_seed())
+
         # instantiate safe_set for evaluation enviornment
         self.safe_set_eval = get_safe_set(env_id=setup.eval_env.env_id,
                                           env=self.env_eval,
                                           obs_proc=self.obs_proc,
-                                          seed=eval_seed)
+                                          seed=self.eval_seed)
 
-        # instantiate Sampler
-        self.sampler = Sampler(self.config)
-        # initialize sampler
-        self.sampler.initialize(env=self.env,
-                                env_eval=self.env_eval,
-                                agent=self.agent,
-                                obs_proc=self.obs_proc,
-                                custom_plotter=self.custom_plotter,
-                                safe_set=self.safe_set,
-                                safe_set_eval=self.safe_set_eval)
 
-        # load params if model loading enables
+    def load_model_params(self):
         if self.config.load_models or self.config.resume or self.config.benchmark or self.config.evaluation_mode:
             if self.config.evaluation_mode:
                 logger.log("Loading models and optimizers for evaluation...", color='cyan')
@@ -146,10 +172,19 @@ class BaseTrainer:
 
             self._load()
 
-        # run custom trainer initialization
-        self.initialize()
+    def save_configs(self):
+        # save config as a py
+        if not self.config.debugging_mode:
+            save_config_as_py(logger.logdir)
+            if self.config.setup.train_env['env_collection'] == 'safety_gym':
+                # save mujoco xml file
+                from utils.safety_gym_utils import save_mujoco_xml_file
+                save_mujoco_xml_file(xml_path=self.config.env_spec_config['robot_base'],
+                                     save_dir=logger.logdir)
 
-        logger.log("Trainer initialized...")
+        # save env config as json
+        logger.dump_dict2json(self.config.env_spec_config, 'env_spec_config')
+        logger.dump_dict2json(self.config_override, 'config_override')
 
     def initialize(self):
         pass
@@ -184,7 +219,7 @@ class BaseTrainer:
         return dict()
 
     # helper functions
-    def _initialize_agent(self, setup):
+    def initialize_agent(self, setup):
         agent_factory = AgentFactory(self.env, self.config)
         return agent_factory(setup['agent'])
 

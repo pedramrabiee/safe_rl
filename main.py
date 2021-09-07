@@ -8,19 +8,29 @@ from rewards.get_reward_gen import get_reward_gen
 
 from logger import logger
 
-if __name__ == "__main__":
-    # accepted env_ids to date:
-    # 'Pendulum-v0' from gym
-    # 'Point' from safety_gym
 
-    setup = AttrDict(agent='sf',
-                     train_env=dict(env_id='Pendulum-v0',
-                                    env_collection='gym'),
-                     eval_env=dict(env_id='Pendulum-v0',
-                                   env_collection='gym'),
-                     load_config_path=None,  # enter the config.pickle file path (don't include config.pickle itself)
-                     # if you wish to load the config file. otherwise, set it None
-                     )
+def make_setup(env_nickname, agent, load_config_path=None):
+    nicknames = {
+        'pendulum': {'env_id': 'Pendulum-v0', 'env_collection': 'gym'},
+        'point': {'env_id': 'Point', 'env_collection': 'safety_gym'}
+    }
+
+    return AttrDict(agent=agent,
+                    train_env=dict(env_id=nicknames[env_nickname]['env_id'],
+                                   env_collection=nicknames[env_nickname]['env_collection']),
+                    eval_env=dict(env_id=nicknames[env_nickname]['env_id'],
+                                  env_collection=nicknames[env_nickname]['env_collection']),
+                    load_config_path=load_config_path,  # enter the env_config.pickle file path (don't include env_config.pickle itself)
+                    # if you wish to load the env_config file. otherwise, set it None
+                    )
+
+if __name__ == "__main__":
+    # accepted environments nicknames:
+    # 'pendulum': Pendulum-v0 from gym
+    # 'point': Point from safety_gym
+
+    setup = make_setup(env_nickname='point',
+                       agent='sf')
 
     # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all
     seed = set_seed()

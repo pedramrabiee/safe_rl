@@ -4,35 +4,37 @@ from controller.random_controller import RandomController
 from controller.random_shoot_controller import RandomShootController
 from controller.cem_controller import CEMController
 from attrdict import AttrDict
+from utils.misc import deep_update
 
 
 class Config:
-    def __init__(self):
+    def __init__(self, config_override_dict=None):
+        self.config_override_dict = config_override_dict
         self.setup = None       # populated in base_trainer __init__
-        self.env_spec_config = None     # populated in base_trainer __init__: modify this in the config dictionary at the beginning of environment specific config file
+        self.env_spec_config = None     # populated in base_trainer __init__: modify this in the env_config dictionary at the beginning of environment specific env_config file
 
         # ENVIRONMENT
         self.ac_lim = (-1.0, 1.0)
         self.use_custom_env = True              # implement your customized(/modified) env in utils/make_env
 
         # UNCOMMENT line below for custom max_episode_len
-        self.max_episode_time = 5.0
-        self.max_episode_time_eval = 2.0
+        self.max_episode_time = 10.0
+        self.max_episode_time_eval = 10.0
 
         # MODE
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
         self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
-        self.plot_custom_figs = True
-        self.save_custom_figs_data = True
+        self.plot_custom_figs = False
+        self.save_custom_figs_data = False
 
         assert (self.resume + self.benchmark + self.evaluation_mode) < 2, 'Only one of resume, benchmark, or evaluation mode can be True'
 
         # TRAINER
         # To change random seed number refer to seed_ in utils.seed
         self.episode_steps_per_itr = 1      # number of timesteps to collect data between model updates
-        self.n_training_episode = 39
+        self.n_training_episode = 19
         self.buffer_size = 1e6
 
         # TRAINING
@@ -50,10 +52,10 @@ class Config:
                                                  noise_to_signal=0.01)
 
         # EVALUATION
-        self.do_evaluation = False
+        self.do_evaluation = True
         self.n_episodes_evaluation = 5
         self.num_evaluation_sessions = 4    # number of evaluation sessions
-        self.n_video_save_per_evaluation = 2
+        self.n_video_save_per_evaluation = 3
         self.n_evaluation_processes = 1
         self.evaluation_device = 'cpu'
         self.n_serial_envs_evaluation = 8  # for use in DummyVecEnv, only used when n_sampler_processes = 1
@@ -62,10 +64,10 @@ class Config:
         # LOG AND SAVE
         self.results_dir = 'results'
         self.use_wandb = True  # Enable wandb
-        self.wandb_project_name = "cbf"  # wandb project name
+        self.wandb_project_name = "point"  # wandb project name
         self.save_models = False and not self.debugging_mode    # Enable to save models every SAVE_FREQUENCY episodes (do not need to save on debugging mode)
         self.save_buffer = False
-        self.num_save_sessions = 10
+        self.num_save_sessions = 5
         self.add_timestamp = True  # Add timestamp to console's
 
         # LOAD MODELS
@@ -73,7 +75,7 @@ class Config:
         self.load_buffer = False
         self.load_run_name = 'run-20210628_125253-37ijc4uh'
         self.load_run_id = self.load_run_name[-8:]
-        self.overwrite_config = False            # overwrite config file, with the loaded model config file
+        self.overwrite_config = False            # overwrite config file, with the loaded model env_config file
         # self.load_timestamp = '20210110_131125'
         self.load_timestamp = 'last'
 
@@ -83,11 +85,30 @@ class Config:
         self.custom_load_list = None
         # self.custom_load_list = ['mf_agent']
 
+        # update attribute values using config override dict
+        self.update_attr(self.config_override_dict.get('init', {}))
+
+
     ##############################
     ###### Agent params
     ##############################
+    def get_agent_params(self, key):
+        if key == 'mb':
+            self.mb_params = deep_update(self._get_mb_params(), self.config_override_dict.get('mb_params'))
+            return self.mb_params
+        if key == 'ddpg':
+            self.ddpg_params = deep_update(self._get_ddpg_params(), self.config_override_dict.get('ddpg_params'))
+            return self.ddpg_params
+        if key == 'sf':
+            self.sf_params = deep_update(self._get_sf_params(), self.config_override_dict.get('sf_params'))
+            return self.sf_params
+        if key == 'cbf':
+            self.cbf_params = deep_update(self._get_cbf_filter_params(), self.config_override_dict.get('cbf_params'))
+            return self.cbf_params
+
+
     # Model-based
-    def get_mb_params(self):
+    def _get_mb_params(self):
         from dynamics.gaussian_nn_dynamics import GaussianDynamics
         from dynamics.deterministic_nn_dynamics import DeterministicDynamics
         from dynamics.gaussian_processes_dynamics import GPDynamics
@@ -99,7 +120,7 @@ class Config:
 
         controller_cls = [RandomController, CEMController]
         replay_buffer_cls = ReplayBuffer
-        self.mb_params = AttrDict(
+        mb_params = AttrDict(
             # dynamics
             replay_buffer_cls=replay_buffer_cls,
             is_ensemble=False,
@@ -140,12 +161,12 @@ class Config:
                             dist_kwargs=dict(loc=0, scale=0.1)),
             phase_2_usage_frac=0.9,
         )
-        return self.mb_params
+        return mb_params
 
     # DDPG
-    def get_ddpg_params(self):
+    def _get_ddpg_params(self):
         from explorations.ou_noise import OUNoise
-        self.ddpg_params = AttrDict(
+        ddpg_params = AttrDict(
             tau=0.001,
             gamma=0.99,
             exp_strategy_cls=OUNoise,
@@ -186,11 +207,11 @@ class Config:
             multi_in_critic_kwargs=dict(in2_cat_layer=1),
             net_updates_per_iter=5,     # currently only used in ddpg_trainer
         )
-        return self.ddpg_params
+        return ddpg_params
 
     # Safety Filter
-    def get_sf_params(self):
-        self.sf_params = AttrDict(
+    def _get_sf_params(self):
+        sf_params = AttrDict(
             # models
             mf='ddpg',
             mb='mb',
@@ -204,8 +225,8 @@ class Config:
             mf_update_freq=1,
             mb_update_freq=10000,
             filter_update_freq=200,     # this option is not currently used in the sf_trainer, use filter_training_stages instead
-            filter_training_stages=dict(stages=[2500, 5000, 7500],
-                                        freq=[2500, 2000, 2000]),
+            filter_training_stages=dict(stages=[5000, 10000, 15000],
+                                        freq=[5000, 4000, 4000]),
             ep_to_start_appending_cbf_deriv_loss_data=4,         # you shouldn't contaminate the data with the data collected under untrained RL policy during first episodes
             # misc.
             safety_filter_is_on=True,
@@ -214,16 +235,15 @@ class Config:
             dyn_train_is_on=False,
             mf_train_is_on=True,
             add_cbf_pretrain_data_to_buffer=True,
-
         )
-        return self.sf_params
+        return sf_params
 
     ##############################
     ###### Filters
     ##############################
     # CBF Filter
-    def get_cbf_filter_params(self):
-        self.cbf_params = AttrDict(
+    def _get_cbf_filter_params(self):
+        cbf_params = AttrDict(
             # filter network
             filter_net_kwargs=dict(hidden_dim=128,
                                    num_layers=2,
@@ -247,7 +267,7 @@ class Config:
             gamma_unsafe=0.0,
             train_on_jacobian=True,
             use_trained_dyn=False,
-            pretrain_max_epoch=1e1,
+            pretrain_max_epoch=1e5,
             pretrain_batch_to_sample_ratio=0.2,
             # losses weights
             safe_loss_weight=1.0,
@@ -259,7 +279,7 @@ class Config:
             loss_tanh_normalization=False
             # set this to None, if you don't want to preprocess observation for dynamics training
         )
-        return self.cbf_params
+        return cbf_params
 
     ##############################
     ###### Controllers params
@@ -301,8 +321,23 @@ class Config:
                 controller_params.append(self.get_cem_params())
         return controller_params
 
+    def update_attr(self, overrides):
+        for k, v in overrides.items():
+            assert hasattr(self, k)
+            setattr(self, k, v)
 
 
-
-
+def get_config_override(train_env):
+    if train_env['env_collection'] == 'gym':
+        if train_env['env_id'] == 'Pendulum-v0':
+            from envs.gym.pendulum.pendulum_configs import config
+            return config
+        else:
+            raise NotImplementedError
+    elif train_env['env_collection'] == 'safety_gym':
+        if train_env['env_id'] == 'Point':
+            from envs.safety_gym.point_robot_configs import config
+            return config
+    else:
+        raise NotImplementedError
 

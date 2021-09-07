@@ -11,6 +11,7 @@ import pickle
 import importlib
 import shutil
 from utils.seed import rng
+from collections import Mapping
 
 
 def hard_copy(source, requires_grad=False):
@@ -307,3 +308,20 @@ def apply_mask_to_dict_of_arrays(dict_of_arrays, mask):
     for k in dict_of_arrays.keys():
         out[k] = dict_of_arrays[k][mask, ...]
     return AttrDict(out)
+
+
+# from https://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
+def deep_update(source, overrides):
+    """
+    Update a nested dictionary or similar mapping.
+    Modify ``source`` in place.
+    """
+    if overrides is None:
+        return source
+    for key, value in overrides.items():
+        if isinstance(value, Mapping) and value:
+            returned = deep_update(source.get(key, {}), value)
+            source[key] = returned
+        else:
+            source[key] = overrides[key]
+    return source

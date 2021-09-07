@@ -246,3 +246,9 @@ def save_mujoco_xml_file(xml_path, save_dir):
 
 
 
+def get_engine_config(env_id):
+    if env_id == 'Point':
+        from envs.safety_gym.point_robot_configs import engine_config
+    else:
+        raise NotImplementedError
+    return engine_config

@@ -1,4 +1,3 @@
-import numpy as np
 from utils.misc import scaler
 import torch
 
@@ -37,14 +36,15 @@ class NominalDynamics:
 def get_nominal_dyn_cls(train_env, env):
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
-            from configs.env_configs.gym_envs.inverted_pendulum_configs import InvertedPendulumNominalDyn
+            from envs.gym.pendulum.pendulum_utils import InvertedPendulumNominalDyn
             params = None
             return InvertedPendulumNominalDyn, params
         else:
             raise NotImplementedError
     elif train_env['env_collection'] == 'safety_gym':
         if train_env['env_id'] == 'Point':
-            from configs.env_configs.safety_gym_envs.point_robot_configs import PointRobotNominalDynamics, get_env_params
+            from envs.safety_gym.point_robot_utils import get_env_params
+            from envs.safety_gym.point_robot_utils import PointRobotNominalDynamics
             params = get_env_params(env)
             return PointRobotNominalDynamics, params
     else:

@@ -1,7 +1,5 @@
 import numpy as np
 import torch
-from gym.spaces import Box
-from gym.spaces.dict import Dict
 from utils.torch_utils import get_tensor_blueprint
 from utils.misc import isvec, torchify, np_object2dict
 
@@ -22,23 +20,6 @@ class ObsProc:
     def obs_dim(self, proc_key=None):
         """returns observation dimension after applying proc"""
         raise NotImplementedError
-
-    # @property
-    # def obs_dim_old(self):
-    #     """returns the original observation dimension (env.observation_space.shape)"""
-    #     return self._obs_dim_old
-
-    # def _get_obs_dim_old(self):
-    #     obs_space = self.env.observation_space
-    #     # flatten dict observation_space: used in safety_gym
-    #     if isinstance(obs_space, Dict):
-    #         # From safety_gym engine:
-    #         obs_space = obs_space.spaces
-    #         obs_flat_size = sum([np.prod(i.shape) for i in obs_space.values()])
-    #         obs_space = Box(-np.inf, np.inf, (obs_flat_size,), dtype=np.float32)
-    #
-    #     assert isinstance(obs_space, Box), 'Only Box and Dict observation space is currently implemented in ObsProc'
-    #     return obs_space.shape[0]
 
     def proc(self, obs, proc_key=None, proc_dict=None):
         """
@@ -120,13 +101,13 @@ class NeutralObsProc(ObsProc):
 def get_obsproc_cls(train_env):
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
-            from configs.env_configs.gym_envs.inverted_pendulum_configs import InvertedPendulumObsProc
+            from envs.gym.pendulum.pendulum_utils import InvertedPendulumObsProc
             return InvertedPendulumObsProc
         else:
             raise NotImplementedError
     elif train_env['env_collection'] == 'safety_gym':
         if train_env['env_id'] == 'Point':
-            from configs.env_configs.safety_gym_envs.point_robot_configs import PointObsProc
+            from envs.safety_gym.point_robot_utils import PointObsProc
             return PointObsProc
     else:
         raise NotImplementedError
