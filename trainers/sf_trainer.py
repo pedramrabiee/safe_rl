@@ -1,9 +1,7 @@
 from trainers.base_trainer import BaseTrainer
 from logger import logger
-import torch
 from utils.misc import torchify
 import numpy as np
-from utils import scale
 from utils.misc import np_object2dict
 from utils.schedule_utils import multi_stage_schedule
 from utils.misc import e_or
@@ -16,12 +14,9 @@ class SFTrainer(BaseTrainer):
     def initialize(self):
         # switch buffer to buffer 1
         self.agent.curr_buf_id = 1
-        self.agent.buffer.initialize(attribute_names=['safe_samples', 'unsafe_samples',
-                                                      'deriv_samples', 'dyn_safe',
+        self.agent.buffer.initialize(attribute_names=['safe_samples', 'unsafe_samples', 'deriv_samples',
                                                       'obs', 'next_obs', 'dyn_values'],
-                                     coupled_list=[['deriv_samples', 'dyn_safe'],
-                                                   ['obs', 'next_obs', 'dyn_values']]
-                                     )
+                                     coupled_list=[['obs', 'next_obs', 'dyn_values']])
         # switch back buffer to buffer 0
         self.agent.curr_buf_id = 0
         self.clear_deriv_data = True        # while this is True, avoid adding obs, next_obs, dyn_values to buffer 1 (cbf buffer)
@@ -65,24 +60,25 @@ class SFTrainer(BaseTrainer):
                 if version == 2:
                     deriv_samples = mid_cond_safe_samples
                 if version == 3:
-                    deriv_samples = safe_samples
+                    deriv_samples = np.vstack((safe_samples, unsafe_samples))
 
                 logger.log(f'Safe set sampling time: {time() - timer_begin}', color='blue')
 
                 # query dynamics values for the deriv_samples to be used in deriv loss in pretraining
-                safe_ac = self.safe_set.get_safe_action(obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
+                # safe_ac = self.safe_set.get_safe_action(obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
                 # TODO: this is only implemented with nominal dynamics, add predicted dyanamics to this
-                nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
-                                                               ac=safe_ac,
-                                                               only_nominal=True,
-                                                               stats=None)
+                # nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
+                #                                                ac=safe_ac,
+                #                                                only_nominal=True,
+                #                                                stats=None)
+                #
+                # safe_ac = self._get_safe_action(deriv_samples)
 
 
                 # add safe and unsafe samples to buffer
                 samples = dict(safe_samples=safe_samples,
                                unsafe_samples=unsafe_samples,
-                               deriv_samples=deriv_samples,
-                               dyn_safe=nom_dyn)
+                               deriv_samples=deriv_samples)
 
                 if self.config.sf_params.add_cbf_pretrain_data_to_buffer:
                     self.agent.curr_buf_id = 1
@@ -211,31 +207,31 @@ class SFTrainer(BaseTrainer):
             deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['mid_cond_safe'])
 
         if version == 3:
-            deriv_mask = is_safe_mask
+            deriv_mask = e_or(is_safe_mask, is_unsafe_mask)
 
         deriv_mask = deriv_mask if isinstance(deriv_mask, list) else [deriv_mask]
 
         # deriv experience
         deriv_samples = queue_items.obs[np.asarray(deriv_mask), ...]
-        if deriv_samples.shape[0] > 0:
-            safe_ac = self.safe_set.get_safe_action(
-                obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
-            # TODO: this is only implemented with nominal dynamics, add predicted dyanamics to this
-            nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
-                                                           ac=safe_ac,
-                                                           only_nominal=True,
-                                                           stats=None)
-        else:
-            nom_dyn = None
+        # if deriv_samples.shape[0] > 0:
+        #     safe_ac = self.safe_set.get_safe_action(
+        #         obs=deriv_samples) * self.config.cbf_params.u_max_weight_in_deriv_loss
+        #     # TODO: this is only implemented with nominal dynamics, add predicted dyanamics to this
+        #     nom_dyn = self.agent.mb_agent.dynamics.predict(obs=deriv_samples,
+        #                                                    ac=safe_ac,
+        #                                                    only_nominal=True,
+        #                                                    stats=None)
+        # else:
+        #     nom_dyn = None
 
         self.agent.buffer.push_to_buffer(experience=dict(safe_samples=safe_samples,
                                                          unsafe_samples=unsafe_samples,
                                                          deriv_samples=deriv_samples,
-                                                         dyn_safe=nom_dyn,
                                                          obs=queue_items.obs if (not self.clear_deriv_data) else None,
                                                          next_obs=queue_items.next_obs if (not self.clear_deriv_data) else None,
                                                          dyn_values=queue_items_dyn if (not self.clear_deriv_data) else None))
         self.agent.curr_buf_id = 0
+
 
 
 

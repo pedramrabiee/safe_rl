@@ -1,8 +1,4 @@
 from attrdict import AttrDict
-import matplotlib as mpl
-mpl.rcParams['agg.path.chunksize'] = 10000
-mpl.rcParams['text.usetex'] = True
-
 
 config = {
     'init': {
@@ -13,7 +9,7 @@ config = {
         'save_custom_figs_data': True,
         'episode_steps_per_itr': 1,
         'n_training_episode': 39,
-        'do_evaluation': True,
+        'do_evaluation': False,
         'n_episodes_evaluation': 5,
         'num_evaluation_sessions': 4,
         'n_video_save_per_evaluation': 3,
@@ -30,7 +26,8 @@ config = {
         'filter_train_is_on': True,
     },
     'cbf_params': {
-        'pretrain_max_epoch': 1e2,
+        'pretrain_max_epoch': 1e5,
+        'stop_criteria_eps': 0.0,
         'train_on_jacobian': True,
         'pretrain_batch_to_sample_ratio': 0.2,
         # losses weights
@@ -39,8 +36,11 @@ config = {
         'deriv_loss_weight': 0.1,
         'safe_deriv_loss_weight': 1.0,
         'u_max_weight_in_deriv_loss': 1.0,
-        'deriv_loss_version': 2,
-        'loss_tanh_normalization': False
+        'deriv_loss_version': 3,
+        'loss_tanh_normalization': False,
+        'gamma_safe': 0.0,
+        'gamma_unsafe': 0.0,
+        'gamma_dh': 0.0
     }
 }
 
@@ -56,7 +56,7 @@ env_config = AttrDict(
     g=10.0,
     m=1.0,
     l=1.0,
-    max_torque=15.0,
+    max_torque=60.0,
     max_speed=8.0,
     sample_velocity_gaussian=True       # velocity distribution will be truncated normal distribution
 )

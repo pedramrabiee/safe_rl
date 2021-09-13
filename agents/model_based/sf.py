@@ -5,7 +5,6 @@ from logger import logger
 
 class SFAgent(BaseAgent):
     def initialize(self, params, init_dict=None):
-        from agents.agent_factory import AgentFactory
         self.params = params
 
         # model-free and model-based agents are instantiated and initialized in agent factory
@@ -13,14 +12,8 @@ class SFAgent(BaseAgent):
         self.mb_agent = init_dict.mb_agent
         self.safety_filter = init_dict.safety_filter
 
-        # Link buffers
-        # self.mf_agent._buffer = self.buffer
-        # self.mb_agent._buffer = self.buffer
-        # when safety_filter has multiple buffer, link its first buffer to SFAgent's buffer
-        # if isinstance(self.safety_filter._buffer, list):
-        #     self.safety_filter._buffer[0] = self.buffer
-        # else:
-        #     self.safety_filter._buffer = self.buffer
+        # set dynamics predictor for safety_filter
+        self.safety_filter.set_dyn_predictor(predictor=self.mb_agent.dynamics.predict)
 
         # list models and optimizers
         self.models = [*self.mf_agent.models, *self.mb_agent.models, *self.safety_filter.models]
@@ -108,11 +101,4 @@ class SFAgent(BaseAgent):
         # Set cbf filter on eval mode
         self.safety_filter.filter_net.eval()
         self.safety_filter.filter_net = to_device(self.safety_filter.filter_net, device)
-
-
-    def add_safe_unsafe(self, samples):
-        obs = samples.obs
-        self.safe_samples = torch.tensor(self.preproc_obs(samples['safe_samples']), dtype=torch.float32)
-        self.unsafe_samples = torch.tensor(self.preproc_obs(samples['unsafe_samples']), dtype=torch.float32)
-
 

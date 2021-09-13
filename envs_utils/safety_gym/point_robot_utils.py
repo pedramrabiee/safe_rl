@@ -31,7 +31,7 @@ class PointRobotSafeSetFromData(SafetyGymSafeSetFromData):
         torque_dir = np.cross(r, vel)[:, -1]
         torque_dir = np.sign(torque_dir)
         force_dir = -np.sign(np.vdot(vec, r))
-        ac_lim_high = scale.ac_old_bounds[1]
+        ac_lim_high = scale.ac_new_bounds[1]
 
         force = (ac_lim_high[0] * force_dir).reshape(-1, 1)
         torque = (ac_lim_high[1] * torque_dir).reshape(-1, 1)
@@ -91,11 +91,11 @@ class PointRobotSafeSetFromCriteria(SafetyGymSafeSetFromCriteria):
         r = np.concatenate((r, np.zeros((r.shape[0], 1))), axis=-1)
         torque_dir = np.cross(r, vel)[:, -1]
         torque_dir = np.sign(torque_dir)
-        force_dir = -np.sign(np.einsum('ij, ij -> i',vec, r[:, :2]))
-        ac_lim_high = scale.ac_old_bounds[1]
+        force_dir = -np.sign(np.einsum('ij, ij -> i', vec, r[:, :2]))
+        ac_lim_high = scale.ac_new_bounds[1]
 
-        force = (ac_lim_high[0] * force_dir).reshape(-1, 1)
-        torque = (ac_lim_high[1] * torque_dir).reshape(-1, 1)
+        force = (ac_lim_high * force_dir).reshape(-1, 1)
+        torque = (ac_lim_high * torque_dir).reshape(-1, 1)
         ac = np.concatenate((force, torque), axis=-1)
         return ac.reshape(-1, 2, 1)
 

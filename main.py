@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # 'pendulum': Pendulum-v0 from gym
     # 'point': Point from safety_gym
 
-    setup = make_setup(env_nickname='point',
+    setup = make_setup(env_nickname='pendulum',
                        agent='sf')
 
     # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all

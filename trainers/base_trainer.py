@@ -35,7 +35,6 @@ class BaseTrainer:
         # instantiate and initialize agent
         self.agent = self.initialize_agent(setup)
 
-
         # initialize scale
         scale.initialize(self.env.action_bounds)
 
@@ -118,6 +117,9 @@ class BaseTrainer:
         self.custom_plotter = setup['custom_plotter_cls'](self.obs_proc)
         self.config.setup['custom_plotter'] = self.custom_plotter
 
+    def initialize_agent(self, setup):
+        agent_factory = AgentFactory(self.env, self.config)
+        return agent_factory(setup['agent'])
 
     def make_eval_env(self, setup):
         # instantiate evaluation environment
@@ -161,7 +163,6 @@ class BaseTrainer:
                                           env=self.env_eval,
                                           obs_proc=self.obs_proc,
                                           seed=self.eval_seed)
-
 
     def load_model_params(self):
         if self.config.load_models or self.config.resume or self.config.benchmark or self.config.evaluation_mode:
@@ -217,11 +218,6 @@ class BaseTrainer:
 
     def _prep_optimizer_dict(self):
         return dict()
-
-    # helper functions
-    def initialize_agent(self, setup):
-        agent_factory = AgentFactory(self.env, self.config)
-        return agent_factory(setup['agent'])
 
     def _save_checkpoint(self, itr):
         if itr % int(self.train_iter / self.config.num_save_sessions) == 0 or itr >= self.train_iter:

@@ -14,7 +14,6 @@ from utils.safe_set import SafeSetFromCriteria
 from utils.seed import rng
 from utils.space_utils import Tuple
 
-
 def inverted_pendulum_customize(env):
     # Settings
 
@@ -132,7 +131,7 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
         else:
             theta = np.arctan2(obs[:, 1], obs[:, 0])
 
-        ac_lim_high = scale.ac_old_bounds[1]
+        ac_lim_high = scale.ac_new_bounds[1]
         return (-np.sign(theta) * ac_lim_high).reshape(len(theta), 1, 1)
 
 
@@ -156,37 +155,33 @@ class InvertedPendulumNominalDyn(NominalDynamics):
             x2 = obs[..., 1]    # sin(theta)
             x3 = obs[..., 2]    # theta_dot
 
-        if not self.continous_time:
-            f_func = lambda x1, x2, x3:\
-                np.array([
-                    x1 - dt * x3 * x2 - (dt ** 2) * 3 * g / (2 * l) * x2 ** 2,
-                    x2 + dt * x3 * x1 + (dt ** 2) * 3 * g / (2 * l) * x2 * x1,
-                    x3 + dt * 3 * g / (2 * l) * x2
-                ], dtype=np.float32)
-            G_func = lambda x1, x2: 3 / (m * l ** 2) * dt * np.array([
-                dt * x2,
-                dt * x1,
-                1.0
-            ], dtype=np.float32)
-            G = np.stack(list(map(G_func, x1, x2)), axis=0)
+        if not self.continous_time: #TODO: only continuous time is checked
+            f = np.stack([
+                x1 - dt * x3 * x2 - (dt ** 2) * 3 * g / (2 * l) * x2 ** 2,
+                x2 + dt * x3 * x1 + (dt ** 2) * 3 * g / (2 * l) * x2 * x1,
+                x3 + dt * 3 * g / (2 * l) * x2
+            ], axis=-1)
+            G = 3 / (m * l ** 2) * dt * np.stack([dt * x2, dt * x1, 1.0], axis=-1)
         else:
-            f_func = lambda x1, x2, x3: \
-                np.array([
-                    -x3 * x2,
-                    x3 * x1,
-                    3 * g / (2 * l) * x2
-                ], dtype=np.float32)
+            f = np.stack([-x3 * x2,
+                          x3 * x1,
+                          3 * g / (2 * l) * x2],
+                         axis=-1)
             G = np.array([
                 0.0,
                 0.0,
                 3 / (m * l ** 2)
             ], dtype=np.float32)
-            G = np.stack([G for _ in range(x1.shape[0])], axis=0)
 
-        f = np.stack(list(map(f_func, x1, x2, x3)), axis=0)
+            G = np.tile(G, (x1.shape[0], 1))
+
+            # G = np.stack([G for _ in range(x1.shape[0])], axis=0)
+
+        # f = np.stack(list(map(f_func, x1, x2, x3)), axis=0)
+
         G = np.expand_dims(G, axis=-1)
-        return (f, G) if split_return else f + np.matmul(G, ac).squeeze(-1)
 
+        return (f, G) if split_return else f + np.matmul(G, ac).squeeze(-1)
 
 class InvertedPendulumCustomPlotter(CustomPlotter):
     def sampler_push_obs(self, obs):

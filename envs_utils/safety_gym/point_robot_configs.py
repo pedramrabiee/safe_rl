@@ -22,19 +22,18 @@ config = {
         'filter_pretrain_is_on': True,
         'filter_train_is_on': True,
     },
-    'cbf_params':{
+    'cbf_params': {
         'pretrain_max_epoch': 1e2,
-        'train_on_jacobian' : True,
-        'pretrain_max_epoch' : 1e2,
-        'pretrain_batch_to_sample_ratio' : 0.2,
+        'train_on_jacobian': True,
+        'pretrain_batch_to_sample_ratio': 0.2,
         # losses weights
-        'safe_loss_weight' : 1.0,
-        'unsafe_loss_weight' : 1.0,
-        'deriv_loss_weight' : 0.1,
-        'safe_deriv_loss_weight' : 1.0,
-        'u_max_weight_in_deriv_loss' : 1.0,
-        'deriv_loss_version' : 2,
-        'loss_tanh_normalization' : False
+        'safe_loss_weight': 1.0,
+        'unsafe_loss_weight': 1.0,
+        'deriv_loss_weight': 0.1,
+        'safe_deriv_loss_weight': 1.0,
+        'u_max_weight_in_deriv_loss': 1.0,
+        'deriv_loss_version': 3,
+        'loss_tanh_normalization': False
     }
 }
 

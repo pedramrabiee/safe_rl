@@ -34,7 +34,10 @@ class CBFFilter(BaseFilter):
         self.optimizers = [self.filter_optimizer]
         self.models_dict = dict(filter_net=self.filter_net)
         self.optimizers_dict = dict(filter_optimizer=self.filter_optimizer)
+        self.dyn_predictor = None
 
+    def set_dyn_predictor(self, predictor):
+        self.dyn_predictor = predictor
 
     @torch.no_grad()
     def filter(self, obs, ac, filter_dict=None):
@@ -100,18 +103,16 @@ class CBFFilter(BaseFilter):
 
     def pre_train(self, samples, pre_train_dict=None):
         epoch = 0
-        chained_keys = [['deriv_samples', 'dyn_safe']]
-        train_gens = self._make_dataloader(samples, chained_keys=chained_keys)
+        train_gens = self._make_dataloader(samples)
         max_epoch = self.params.pretrain_max_epoch / self.params.pretrain_batch_to_sample_ratio
         pbar = tqdm(total=max_epoch, desc='Filter Pretraining Progress')
         while True:
             safe_samples = next(iter(train_gens['safe_samples']))[0]
             unsafe_samples = next(iter(train_gens['unsafe_samples']))[0]
-            deriv_samples, dyn_safe = next(iter(train_gens['deriv_samples']))
+            deriv_samples = next(iter(train_gens['deriv_samples']))[0]
             sample = AttrDict(safe_samples=safe_samples,
                               unsafe_samples=unsafe_samples,
-                              deriv_samples=deriv_samples,
-                              dyn_safe=dyn_safe)
+                              deriv_samples=deriv_samples)
             self.filter_optimizer.zero_grad()
             loss = self._compute_pretrain_loss(sample)
             loss.backward()
@@ -146,7 +147,7 @@ class CBFFilter(BaseFilter):
         safe_samples = samples.safe_samples
         unsafe_samples = samples.unsafe_samples
         deriv_samples = samples.deriv_samples
-        dyns = samples.dyn_safe
+        # dyns = samples.dyn_safe
 
         # Safe loss
         safe_loss = torch.zeros(1, requires_grad=True)[0]
@@ -160,9 +161,10 @@ class CBFFilter(BaseFilter):
             unsafe_loss = (self._append_zeros(self.params.gamma_unsafe + self.filter_net(unsafe_samples))).max(dim=-1).values
             unsafe_loss = self._normalize_loss(unsafe_loss).mean()
         # Derivative loss
-        if not deriv_samples.size(0) == 0:
-            deriv_loss = self._compute_deriv_loss(deriv_samples, dyns)
-            deriv_loss = (self._append_zeros(self.params.gamma_safe - deriv_loss)).max(dim=-1).values
+        if not deriv_samples.size(0) == 0 or self.params.safe_deriv_loss_weight != 0.0:
+            # deriv_loss = self._compute_deriv_loss(deriv_samples, dyns)
+            deriv_loss = self._compute_max_deriv_loss(deriv_samples)
+            deriv_loss = (self._append_zeros(self.params.gamma_dh - deriv_loss)).max(dim=-1).values
             deriv_loss = self._normalize_loss(deriv_loss).mean()
 
         # push loss plots, dumped in trainer
@@ -194,8 +196,12 @@ class CBFFilter(BaseFilter):
 
     def _check_stop_criteria(self, samples):
         h_unsafe = self.filter_net(samples.unsafe_samples)
-        h_dot_deriv_samples = self._compute_deriv_loss(samples.deriv_samples, samples.dyn_safe)
-        if torch.max(h_unsafe) > self.params.stop_criteria_eps or torch.min(h_dot_deriv_samples) < self.params.stop_criteria_eps:
+        h_dot_deriv_samples = self._compute_max_deriv_loss(samples.deriv_samples)
+        if self.params.safe_deriv_loss_weight == 0.0:
+            if torch.max(h_unsafe) > self.params.stop_criteria_eps:
+                return False
+            return True
+        if torch.max(h_unsafe) > -self.params.stop_criteria_eps or torch.min(h_dot_deriv_samples) < self.params.stop_criteria_eps:
             return False
         return True
 
@@ -213,10 +219,29 @@ class CBFFilter(BaseFilter):
         return deriv_loss
 
     def _make_dataloader(self, samples, chained_keys=None):
-        all_chained_keys = list(chain(*chained_keys))
+        all_chained_keys = [] if chained_keys is None else list(chain(*chained_keys))
         ratio = self.params.pretrain_batch_to_sample_ratio
         min_batch_size = int(min([v.size(0) for _, v in samples.items()]) * ratio)
         make_data_gen = lambda x: DataLoader(dataset=TensorDataset(*x), batch_size=min_batch_size, shuffle=True)
         train_generator = {k: make_data_gen([v]) for k, v in samples.items() if k not in all_chained_keys}
-        chained_generator = {item[0]: make_data_gen([samples[k] for k in item]) for item in chained_keys}
+        chained_generator = {} if chained_keys is None else \
+            {item[0]: make_data_gen([samples[k] for k in item]) for item in chained_keys}
         return {**train_generator, **chained_generator}
+
+
+    def _compute_max_deriv_loss(self, obs):
+        ac = [scale.ac_new_bounds for _ in range(self._ac_dim)]
+        acs = np.array(np.meshgrid(*ac)).T.reshape(-1, self._ac_dim)
+        grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
+        deriv_loss = []
+        obs_np = obs.detach().numpy()
+        for ac in acs:
+            ac_tile = np.expand_dims(np.tile(ac, (obs.size(0), 1)), axis=-1)
+            dyn = self.dyn_predictor(obs=obs_np,
+                                     ac=ac_tile,
+                                     only_nominal=True,
+                                     stats=None)
+            deriv_loss.append(row_wise_dot(grad, torchify(dyn, device=obs.device)))
+        deriv_loss = torch.hstack(deriv_loss).max(dim=-1).values.unsqueeze(dim=-1)
+        deriv_loss += self.params.eta * self.filter_net(obs)
+        return deriv_loss

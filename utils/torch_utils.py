@@ -1,9 +1,13 @@
 import torch
 from attrdict import AttrDict
+import numpy as np
 
 
 def row_wise_dot(a, b):
-    return (a * b).sum(dim=-1).unsqueeze(dim=-1)
+    if torch.is_tensor(a):
+        return (a * b).sum(dim=-1).unsqueeze(dim=-1)
+    if isinstance(a, np.ndarray):
+        return np.expand_dims((a * b).sum(axis=-1), axis=-1)
 
 
 def apply_mask_to_dict_of_tensors(dict_of_tensors, mask):
