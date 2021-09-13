@@ -244,7 +244,7 @@ class Config:
             # filter network
             filter_net_kwargs=dict(hidden_dim=128,
                                    num_layers=2,
-                                   unit_activation=nn.SiLU,
+                                   unit_activation=nn.ELU,
                                    out_activation=nn.Identity,
                                    batch_norm=False,
                                    layer_norm=False,

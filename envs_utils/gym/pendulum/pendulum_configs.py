@@ -33,7 +33,7 @@ config = {
         # losses weights
         'safe_loss_weight': 1.0,
         'unsafe_loss_weight': 1.0,
-        'deriv_loss_weight': 0.1,
+        'deriv_loss_weight': 0.001,
         'safe_deriv_loss_weight': 1.0,
         'u_max_weight_in_deriv_loss': 1.0,
         'deriv_loss_version': 3,

@@ -150,9 +150,9 @@ class CBFFilter(BaseFilter):
         # dyns = samples.dyn_safe
 
         # Safe loss
-        safe_loss = torch.zeros(1, requires_grad=True)[0]
-        unsafe_loss = torch.zeros(1, requires_grad=True)[0]
-        deriv_loss = torch.zeros(1, requires_grad=True)[0]
+        safe_loss = torch.zeros(1, requires_grad=True, device=safe_samples.device)[0]
+        unsafe_loss = torch.zeros(1, requires_grad=True, device=unsafe_samples.device)[0]
+        deriv_loss = torch.zeros(1, requires_grad=True, device=deriv_samples.device)[0]
         if not safe_samples.size(0) == 0:     # if the tensor is not empty
             safe_loss = (self._append_zeros(self.params.gamma_safe - self.filter_net(safe_samples))).max(dim=-1).values
             safe_loss = self._normalize_loss(safe_loss).mean()
@@ -168,9 +168,9 @@ class CBFFilter(BaseFilter):
             deriv_loss = self._normalize_loss(deriv_loss).mean()
 
         # push loss plots, dumped in trainer
-        logger.push_plot(np.stack([safe_loss.detach().numpy(),
-                                   unsafe_loss.detach().numpy(),
-                                   deriv_loss.detach().numpy()]).reshape(1, -1),
+        logger.push_plot(np.stack([safe_loss.cpu().detach().numpy(),
+                                   unsafe_loss.cpu().detach().numpy(),
+                                   deriv_loss.cpu().detach().numpy()]).reshape(1, -1),
                          plt_key="loss_plots")
 
         return self.params.safe_loss_weight * safe_loss +\
@@ -234,7 +234,7 @@ class CBFFilter(BaseFilter):
         acs = np.array(np.meshgrid(*ac)).T.reshape(-1, self._ac_dim)
         grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
         deriv_loss = []
-        obs_np = obs.detach().numpy()
+        obs_np = obs.cpu().detach().numpy()
         for ac in acs:
             ac_tile = np.expand_dims(np.tile(ac, (obs.size(0), 1)), axis=-1)
             dyn = self.dyn_predictor(obs=obs_np,

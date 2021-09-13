@@ -37,12 +37,19 @@ def unfreeze_net(net):
     for p in net.parameters():
         p.requires_grad = True
 
+def get_device(device):
+    if isinstance(device, str):
+        return torch.device('cuda' if device == ('gpu' or 'cuda') else 'cpu')
+    if isinstance(device, torch.device):
+        return device
+
 
 def torchify(x, dtype=torch.float32, device='cpu', requires_grad=False):
+
     if torch.is_tensor(x):
         x.requires_grad_(requires_grad)
         x.to(dtype=dtype)
-        x.to(device='cuda' if device == 'gpu' else 'cpu')
+        x.to(device=get_device(device))
         return x
     if isinstance(x, dict): # dict of torch.tensors
         out = {k: torchify(v, dtype, device, requires_grad) for k, v in x.items()}
@@ -50,7 +57,7 @@ def torchify(x, dtype=torch.float32, device='cpu', requires_grad=False):
     if isinstance(x, np.ndarray) and not(x.shape[0] == 0) and isinstance(x[0], dict):
         out = np.hstack([torchify(dic) for dic in x])
         return out
-    out = torch.as_tensor(x, dtype=dtype, device=torch.device('cuda' if device == 'gpu' else 'cpu'))
+    out = torch.as_tensor(x, dtype=dtype, device=get_device(device))
     out.requires_grad_(requires_grad)
     return out
 

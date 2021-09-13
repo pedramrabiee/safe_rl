@@ -87,6 +87,7 @@ class SFTrainer(BaseTrainer):
 
                 # pretrain filter
                 timer_begin = time()
+                self.agent.train_mode(device=self.config.training_device)
                 self.agent.pre_train_filter(samples=AttrDict(torchify(samples, device=self.config.training_device)))
                 logger.log(f'Pretraining time: {time() - timer_begin}', color='blue')
 
