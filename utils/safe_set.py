@@ -83,7 +83,9 @@ class SafeSetFromCriteria(SafeSet):
         """
         super().__init__(env, obs_proc)
 
-        keys = ['geo_safe', 'in_safe', 'mid_safe', 'unsafe', 'out_cond_safe', 'out_cond_unsafe', 'mid_cond_safe']
+        # keys = ['geo_safe', 'in_safe', 'mid_safe', 'unsafe', 'out_cond_safe', 'out_cond_unsafe', 'mid_cond_safe']
+        keys = ['geo_safe', 'in_safe', 'unsafe', 'out_cond_safe', 'out_cond_unsafe']
+
         self.criteria = {k: getattr(self, 'is_' + k) for k in keys}
 
     def sample_by_criteria(self, criteria_keys, batch_size):
@@ -116,7 +118,6 @@ class SafeSetFromCriteria(SafeSet):
 
         return [np.vstack(sample) for sample in samples]
 
-
     def filter_sample_by_criteria(self, samples, criteria_keys):
         num_criteria = len(criteria_keys)
         masks = [None for _ in range(num_criteria)]
@@ -139,8 +140,8 @@ class SafeSetFromCriteria(SafeSet):
     def is_in_safe(self, obs):  # geometrically inside the inner safe section
         raise NotImplementedError
 
-    def is_mid_safe(self, obs):  # geometrically inside the middle safe section
-        raise NotImplementedError
+    # def is_mid_safe(self, obs):  # geometrically inside the middle safe section
+    #     raise NotImplementedError
 
     def is_out_safe(self, obs):  # geometrically inside the outer safe section
         raise NotImplementedError
@@ -161,10 +162,10 @@ class SafeSetFromCriteria(SafeSet):
             obs = obs.numpy()
         return e_and(self.is_out_safe(obs), e_not(self.is_ss_safe(obs)))
 
-    def is_mid_cond_safe(self, obs):  # conditionally safe in middle safe section
-        if torch.is_tensor(obs):
-            obs = obs.numpy()
-        return e_and(self.is_mid_safe(obs), e_not(self.is_ss_safe(obs)))
+    # def is_mid_cond_safe(self, obs):  # conditionally safe in middle safe section
+    #     if torch.is_tensor(obs):
+    #         obs = obs.numpy()
+    #     return e_and(self.is_mid_safe(obs), e_not(self.is_ss_safe(obs)))
 
     def _get_obs(self):
         raise NotImplementedError
@@ -183,6 +184,10 @@ def get_safe_set(env_id, env, obs_proc, seed):
         from envs_utils.safety_gym.point_robot_utils import PointRobotSafeSetFromCriteria
         safe_set = PointRobotSafeSetFromCriteria(env, obs_proc)
          # TODO: Set seeds if needed
+    elif env_id == 'cbf_test':
+        from envs_utils.test_env.test_env_utils import CBFTestSafeSet
+        safe_set = CBFTestSafeSet(env, obs_proc)
+        safe_set.in_safe_set.seed(seed)
     else:
         raise NotImplementedError
     return safe_set

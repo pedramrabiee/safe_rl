@@ -56,8 +56,8 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
         obs_dim = self.obs_proc.obs_dim(proc_key='filter')   # TODO: check this, you may need to change it to safe_set
         max_speed = env.observation_space.high[2]
 
-        safe_half_wedge_angle = env_config.half_wedge_angle - (env_config.mid_safe_set_width + env_config.outer_safe_set_width)
-        mid_half_wedge_angle = env_config.half_wedge_angle - env_config.outer_safe_set_width
+        safe_half_wedge_angle = env_config.half_wedge_angle - env_config.outer_safe_set_width
+        # mid_half_wedge_angle = env_config.half_wedge_angle - env_config.outer_safe_set_width
 
         if obs_dim == 2: # TODO: add middle boundary and check inner and geo_safe_set
             self.geo_safe_set = Tuple([Box(low=np.array([-env_config.half_wedge_angle, -max_speed]),
@@ -77,9 +77,9 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
                                           high=np.array([1.0, np.sin(safe_half_wedge_angle), max_speed]),
                                           dtype=np.float64)])       # for wedge angle smaller than pi
             # middle boundary
-            self.mid_safe_set = Tuple([Box(low=np.array([np.cos(mid_half_wedge_angle), -np.sin(mid_half_wedge_angle), -max_speed]),
-                                           high=np.array([1.0, np.sin(mid_half_wedge_angle), max_speed]),
-                                           dtype=np.float64)])
+            # self.mid_safe_set = Tuple([Box(low=np.array([np.cos(mid_half_wedge_angle), -np.sin(mid_half_wedge_angle), -max_speed]),
+            #                                high=np.array([1.0, np.sin(mid_half_wedge_angle), max_speed]),
+            #                                dtype=np.float64)])
 
     def is_geo_safe(self, obs):
         if torch.is_tensor(obs):
@@ -91,16 +91,16 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
             obs = obs.numpy()
         return self.in_safe_set.contains(self.obs_proc.proc(obs).squeeze())
 
-    def is_mid_safe(self, obs):             # geometrically inside the middle safe section
-        if torch.is_tensor(obs):
-            obs = obs.numpy()
-        return e_and(self.mid_safe_set.contains(self.obs_proc.proc(obs).squeeze()),
-                     e_not(self.is_in_safe(obs)))
+    # def is_mid_safe(self, obs):             # geometrically inside the middle safe section
+    #     if torch.is_tensor(obs):
+    #         obs = obs.numpy()
+    #     return e_and(self.mid_safe_set.contains(self.obs_proc.proc(obs).squeeze()),
+    #                  e_not(self.is_in_safe(obs)))
 
     def is_out_safe(self, obs):             # geometrically inside the outer safe section
         if torch.is_tensor(obs):
             obs = obs.numpy()
-        return e_and(self.is_geo_safe(obs), e_not(self.is_mid_safe(obs)), e_not(self.is_in_safe(obs)))
+        return e_and(self.is_geo_safe(obs), e_not(self.is_in_safe(obs)))
 
     def is_unsafe(self, obs):
         if torch.is_tensor(obs):

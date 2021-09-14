@@ -110,6 +110,6 @@ def get_obsproc_cls(train_env):
             from envs_utils.safety_gym.point_robot_utils import PointObsProc
             return PointObsProc
     else:
-        raise NotImplementedError
+        return NeutralObsProc
 
 

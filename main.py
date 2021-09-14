@@ -12,7 +12,8 @@ from logger import logger
 def make_setup(env_nickname, agent, load_config_path=None):
     nicknames = {
         'pendulum': {'env_id': 'Pendulum-v0', 'env_collection': 'gym'},
-        'point': {'env_id': 'Point', 'env_collection': 'safety_gym'}
+        'point': {'env_id': 'Point', 'env_collection': 'safety_gym'},
+        'cbf_test': {'env_id': 'cbf_test', 'env_collection': 'misc'}
     }
 
     return AttrDict(agent=agent,
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     # 'pendulum': Pendulum-v0 from gym
     # 'point': Point from safety_gym
 
-    setup = make_setup(env_nickname='pendulum',
+    setup = make_setup(env_nickname='cbf_test',
                        agent='sf')
 
     # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all

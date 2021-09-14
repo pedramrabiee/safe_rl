@@ -32,6 +32,11 @@ def make_env(env_id,
         if max_episode_time:
             env.num_steps = int(max_episode_time / env.robot.sim.model.opt.timestep)
         max_episode_len = env.num_steps
+    elif collection == 'misc':
+        if env_id == 'cbf_test':
+            from envs_utils.test_env.test_env_utils import SimpleEnv
+            env = SimpleEnv()
+            max_episode_len = env.max_episode_len
 
     env = ActionScalerWrapper(env, ac_lim=ac_lim)
 

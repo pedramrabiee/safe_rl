@@ -34,10 +34,10 @@ class NominalDynamics:
 
 
 def get_nominal_dyn_cls(train_env, env):
+    params = None
     if train_env['env_collection'] == 'gym':
         if train_env['env_id'] == 'Pendulum-v0':
             from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumNominalDyn
-            params = None
             return InvertedPendulumNominalDyn, params
         else:
             raise NotImplementedError
@@ -47,5 +47,9 @@ def get_nominal_dyn_cls(train_env, env):
             from envs_utils.safety_gym.point_robot_utils import PointRobotNominalDynamics
             params = get_env_params(env)
             return PointRobotNominalDynamics, params
+    elif train_env['env_collection'] == 'misc':
+        if train_env['env_id'] == 'cbf_test':
+            from envs_utils.test_env.test_env_utils import CBFTestDynamics
+            return CBFTestDynamics, params
     else:
         raise NotImplementedError

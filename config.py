@@ -335,6 +335,9 @@ def get_config_override(train_env):
         if train_env['env_id'] == 'Point':
             from envs_utils.safety_gym.point_robot_configs import config
             return config
+    elif train_env['env_collection'] == 'misc':
+        from envs_utils.test_env.test_env_configs import config
+        return config
     else:
         raise NotImplementedError
 

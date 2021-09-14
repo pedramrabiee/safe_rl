@@ -50,7 +50,7 @@ env_config = AttrDict(
     timestep=0.01,
     # Safe set width
     half_wedge_angle=1.5,
-    mid_safe_set_width=0.2,
+    # mid_safe_set_width=0.2,
     outer_safe_set_width=0.2,
     # Pendulum dynamics parameters
     g=10.0,

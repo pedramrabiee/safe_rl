@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from scipy.signal import lfilter
 from scipy.spatial.transform import Rotation as R
-
 from dynamics.nominal_dynamics import NominalDynamics
 from envs_utils.safety_gym.point_robot_configs import env_config, engine_config
 from envs_utils.safety_gym.safety_gym_utils import SafetyGymSafeSetFromData, SafetyGymSafeSetFromCriteria

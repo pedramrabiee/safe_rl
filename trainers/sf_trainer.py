@@ -31,34 +31,36 @@ class SFTrainer(BaseTrainer):
                 timer_begin = time()
                 # sample safe datasets
                 samples = self.safe_set.sample_by_criteria(criteria_keys=['in_safe',
-                                                                          'mid_safe',
+                                                                          # 'mid_safe',
                                                                           "out_cond_safe",
                                                                           'unsafe',
                                                                           'out_cond_unsafe',
-                                                                          "mid_cond_safe"
+                                                                          # "mid_cond_safe"
                                                                           ],
-                                                           batch_size=[int(batch_size / 3),
-                                                                       int(batch_size / 3),
+                                                           batch_size=[int(2 * batch_size / 3),
                                                                        int(batch_size / 3),
                                                                        int(2 * batch_size / 3),
-                                                                       int(batch_size / 3),
                                                                        int(batch_size / 3)
                                                                        ])
 
-                safe_in_samples, safe_mid_samples, out_cond_safe_samples,\
-                    unsafe_samples, out_cond_unsafe_samples, mid_cond_safe_samples = samples
+                safe_in_samples, out_cond_safe_samples,\
+                    unsafe_samples, out_cond_unsafe_samples = samples
 
                 # stack safe datasets for the safe loss in pretraining
-                safe_samples = np.vstack((safe_in_samples, safe_mid_samples, out_cond_safe_samples))
+                safe_samples = np.vstack((safe_in_samples, out_cond_safe_samples))
+
 
                 # stack unsafe datasets for the unsafe loss in pretraining
                 unsafe_samples = np.vstack((unsafe_samples, out_cond_unsafe_samples))
 
                 # deriv experience for the deriv loss in pretraining
                 if version == 1:
-                    deriv_samples = out_cond_unsafe_samples
+                    # deriv_samples = out_cond_unsafe_samples
+                    raise NotImplementedError
+
                 if version == 2:
-                    deriv_samples = mid_cond_safe_samples
+                    # deriv_samples = mid_cond_safe_samples
+                    raise NotImplementedError
                 if version == 3:
                     deriv_samples = np.vstack((safe_samples, unsafe_samples))
 
@@ -190,7 +192,7 @@ class SFTrainer(BaseTrainer):
 
         # safe experience
         is_safe_mask = e_or(
-            *self.safe_set.filter_sample_by_criteria(queue_items.obs, ['in_safe', 'mid_safe', 'out_cond_safe']))
+            *self.safe_set.filter_sample_by_criteria(queue_items.obs, ['in_safe', 'out_cond_safe']))
         is_safe_mask = is_safe_mask if isinstance(is_safe_mask, list) else [is_safe_mask]
         safe_samples = queue_items.obs[np.asarray(is_safe_mask), ...]
 
@@ -202,10 +204,12 @@ class SFTrainer(BaseTrainer):
 
         # deriv experience mask
         if version == 1:
-            deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['out_cond_unsafe'])
+            raise NotImplementedError
+            # deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['out_cond_unsafe'])
 
         if version == 2:
-            deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['mid_cond_safe'])
+            # deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['mid_cond_safe'])
+            raise NotImplementedError
 
         if version == 3:
             deriv_mask = e_or(is_safe_mask, is_unsafe_mask)

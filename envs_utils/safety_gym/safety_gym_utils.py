@@ -141,7 +141,6 @@ class SafetyGymSafeSetFromCriteria(SafeSetFromCriteria):
         self.robot_keepout = None   # populated in the specific robot __init__ method
         self.max_speed = None       # populated in the specific robot __init__ method
 
-
     def _make_obstacles(self, obstacles_names):
         obst_pos = []
         obst_size = []
@@ -164,12 +163,12 @@ class SafetyGymSafeSetFromCriteria(SafeSetFromCriteria):
 
     def is_in_safe(self, obs):  # geometrically inside the inner safe section
         return self._check_criterion(obs,
-                                     lambda d: all(d - self.obstacles['size'] - self.robot_keepout - self.w_o - self.w_m > 0))
+                                     lambda d: all(d - self.obstacles['size'] - self.robot_keepout - self.w_o > 0))
 
-    def is_mid_safe(self, obs):  # geometrically inside the middle safe section
-        return self._check_criterion(obs,
-                                     lambda d: all(d - self.obstacles['size'] - self.robot_keepout - self.w_o > 0) and
-                                               any(d - self.obstacles['size'] - self.robot_keepout - self.w_o - self.w_m <= 0))
+    # def is_mid_safe(self, obs):  # geometrically inside the middle safe section
+    #     return self._check_criterion(obs,
+    #                                  lambda d: all(d - self.obstacles['size'] - self.robot_keepout - self.w_o > 0) and
+    #                                            any(d - self.obstacles['size'] - self.robot_keepout - self.w_o - self.w_m <= 0))
 
     def is_out_safe(self, obs):  # geometrically inside the outer safe section
         return self._check_criterion(obs,
@@ -181,7 +180,7 @@ class SafetyGymSafeSetFromCriteria(SafeSetFromCriteria):
                                      lambda d: any(d - self.obstacles['size'] <= 0))
 
     def is_geo_safe(self, obs):
-        return e_or(self.is_in_safe(obs), self.is_mid_safe(obs), self.is_out_safe(obs))
+        return e_or(self.is_in_safe(obs), self.is_out_safe(obs))
 
     def _check_criterion(self, obs, criterion):
         if torch.is_tensor(obs):

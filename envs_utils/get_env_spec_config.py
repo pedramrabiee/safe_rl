@@ -10,6 +10,9 @@ def get_env_spec_config(train_env):
             from envs_utils.safety_gym.point_robot_configs import env_config
             from envs_utils.safety_gym.point_robot_configs import engine_config
             env_config.update(engine_config)
+    elif train_env['env_collection'] == 'misc':
+        if train_env['env_id'] == 'cbf_test':
+            from envs_utils.test_env.test_env_configs import env_config
     else:
         raise NotImplementedError
     return env_config
