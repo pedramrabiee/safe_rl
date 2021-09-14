@@ -2,11 +2,12 @@ from attrdict import AttrDict
 
 config = {
     'init': {
+        'debugging_mode': False,
         'use_custom_env': True,
         'max_episode_time': 10.0,
         'max_episode_time_eval': 10.0,
-        'plot_custom_figs': False,
-        'save_custom_figs_data': False,
+        'plot_custom_figs': True,
+        'save_custom_figs_data': True,
         'episode_steps_per_itr': 1,
         'n_training_episode': 39,
         'do_evaluation': False,
@@ -29,12 +30,12 @@ config = {
         'filter_training_stages': dict(stages=[5000, 10000, 15000],
                                        freq=[5000, 4000, 4000]),
         'safety_filter_is_on': True,
-        'filter_pretrain_is_on': False,
+        'filter_pretrain_is_on': True,
         'filter_train_is_on': True,
         'save_filter_and_buffer_after_pretraining': True,
     },
     'cbf_params': {
-        'pretrain_max_epoch': 10,
+        'pretrain_max_epoch': 1e4,
         'stop_criteria_eps': 0.0,
         'train_on_jacobian': True,
         'pretrain_batch_to_sample_ratio': 0.2,

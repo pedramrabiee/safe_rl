@@ -57,10 +57,9 @@ class SFTrainer(BaseTrainer):
                 if version == 1:
                     # deriv_samples = out_cond_unsafe_samples
                     raise NotImplementedError
-
                 if version == 2:
                     # deriv_samples = mid_cond_safe_samples
-                    raise NotImplementedError
+                    deriv_samples = safe_samples
                 if version == 3:
                     deriv_samples = np.vstack((safe_samples, unsafe_samples))
 
@@ -213,7 +212,8 @@ class SFTrainer(BaseTrainer):
 
         if version == 2:
             # deriv_mask = self.safe_set.filter_sample_by_criteria(queue_items.obs, ['mid_cond_safe'])
-            raise NotImplementedError
+            # raise NotImplementedError
+            deriv_mask = is_safe_mask
 
         if version == 3:
             deriv_mask = e_or(is_safe_mask, is_unsafe_mask)
