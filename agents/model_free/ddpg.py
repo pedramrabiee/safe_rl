@@ -1,12 +1,14 @@
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
-
 from agents.base_agent import BaseAgent
 from distributions.dist_functional import one_hot_from_logits
 from networks.mlp import MLPNetwork
 from networks.multi_input_mlp import MultiInputMLP
 from utils.misc import *
 from logger import logger
+from utils import scale
+from utils.seed import rng
+
 
 class DDPGAgent(BaseAgent):
     def initialize(self, params, init_dict=None):
@@ -52,10 +54,12 @@ class DDPGAgent(BaseAgent):
         # initialize last episode noise is reset and rescaled as -1
         self._reset_noise_ep = -1
 
-    def step(self, obs, explore=False):
+    def step(self, obs, explore=False, init_phase=False):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='mf')
         obs = torch.as_tensor(obs, dtype=torch.float32)
+        if init_phase:
+            return self.init_phase_step(obs, explore), None
 
         action = self.policy(obs)
         if self._discrete_action:   # discrete action
@@ -68,6 +72,10 @@ class DDPGAgent(BaseAgent):
                 action += torchify(self.exploration.noise())
             action = action.clamp(self._ac_lim['low'], self._ac_lim['high'])
         return action, None
+
+    def init_phase_step(self, obs, explore):
+        return torchify(rng.uniform(low=scale.ac_new_bounds[0], high=scale.ac_new_bounds[1], size=self._ac_dim),
+                        device=obs.device)
 
     def sample_mode(self, device='cpu', sample_dict=None):
         super(DDPGAgent, self).sample_mode(device=device)

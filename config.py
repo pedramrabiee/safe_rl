@@ -25,7 +25,7 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = False
         self.save_custom_figs_data = False
 
@@ -44,6 +44,7 @@ class Config:
         # SAMPLER
         self.sampling_batch_size = 'all'                    # you need to remove this and move the sampling batch_size into method parameters. Like in the case of sf agent and trainer
         self.n_episode_initial_data_collection = 1
+        self.n_episode_init_phase = 1                       # number of episodes to use init phase for action
 
         self.sampler_device = 'cpu'
         self.episodes_per_return_log = 1

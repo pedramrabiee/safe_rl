@@ -32,19 +32,12 @@ class SFAgent(BaseAgent):
         self.agents = [self.mf_agent, self.mb_agent, self.safety_filter]
 
 
-    def step(self, obs, explore=False):
+    def step(self, obs, explore=False, init_phase=False):
         # call act method on model-free agent
-        # TODO: why don't you use explore anywhere
-        ac_mf, _ = self.mf_agent.act(obs)
+        ac_mf, _ = self.mf_agent.act(obs, explore=explore, init_phase=init_phase)
         ac_mf = np.expand_dims(ac_mf, axis=0) if np.ndim(ac_mf) == 1 else ac_mf
 
         # get dynamics from model-based, ground truth and mu, std
-        # dyn_bd = self.mb_agent.dynamics.predict(obs=obs, ac=ac_mf, stats=self.mb_agent.stats) #TODO: for each dynamics option test prediction without split_return by uncommenting this line
-
-        # FIXME: The nominal dynamics is defined as a function of action with actual bounds, the ac_mf is using the scaled bounds
-        #   in the affine in control case, this may or may not cause a problem, but in general you get into trouble later
-        #   when using the output of dynamics.predict in the safety filter
-
         dyn_bd = self.mb_agent.dynamics.predict(obs=obs, ac=ac_mf, stats=self.mb_agent.stats, split_return=True)
 
         info = None

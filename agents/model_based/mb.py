@@ -78,7 +78,7 @@ class MBAgent(BaseAgent):
 
         self.controller.initialize(self.params, init_dict=self.params.controller_params[idx])
 
-    def step(self, obs, explore=False):
+    def step(self, obs, explore=False, init_phase=False):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='mb')
 

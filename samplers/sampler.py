@@ -45,8 +45,8 @@ class Sampler:
 
         episode_steps = 0
         while True:
-
-            ac, act_info = self.agent.act(obs)      # Each agent takes care of observation processing in its step method
+            init_phase = True if self.episode_completed < self._config.n_episode_init_phase else False
+            ac, act_info = self.agent.act(obs, explore=True, init_phase=init_phase)      # Each agent takes care of observation processing in its step method
             next_obs, rew, done, info = self.env.step(ac)
 
             if act_info is not None:
@@ -134,7 +134,7 @@ class Sampler:
         safety_violations = []
         pbar = tqdm(total=self._config.n_episodes_evaluation * max_episode_len_eval, desc='Evaluating')
         while True:
-            ac, _ = self.agent.act(obs, explore=False)
+            ac, _ = self.agent.act(obs, explore=False, init_phase=False)
             next_obs, rew, done, info = self.env_eval.step(ac)
 
             episode_return += rew

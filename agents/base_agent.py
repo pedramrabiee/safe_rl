@@ -24,13 +24,16 @@ class BaseAgent:
         pass
 
     @torch.no_grad()
-    def act(self, obs, explore=True):
-        ac, info = self.step(obs, explore=explore)
+    def act(self, obs, explore=True, init_phase=False):
+        ac, info = self.step(obs, explore=explore, init_phase=init_phase)
         if torch.is_tensor(ac):
             ac = ac.numpy()
         return ac.squeeze(axis=0) if (ac.ndim > 1 and ac.shape[0] == 1) else ac, info
 
-    def step(self, obs, explore=False):
+    def step(self, obs, explore=False, init_phase=False):
+        raise NotImplementedError
+
+    def init_phase_step(self, obs, explore):
         raise NotImplementedError
 
     def push_to_buffer(self, experience, push_to_all=False):

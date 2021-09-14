@@ -1,5 +1,4 @@
 from controller.base_controller import BaseController
-import numpy as np
 from utils.seed import rng
 
 class RandomController(BaseController):
