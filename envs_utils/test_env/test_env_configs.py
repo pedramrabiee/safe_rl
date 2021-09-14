@@ -13,15 +13,16 @@ config = {
         'n_video_save_per_evaluation': 3,
         'wandb_project_name': 'cbf_test',
         'save_models': False,
+        'step_save_freq': 10
     },
     'sf_params': {
         'mf': 'cbftest_agent',
-        'filter_pretrain_sample_size': 1000,
+        'filter_pretrain_sample_size': 500,
         'mf_update_freq': 2000,
         'filter_training_stages': dict(stages=[2000, 10000, 15000],
                                        freq=[2000, 2000, 2000]),
-        'safety_filter_is_on': False,
-        'filter_pretrain_is_on': False,
+        'safety_filter_is_on': True,
+        'filter_pretrain_is_on': True,
         'filter_train_is_on': False,
         'mf_train_is_on': False
     },

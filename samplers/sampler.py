@@ -22,7 +22,7 @@ class Sampler:
         logger.log('Sampler initialized...')
         self._init_sample_round = True
         self._episode_counter = 0
-        self._min_buffer_size = int(self._config.n_episode_initial_data_collection * self._config.max_episode_len)
+        self._min_buffer_size = int(self._config.n_episode_initial_data_collection * self._config.max_episode_len / self._config.step_save_freq)
         self._reset_buffer_queue()
 
     def collect_data(self, train_itr):
@@ -37,13 +37,14 @@ class Sampler:
             self._safety_violation_counter = 0
             self._safety_violations = []
             self._returns = []
-            pbar = tqdm(total=self._min_buffer_size, desc='Initial Sampling Progress')
+            pbar = tqdm(total=self._min_buffer_size * self._config.step_save_freq, desc='Initial Sampling Progress')
         else:
             obs = self._last_obs
-            pbar = tqdm(total=self._episode_steps_per_itr, desc='Sampling on iteration %d' % train_itr)
+            pbar = tqdm(total=self._episode_steps_per_itr * self._config.step_save_freq, desc='Sampling on iteration %d' % train_itr)
 
 
         episode_steps = 0
+        save_skip = 0
         while True:
             init_phase = True if self.episode_completed < self._config.n_episode_init_phase else False
             ac, act_info = self.agent.act(obs, explore=True, init_phase=init_phase)      # Each agent takes care of observation processing in its step method
@@ -51,18 +52,23 @@ class Sampler:
 
             if act_info is not None:
                 info = {**info, **act_info}
-            # process observations store transition data in the temporary buffer
-            obs_proc = self.obs_proc.proc(obs, proc_key='buffer')
-            next_obs_proc = self.obs_proc.proc(next_obs, proc_key='buffer')
-            obs_proc = obs_proc if isinstance(obs_proc, np.ndarray) else obs_proc
-            next_obs_proc = next_obs_proc if isinstance(next_obs_proc, np.ndarray) else obs_proc
 
-            self._buffer_queue(obs_proc,
-                               ac.reshape(1, -1),
-                               rew.reshape(1, -1),
-                               next_obs_proc,
-                               done.reshape(1, -1),
-                               info)
+            if done: save_skip = 0
+            # process observations store transition data in the temporary buffer
+            if not save_skip:
+                obs_proc = self.obs_proc.proc(obs, proc_key='buffer')
+                next_obs_proc = self.obs_proc.proc(next_obs, proc_key='buffer')
+                obs_proc = obs_proc if isinstance(obs_proc, np.ndarray) else obs_proc
+                next_obs_proc = next_obs_proc if isinstance(next_obs_proc, np.ndarray) else obs_proc
+
+                self._buffer_queue(obs_proc,
+                                   ac.reshape(1, -1),
+                                   rew.reshape(1, -1),
+                                   next_obs_proc,
+                                   done.reshape(1, -1),
+                                   info)
+            save_skip += 1
+            save_skip = save_skip if save_skip < self._config.step_save_freq else 0
 
             # sampler_push_obs append observation to the current timestep row.
             # You need to call sampler_push_action somewhere (either here or inside the agent) before calling sampler_push_obs
@@ -74,6 +80,7 @@ class Sampler:
             if done or self._episode_time >= self._max_episode_len:
                 self._episode_counter += 1
                 self._episode_time = 0
+                save_skip = 0
                 # reset environment
                 obs = self._env_reset()
                 # reset agent
@@ -106,7 +113,7 @@ class Sampler:
 
             episode_steps += 1
             pbar.update(1)
-            if episode_steps >= self._episode_steps_per_itr and self.buffer_size() > self._min_buffer_size:
+            if int(episode_steps / self._config.step_save_freq) >= self._episode_steps_per_itr and self.buffer_size() > self._min_buffer_size:
                 # add noise to data to be stored if required
                 if self._config.add_noise_when_buffering.is_true:
                     self._add_noise()

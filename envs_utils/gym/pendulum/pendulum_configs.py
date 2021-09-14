@@ -5,8 +5,8 @@ config = {
         'use_custom_env': True,
         'max_episode_time': 10.0,
         'max_episode_time_eval': 10.0,
-        'plot_custom_figs': True,
-        'save_custom_figs_data': True,
+        'plot_custom_figs': False,
+        'save_custom_figs_data': False,
         'episode_steps_per_itr': 1,
         'n_training_episode': 39,
         'do_evaluation': False,
@@ -15,6 +15,8 @@ config = {
         'n_video_save_per_evaluation': 3,
         'wandb_project_name': 'pendulum',
         'save_models': True,
+        'n_episode_init_phase': 1,
+        'step_save_freq': 10
     },
     'sf_params': {
         'filter_pretrain_sample_size': 500,
@@ -22,8 +24,8 @@ config = {
         'filter_training_stages': dict(stages=[5000, 10000, 15000],
                                        freq=[5000, 4000, 4000]),
         'safety_filter_is_on': True,
-        'filter_pretrain_is_on': True,
-        'filter_train_is_on': True,
+        'filter_pretrain_is_on': False,
+        'filter_train_is_on': False,
     },
     'cbf_params': {
         'pretrain_max_epoch': 1e5,
@@ -33,7 +35,7 @@ config = {
         # losses weights
         'safe_loss_weight': 1.0,
         'unsafe_loss_weight': 1.0,
-        'deriv_loss_weight': 0.001,
+        'deriv_loss_weight': 0.01,
         'safe_deriv_loss_weight': 1.0,
         'u_max_weight_in_deriv_loss': 1.0,
         'deriv_loss_version': 3,
@@ -47,7 +49,7 @@ config = {
 env_config = AttrDict(
     do_obs_proc=False,
     safe_reset=True,
-    timestep=0.01,
+    timestep=0.001,
     # Safe set width
     half_wedge_angle=1.5,
     # mid_safe_set_width=0.2,

@@ -44,7 +44,10 @@ class Config:
         # SAMPLER
         self.sampling_batch_size = 'all'                    # you need to remove this and move the sampling batch_size into method parameters. Like in the case of sf agent and trainer
         self.n_episode_initial_data_collection = 1
-        self.n_episode_init_phase = 1                       # number of episodes to use init phase for action
+        self.n_episode_init_phase = 0                       # number of episodes to use init phase for action
+        # number of environment steps to skip when saving to buffer
+        # (e.g. env_step = 0.001, step_save_freq = 10 -> save to buffer every 0.01s)
+        self.step_save_freq = 1
 
         self.sampler_device = 'cpu'
         self.episodes_per_return_log = 1

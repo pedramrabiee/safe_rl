@@ -14,9 +14,8 @@ from utils.space_utils import Tuple
 import gym
 from gym.utils import seeding
 from copy import copy
-from utils.seed import rng
 from agents.model_free.ddpg import DDPGAgent
-
+from utils.seed import rng
 
 class SimpleEnv(gym.Env):
     def __init__(self):
@@ -36,10 +35,11 @@ class SimpleEnv(gym.Env):
         self.observation_space = Box(low=-high, high=high, dtype=np.float32)
 
         self.seed()
+        self.rng = np.random.default_rng(0)
 
     def reset(self):
         high = np.array([self.max_x, self.max_speed])
-        self.state = rng.uniform(low=-high, high=high)
+        self.state = self.rng.uniform(low=-high, high=high)
         return copy(self.state)
 
     def step(self, u):
@@ -135,7 +135,7 @@ class CBFTestAgent(DDPGAgent):
     #     self._obs_dim = self.obs_proc.obs_dim(proc_key='mf')
     #     self.params = params
 
-    def step(self, obs, explore=False):
+    def step(self, obs, explore=False, init_phase=False):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='mf')
         action = rng.uniform(-1.0, 1.0, (1, self._ac_dim))
