@@ -113,6 +113,10 @@ class SFTrainer(BaseTrainer):
             elif issubclass(type(self.safe_set), SafeSetFromData):
                 raise NotImplementedError
 
+            # save filter and buffer
+            if self.config.sf_params.save_filter_and_buffer_after_pretraining:
+                self._save(itr=itr, episode=self.sampler.episode_completed)
+
         # collect data by running current policy
         self.sampler.collect_data(itr)
 

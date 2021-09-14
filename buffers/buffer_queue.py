@@ -67,3 +67,12 @@ class BufferQueue(ReplayBuffer):
     def sample_by_indices(self, inds, device='cpu'):
         return AttrDict({k: torchify(v[inds[i]], device=device) if inds[i] is not None else torchify(np.array([]), device=device)
                          for i, (k, v) in enumerate(self.buffer.items())})
+
+    def get_buffer(self, to_tensor=False, device="cpu"):
+        if to_tensor:
+            raise NotImplementedError
+        else:
+            return self.buffer
+
+    def init_buffer(self, data):
+        self.buffer = data

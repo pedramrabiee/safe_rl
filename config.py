@@ -25,7 +25,7 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = False
         self.save_custom_figs_data = False
 
@@ -70,18 +70,18 @@ class Config:
         self.use_wandb = True  # Enable wandb
         self.wandb_project_name = "point"  # wandb project name
         self.save_models = False and not self.debugging_mode    # Enable to save models every SAVE_FREQUENCY episodes (do not need to save on debugging mode)
-        self.save_buffer = False
+        self.save_buffer = True
         self.num_save_sessions = 5
         self.add_timestamp = True  # Add timestamp to console's
 
         # LOAD MODELS
-        self.load_models = False
-        self.load_buffer = False
-        self.load_run_name = 'run-20210628_125253-37ijc4uh'
+        self.load_models = True
+        self.load_buffer = True
+        self.load_run_name = 'run-20210914_145325-3nrejh0p'
         self.load_run_id = self.load_run_name[-8:]
         self.overwrite_config = False            # overwrite config file, with the loaded model env_config file
-        # self.load_timestamp = '20210110_131125'
-        self.load_timestamp = 'last'
+        self.load_timestamp = '20210914_145340_ep0'
+        # self.load_timestamp = 'last'
 
         # Custom model loader:
         # Make a list of dict keys that you want to load from agent's models.
@@ -236,6 +236,7 @@ class Config:
             dyn_train_is_on=False,
             mf_train_is_on=True,
             add_cbf_pretrain_data_to_buffer=True,
+            save_filter_and_buffer_after_pretraining=True,
         )
         return sf_params
 

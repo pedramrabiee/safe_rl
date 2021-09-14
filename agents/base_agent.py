@@ -149,4 +149,6 @@ class BaseAgent:
     def curr_buf_id(self, buf_id):
         self._curr_buf_id = buf_id
 
-
+    @property
+    def num_buffer(self):
+        return len(self._buffer) if isinstance(self._buffer, list) else 1

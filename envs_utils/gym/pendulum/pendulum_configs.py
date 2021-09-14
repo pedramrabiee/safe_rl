@@ -25,10 +25,10 @@ config = {
                                        freq=[5000, 4000, 4000]),
         'safety_filter_is_on': True,
         'filter_pretrain_is_on': False,
-        'filter_train_is_on': False,
+        'filter_train_is_on': True,
     },
     'cbf_params': {
-        'pretrain_max_epoch': 1e5,
+        'pretrain_max_epoch': 10,
         'stop_criteria_eps': 0.0,
         'train_on_jacobian': True,
         'pretrain_batch_to_sample_ratio': 0.2,

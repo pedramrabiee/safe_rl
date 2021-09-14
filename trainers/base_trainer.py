@@ -212,7 +212,6 @@ class BaseTrainer:
         # run evaluation loop
         self._evaluate(itr=0)
 
-
     def _train(self, itr):
         raise NotImplementedError
 
@@ -239,7 +238,16 @@ class BaseTrainer:
         states['episdoe'] = episode
         states = self.agent.get_params()
         if self.config.save_buffer:
-            states['buffer'] = self.agent.get_buffer()
+            num_buffer = self.agent.num_buffer
+            if num_buffer == 1:
+                states['buffer'] = self.agent.get_buffer()
+            else:
+                cur_id = self.agent.curr_buf_id
+                states['buffer'] = []
+                for i in range(num_buffer):
+                    self.agent.curr_buf_id = i
+                    states['buffer'].append(self.agent.get_buffer())
+                self.agent.curr_buf_id = cur_id
         torch.save(states, filename)
         logger.log('Checkpoint saved: %s' % filename)
 
@@ -251,7 +259,14 @@ class BaseTrainer:
         self.agent.load_params(checkpoint=checkpoint,
                                custom_load_list=self.config.custom_load_list)
         if self.config.load_buffer and 'buffer' in checkpoint.keys():
-            self.agent.init_buffer(checkpoint['buffer'])
+            if isinstance(checkpoint['buffer'], list):
+                cur_id = self.agent.curr_buf_id
+                for i, buffer_data in enumerate(checkpoint['buffer']):
+                    self.agent.curr_buf_id = i
+                    self.agent.init_buffer(buffer_data)
+                self.agent.curr_buf_id = cur_id
+            else:
+                self.agent.init_buffer(checkpoint['buffer'])
 
     def _overwrite_config(self, new_config):
         # overwrite loaded config from the loaded run with the current config.
