@@ -75,8 +75,8 @@ class Config:
         self.add_timestamp = True  # Add timestamp to console's
 
         # LOAD MODELS
-        self.load_models = True
-        self.load_buffer = True
+        self.load_models = False
+        self.load_buffer = False
         self.load_run_name = 'run-20210914_145325-3nrejh0p'
         self.load_run_id = self.load_run_name[-8:]
         self.overwrite_config = False            # overwrite config file, with the loaded model env_config file
@@ -172,6 +172,7 @@ class Config:
             gamma=0.99,
             exp_strategy_cls=OUNoise,
             n_exploration_episode=self.n_training_episode,
+            init_phase_coef=0.5,
             exp_kwargs=dict(theta=0.15,         # exploration parameters
                             sigma=0.2,
                             mu=0.0),

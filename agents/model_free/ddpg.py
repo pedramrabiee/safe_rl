@@ -75,7 +75,7 @@ class DDPGAgent(BaseAgent):
 
     def init_phase_step(self, obs, explore):
         return torchify(rng.uniform(low=scale.ac_new_bounds[0], high=scale.ac_new_bounds[1], size=self._ac_dim),
-                        device=obs.device)
+                        device=obs.device) * self.params.init_phase_coef
 
     def sample_mode(self, device='cpu', sample_dict=None):
         super(DDPGAgent, self).sample_mode(device=device)
