@@ -16,10 +16,12 @@ config = {
         'n_video_save_per_evaluation': 3,
         'wandb_project_name': 'pendulum',
         'save_models': True,
-        'load_models': False,
-        'load_buffer': False,
+        'load_models': True,
+        'load_buffer': True,
         'n_episode_init_phase': 1,
-        'step_save_freq': 10
+        'step_save_freq': 10,
+        'load_run_name': 'run-20210914_160746-a7mp6vyc',
+        'load_timestamp': '20210914_161734_ep0'
     },
     'ddpg_params': {
         'init_phase_coef': 0.5
@@ -27,11 +29,11 @@ config = {
     'sf_params': {
         'filter_pretrain_sample_size': 1000,
         'mf_update_freq': 1,
-        'filter_training_stages': dict(stages=[5000, 10000, 15000],
-                                       freq=[5000, 4000, 4000]),
+        'filter_training_stages': dict(stages=[5, 10, 20],
+                                       freq=[5, 4, 5]),
         'safety_filter_is_on': True,
-        'filter_pretrain_is_on': True,
-        'filter_train_is_on': True,
+        'filter_pretrain_is_on': False,
+        'filter_train_is_on': False,
         'save_filter_and_buffer_after_pretraining': True,
     },
     'cbf_params': {

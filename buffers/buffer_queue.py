@@ -41,7 +41,20 @@ class BufferQueue(ReplayBuffer):
             None, None, None, None, None, None
 
     def release_queue(self, to_tensor=False, device='cpu'):
-        out = self.get_buffer(to_tensor=to_tensor, device=device)
+        if to_tensor:
+            out = AttrDict(obs=torchify(self._obs, device=device),
+                           ac=torchify(self._ac, device=device),
+                           rew=torchify(self._rew, device=device),
+                           next_obs=torchify(self._next_obs, device=device),
+                           done=torchify(self._done, device=device),
+                           info=self._info)
+        else:
+            out = AttrDict(obs=self._obs,
+                           ac=self._ac,
+                           rew=self._rew,
+                           next_obs=self._next_obs,
+                           done=self._done,
+                           info=self._info)
         self.reset_queue()
         return out
 

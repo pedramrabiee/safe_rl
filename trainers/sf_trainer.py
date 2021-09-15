@@ -20,6 +20,7 @@ class SFTrainer(BaseTrainer):
         # switch back buffer to buffer 0
         self.agent.curr_buf_id = 0
         self.clear_deriv_data = True        # while this is True, avoid adding obs, next_obs, dyn_values to buffer 1 (cbf buffer)
+        self.last_ep_filter_updated = 0
 
 
     def _train(self, itr):
@@ -115,7 +116,6 @@ class SFTrainer(BaseTrainer):
             # save filter and buffer
             if self.config.sf_params.save_filter_and_buffer_after_pretraining:
                 self._save(itr=itr, episode=self.sampler.episode_completed)
-
         # collect data by running current policy
         self.sampler.collect_data(itr)
 
@@ -151,8 +151,9 @@ class SFTrainer(BaseTrainer):
 
         # train filter on its frequency
         if self.config.sf_params.safety_filter_is_on and self.config.sf_params.filter_train_is_on and\
-                multi_stage_schedule(itr=itr, stages_dict=self.config.sf_params.filter_training_stages)\
-                and (not itr == 0):
+                multi_stage_schedule(ep=self.sampler.episode_completed, stages_dict=self.config.sf_params.filter_training_stages)\
+                and (not self.sampler.episode_completed == self.last_ep_filter_updated):
+            self.last_ep_filter_updated = self.sampler.episode_completed
             to_train.append('filter')
 
             # FIXME
