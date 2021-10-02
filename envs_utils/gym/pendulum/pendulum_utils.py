@@ -11,6 +11,7 @@ from utils.custom_plotter import CustomPlotter
 from utils.misc import e_and, e_not
 from utils.process_observation import ObsProc
 from utils.safe_set import SafeSetFromCriteria
+from utils.safe_set import SafeSetFromPropagation
 from utils.seed import rng
 from utils.space_utils import Tuple
 
@@ -135,6 +136,68 @@ class InvertedPendulumSafeSet(SafeSetFromCriteria):
         return (-np.sign(theta) * ac_lim_high).reshape(len(theta), 1, 1)
 
 
+class InvertedPendulumSafeSetFromPropagation(SafeSetFromPropagation):
+    def __init__(self, env, obs_proc):
+        super().__init__(env, obs_proc)
+        self.max_speed = env_config.max_speed_for_safe_set_training
+
+        self.geo_safe_set = Tuple(
+            [Box(low=np.array([np.cos(env_config.half_wedge_angle), -np.sin(env_config.half_wedge_angle), -np.inf]),
+                 high=np.array([1.0, np.sin(env_config.half_wedge_angle), np.inf]),
+                 dtype=np.float64)])  # for wedge angle smaller than pi
+
+    def initialize(self, init_dict=None):
+        super().initialize(init_dict)
+        self.max_T = env_config.max_T_for_safe_set
+
+    def _get_obs(self):
+        theta = rng.uniform(low=-np.pi, high=np.pi)
+        thetadot = rng.normal(loc=0.0, scale=self.max_speed)
+        return np.array([np.cos(theta), np.sin(theta), thetadot])
+
+    def get_safe_action(self, obs):
+        obs = obs.reshape(1, -1) if obs.ndim == 1 else obs
+        if obs.shape[1] == 2:
+            theta = obs[:, 0]
+            thetadot = obs[:, 1]
+        else:
+            theta = np.arctan2(obs[:, 1], obs[:, 0])
+            thetadot = obs[:, 2]
+
+        ac_lim_high = scale.ac_new_bounds[1]
+        return (-np.sign(thetadot) * ac_lim_high).reshape(len(theta), 1, 1)
+
+    def propagation_terminate_cond(self, obs, next_obs):
+        single_obs = False
+        if np.isscalar(obs[0]):
+            obs = np.expand_dims(obs, axis=0)
+            next_obs = np.expand_dims(next_obs, axis=0)
+            single_obs = True
+
+        theta_dot = obs[:, 2]
+        new_theta_dot = next_obs[:, 2]
+        terminate = theta_dot * new_theta_dot <= 0.0     # declare if theta_dot changed sign
+        return terminate[0] if single_obs else list(terminate)
+
+    def compute_next_obs(self, deriv_value, obs):
+        """
+         for the inverted pendulum deriv values are:
+         -theta_dot * cos(theta)
+         theta_dot * sin(theta)
+         theta_ddot
+        """
+        single_obs = False
+        if np.isscalar(obs[0]):
+            obs = np.expand_dims(obs, axis=0)
+            single_obs = True
+
+        theta = np.arctan2(obs[:, 1], obs[:, 0])
+        theta_dot = obs[:, 2]
+        new_theta_dot = theta_dot + deriv_value[:, 2] * self.timestep
+        new_theta = theta + new_theta_dot * self.timestep
+        next_obs = np.stack([np.cos(new_theta), np.sin(new_theta), new_theta_dot], axis=-1)
+        return next_obs[0] if single_obs else next_obs
+
 class InvertedPendulumNominalDyn(NominalDynamics):
     def initialize(self, params, init_dict=None):
         #TODO: You should link this with the params, so that if you are normalizing the observation or action, apply the same thing here
@@ -213,8 +276,24 @@ class InvertedPendulumCustomPlotter(CustomPlotter):
                                   )
 
 
+    def safe_set_plotter(self, safe_samples, unsafe_samples):
+        cossin2theta = lambda x: np.arctan2(x[:, 1], x[:, 0])
+
+        theta_safe = cossin2theta(safe_samples)
+        theta_unsafe = cossin2theta(unsafe_samples)
+        plt.scatter(theta_safe, safe_samples[:, 2], c='g', marker='.', linewidths=0.05, alpha=0.5)
+        plt.scatter(theta_unsafe, unsafe_samples[:, 2], c='r', marker='.', linewidths=0.05, alpha=0.5)
+        plt.axvline(x=-env_config.half_wedge_angle, color='k', linestyle='-')
+        plt.axvline(x=env_config.half_wedge_angle, color='k', linestyle='-')
+
+
+        logger.dump_plot(filename='safe_unsafe_sets',
+                         plt_key='safe_unsafe')
+
+
+
     def h_plotter(self, itr, filter_net):
-        speeds = env_config.max_speed * np.linspace(-1.0, 1.0, num=9)
+        speeds = env_config.max_speed_for_safe_set_training * np.linspace(-1.0, 1.0, num=9)
         theta = np.linspace(-np.pi, np.pi, num=100).reshape(-1, 1)
         # plt.figure()
         for speed in speeds:
@@ -226,12 +305,12 @@ class InvertedPendulumCustomPlotter(CustomPlotter):
             plt.legend()
 
         logger.dump_plot(filename='cbf_itr_%d' % itr,
-                         plt_key='cbf')
+                         plt_key='cbf2d')
 
         # plt.figure()
         # mpl.use('TkAgg')  # or can use 'TkAgg', whatever you have/prefer
         # plt.ion()
-        speeds = env_config.max_speed * np.linspace(-1.0, 1.0, num=100)
+        speeds = env_config.max_speed_for_safe_set_training * np.linspace(-1.0, 1.0, num=100)
 
         X, Y = np.meshgrid(theta, speeds)
         # x = np.concatenate((np.cos(X), np.sin(X), Y))
@@ -246,12 +325,16 @@ class InvertedPendulumCustomPlotter(CustomPlotter):
         # ax.contour3D(X, Y, out, 50, cmap='binary')
         ax.plot_surface(X, Y, out, rstride=1, cstride=1,
                      cmap='viridis', edgecolor='none')
+        zlim = ax.get_zlim()
+        cs = ax.contour(X, Y, out, [0.0], colors="k", linestyles="solid", zdir='z', offset=zlim[0], alpha=1.0)
+        ax.clabel(cs, inline=True, fontsize=10)
         ax.set_xlabel(r'$\theta$')
         ax.set_ylabel(r'$\dot \theta$')
         ax.set_zlabel(r'$h$'),
         ax.view_init(50, 40)
+        # ax.set_zlim(-0.1, 0.1)
 
         logger.dump_plot(filename='cbf_itr_%d_3D' % itr,
-                         plt_key='cbf')
+                         plt_key='cbf3d')
 
         # plt.ioff()
