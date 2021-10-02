@@ -97,7 +97,7 @@ class BaseTrainer:
         # Get max episode length
         self.config.max_episode_len = env_info['max_episode_len']
         self.train_iter = int(
-            self.config.n_training_episode * env_info['max_episode_len'] / self.config.episode_steps_per_itr)
+            self.config.n_training_episode * env_info['max_episode_len'] / self.config.episode_steps_per_itr / self.config.step_save_freq)
 
         if self.config.setup.train_env['env_collection'] == 'safety_gym':
             # reset environment to create layout (to get obstacle positions)
