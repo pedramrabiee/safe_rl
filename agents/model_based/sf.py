@@ -85,8 +85,9 @@ class SFAgent(BaseAgent):
 
     def sample_mode(self, device='cpu', sample_dict=None):
         # Set model-free policy on eval mode
-        self.mf_agent.policy.eval()
-        self.mf_agent.policy = to_device(self.mf_agent.policy, device)
+        if hasattr(self.mf_agent, 'policy'):
+            self.mf_agent.policy.eval()
+            self.mf_agent.policy = to_device(self.mf_agent.policy, device)
 
         # Set dynamics on eval mode
         self.mb_agent.dynamics.eval_mode(device=device)
@@ -95,3 +96,10 @@ class SFAgent(BaseAgent):
         self.safety_filter.filter_net.eval()
         self.safety_filter.filter_net = to_device(self.safety_filter.filter_net, device)
 
+    def on_episode_reset(self, episode):
+        for agent in self.agents:
+            agent.on_episode_reset(episode)
+
+
+    def is_safety_criteria_violated(self, obs):
+        return self.safety_filter.is_safety_criteria_violated(obs)
