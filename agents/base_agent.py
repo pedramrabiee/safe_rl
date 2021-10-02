@@ -18,11 +18,6 @@ class BaseAgent:
     def initialize(self, params, init_dict=None):
         raise NotImplementedError
 
-    def reset(self):
-        """implement actions to be taken when this function is called such as restarting noise,
-         or stats at the beginning of each episode"""
-        pass
-
     @torch.no_grad()
     def act(self, obs, explore=True, init_phase=False):
         ac, info = self.step(obs, explore=explore, init_phase=init_phase)
@@ -82,6 +77,10 @@ class BaseAgent:
 
     def after_optimize(self):
         """implement what needs to be updated for all agents simultaneously here"""
+        pass
+
+    def on_episode_reset(self, episode):
+        """implement what needs to be done at the beginning of each episode here"""
         pass
 
     @property
