@@ -14,11 +14,16 @@ from utils.seed import rng
 from collections import Mapping
 
 
-def hard_copy(source, requires_grad=False):
+def hard_copy(source, requires_grad=False, keep_requires_grad=False):
+    # if keep_requires_grad is true, it will copy the requires grad status of the source
     copied = deepcopy(source)
     # set requires_grad
-    for p in copied.parameters():
-        p.requires_grad = requires_grad
+    if keep_requires_grad:
+        for p, p_source in zip(copied.parameters(), source.parameters()):
+            p.requires_grad = p_source.requires_grad
+    else:
+        for p in copied.parameters():
+            p.requires_grad = requires_grad
     return copied
 
 
@@ -194,6 +199,7 @@ def discount_cumsum(x, discount, return_first=False):
 
 
 def train_valid_split(data_size, holdout_ratio):
+    from utils.seed import rng
     num_valid = int(holdout_ratio * data_size)
     num_train = data_size - num_valid
 
@@ -332,3 +338,6 @@ def deep_update(source, overrides):
         else:
             source[key] = overrides[key]
     return source
+
+def euler_integrator(deriv_value, x, timestep):
+    return x + deriv_value * timestep
