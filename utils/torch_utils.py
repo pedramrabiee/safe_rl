@@ -72,7 +72,8 @@ def itermap_on_dict(x, func):
     if not isinstance(x[next(iter(x))], dict):
         return map_on_dict(x, func)
     for k in x.keys():
-        out[k] = itermap_on_dict(x[k], func)
+        if x[k]:
+            out[k] = itermap_on_dict(x[k], func)
     return out
 
 
