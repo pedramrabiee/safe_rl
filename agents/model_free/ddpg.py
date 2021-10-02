@@ -164,5 +164,7 @@ class DDPGAgent(BaseAgent):
             # store the last episode the noise is reset and rescaled
             self._reset_noise_ep = episode
 
+    def on_episode_reset(self, episode):
+        self._reset_rescale_noise(episode)
 
 

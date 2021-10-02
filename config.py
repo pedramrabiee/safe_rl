@@ -248,14 +248,14 @@ class Config:
     def _get_cbf_filter_params(self):
         cbf_params = AttrDict(
             # filter network
-            filter_net_kwargs=dict(hidden_dim=128,
+            filter_net_kwargs=dict(hidden_dim=512,
                                    num_layers=2,
-                                   unit_activation=nn.ELU,
-                                   out_activation=nn.Identity,
+                                   unit_activation=nn.Tanh,
+                                   out_activation=nn.Tanh,
                                    batch_norm=False,
                                    layer_norm=False,
                                    batch_norm_first_layer=False,
-                                   out_layer_initialize_small=True),
+                                   out_layer_initialize_small=False),
             filter_optim_cls=optim.Adam,
             filter_optim_kwargs=dict(lr=1e-4,
                                      weight_decay=0),
@@ -263,6 +263,7 @@ class Config:
             k_epsilon=1e24,  # slack variable weight
             k_delta=1.6,  # for confidence interval k_delta * std
             eta=0.99,  # alpha function coeficient: alpha(x) = eta * h(x)
+            tau=0.1,  # used for polyak update
             stop_criteria_eps=5e-5,  # stop criteria for unsafe experience loss all being negative
             max_epoch=10,
             gamma_dh=0.0,  # saftey threshold in loss
@@ -279,7 +280,12 @@ class Config:
             safe_deriv_loss_weight=1.0,
             u_max_weight_in_deriv_loss=1.0,
             deriv_loss_version=2,
-            loss_tanh_normalization=False
+            loss_tanh_normalization=False,
+            pretrain_holdout_ratio=0.1,
+            use_filter_just_for_plot=False,
+            train_on_max=True,
+            constrain_control=True,
+
             # set this to None, if you don't want to preprocess observation for dynamics training
         )
         return cbf_params
@@ -326,7 +332,7 @@ class Config:
 
     def update_attr(self, overrides):
         for k, v in overrides.items():
-            assert hasattr(self, k)
+            assert hasattr(self, k), f'Invalid key {k}'
             setattr(self, k, v)
 
 
