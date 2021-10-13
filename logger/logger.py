@@ -181,7 +181,7 @@ def set_plotter_in_train_mode():
     _plotter_in_eval_mode = False
 
 
-def dump_plot(filename, plt_key):
+def dump_plot(filename, plt_key, step_key=None):
     global plotdir, _config
 
     if not _config.debugging_mode and _config.plot_custom_figs:
@@ -191,7 +191,10 @@ def dump_plot(filename, plt_key):
         path = osp.join(path, filename + '.png')
         plt.savefig(path, dpi=300)
         plt.show()
-        dump_wandb({plt_key: wandb.Image(path)})
+        step_info = {}
+        if step_key is not None:
+            step_info[step_key] = _steps[step_key]
+        dump_wandb({**{plt_key: wandb.Image(path)}, **step_info})
     else:
         plt.show()
 
@@ -199,7 +202,7 @@ def dump_plot(filename, plt_key):
 def dump_plot_with_key(plt_key, filename, plt_info=None,
                        plt_kwargs=None, subplot=True,
                        first_col_as_x=False, custom_col_config_list=None,
-                       columns=None):
+                       columns=None, step_key=None):
     global _plot_queue, _config
 
     if not _config.plot_custom_figs and not _config.save_custom_figs_data:
@@ -215,7 +218,7 @@ def dump_plot_with_key(plt_key, filename, plt_info=None,
                   first_col_as_x=first_col_as_x,
                   custom_col_config_list=custom_col_config_list
                   )
-        dump_plot(filename, plt_key)
+        dump_plot(filename, plt_key=plt_key, step_key=step_key)
     if _config.save_custom_figs_data:
         path = osp.join(plotdir, plt_key)
         _save_csv(data=data, path=path, filename=filename, columns=columns)
@@ -253,6 +256,10 @@ def _plot(data, plt_info, plt_kwargs=None, subplot=True, first_col_as_x=False, c
             plt.plot(data_x, data_y)
         if "ylabel" in plt_info.keys():
             plt.ylabel(plt_info["ylabel"])
+        if "legend" in plt_info.keys():
+            if plt_info["legend"] is not None:
+                plt.legend(plt_info["legend"], frameon=False)
+
     else:   # if you have multiple columns of data, use subplot
         colors = _get_color_cycle(data_y.shape[1])      # you need colors to the number of columns you have in data_y
         if subplot:      # you wanna add the merged subplot usage only for the subplot case
@@ -396,3 +403,13 @@ def dump_dict2json(dictionary, filename):
         with open(file, "w") as f:
             json.dump(dictionary, f, indent=4)
         log(f'{filename}.json saved')
+
+def get_plot_queue_by_key(plt_key):
+    global _plot_queue
+    assert plt_key in _plot_queue.keys(), "Plot key is not in plot queue"
+    return _plot_queue[plt_key]
+
+
+def set_plot_queue_by_key(plt_key, data):
+    global _plot_queue
+    _plot_queue[plt_key] = data
