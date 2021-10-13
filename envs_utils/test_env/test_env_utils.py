@@ -20,6 +20,7 @@ from agents.base_agent import BaseAgent
 from scipy.linalg import block_diag
 from control.matlab import *
 from utils.grads import get_jacobian
+from logger import logger
 
 class SimpleEnv(gym.Env):
     def __init__(self):
@@ -49,13 +50,19 @@ class SimpleEnv(gym.Env):
 
         self.seed()
         self.rng = np.random.default_rng(0)
+        self.reset_called = False
 
     def reset(self):
+        if env_config.fixed_reset and not self.reset_called:
+            self.rng = np.random.default_rng(0)
+            self.reset_called = True
         high = np.array([self.max_x, env_config.max_speed_for_safe_set_training])
         self.state = self.rng.uniform(low=-high, high=high)
         return copy(self.state)
 
     def step(self, u):
+        if self.reset_called:
+            self.reset_called = False
         # u = np.clip(u, -self.max_u, self.max_u)
         state = self.sys_d.A.A @ self.state + self.sys_d.B.A @ np.hstack((u, np.zeros(1)))
         # state[1] = np.clip(state[1], -self.max_speed, self.max_speed)
@@ -262,7 +269,8 @@ class CBFTestAgent(BaseAgent):
         obs = self.obs_proc.proc(obs, proc_key='mf')
         obs = obs.squeeze()
         # action = rng.uniform(-1.0, 1.0, (1, self._ac_dim))
-        command = 1 * np.sin(self.omega * np.pi * self.t) + 4
+        command = env_config.command_amplitude * np.sin(self.omega * np.pi * self.t) + 4
+        logger.push_plot(command.reshape(1, -1), plt_key='performance')
         self.t += self._timestep
         self.xi = self.sys_cd.A.A @ self.xi + (self.sys_cd.B.A * (command - obs[0])).squeeze()
         action = self.K @ obs + self.Ki @ self.xi
@@ -279,6 +287,7 @@ class CBFTestCustomPlotter(CustomPlotter):
     def sampler_push_obs(self, obs):
         # logger.push_plot(np.concatenate((state.reshape(1, -1), ac.reshape(1, -1) * scale.ac_old_bounds[1]), axis=1), plt_key="sampler_plots")
         logger.push_plot(obs.reshape(1, -1), plt_key="sampler_plots", row_append=True)
+        logger.push_plot(obs[0].reshape(1, -1), plt_key='performance', row_append=True)
 
     def filter_push_action(self, ac):
         ac, ac_filtered = ac
@@ -299,6 +308,27 @@ class CBFTestCustomPlotter(CustomPlotter):
                                               [r'$u_{\rm mf}$',
                                                r'$u_{\rm filtered}$']
                                               ]),
+                                  step_key='episode'
+                                  )
+
+    def dump_performance_plots(self, episode_num):
+        performance_data = logger.get_plot_queue_by_key('performance')
+        performance_data = np.vstack(performance_data)
+        error = (performance_data[:, 0] - performance_data[:, 1]).reshape(-1, 1)
+        performance_data = np.concatenate((performance_data, error), axis=-1)
+        logger.set_plot_queue_by_key('performance', performance_data)
+
+        logger.dump_plot_with_key(plt_key="performance",
+                                  filename='performance_episode_%d' % episode_num,
+                                  custom_col_config_list=[[0, 1], [2]],
+                                  columns=['command', 'x', 'error'],
+                                  plt_info=dict(
+                                      xlabel=r'Timestep',
+                                      ylabel=[r'$x$', r'$e$'],
+                                      legend=[
+                                          [r'$r$', r'$x$'],
+                                          None
+                                      ]),
                                   step_key='episode'
                                   )
 
