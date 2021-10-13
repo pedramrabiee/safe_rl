@@ -89,5 +89,6 @@ class ReplayBuffer:
 
 
     def init_buffer(self, data):
-        self._obs, self._ac, self._rew, self._next_obs, self._done, self_info = \
-            data.obs, data.ac, data.rew, data.next_obs, data.done, data.info
+        self._info = data.info
+        self._obs, self._ac, self._rew, self._next_obs, self._done = \
+            data.obs, data.ac, data.rew, data.next_obs, data.done

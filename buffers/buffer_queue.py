@@ -11,11 +11,13 @@ class BufferQueue(ReplayBuffer):
     def __init__(self, max_size=int(100)):
         super().__init__(max_size)
         self.reset_queue()
+        self.is_loaded = False
 
     def initialize(self, attribute_names, coupled_list=None):
-        self.buffer = OrderedDict()
-        for k in attribute_names:
-            self.buffer[k] = None
+        if not self.is_loaded:
+            self.buffer = OrderedDict()
+            for k in attribute_names:
+                self.buffer[k] = None
         self.coupled_list = [[attribute_names.index(item) for item in coupled_set] for coupled_set in coupled_list]
 
     # def push(self, experience):
@@ -89,3 +91,4 @@ class BufferQueue(ReplayBuffer):
 
     def init_buffer(self, data):
         self.buffer = data
+        self.is_loaded = True
