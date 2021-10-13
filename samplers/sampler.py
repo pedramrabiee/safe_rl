@@ -32,10 +32,14 @@ class Sampler:
 
         if self._init_sample_round:
             obs = self._env_reset()
+            self.agent.on_episode_reset(self.episode_completed)
+
             self._episode_time = 0
             self._episode_return = 0
             self._safety_violation_counter = 0
+            self._safety_criteria_violation_counter = 0
             self._safety_violations = []
+            self._safety_criteria_violations = []
             self._returns = []
             pbar = tqdm(total=self._min_buffer_size * self._config.step_save_freq, desc='Initial Sampling Progress')
         else:
@@ -75,6 +79,9 @@ class Sampler:
             self.custom_plotter.sampler_push_obs(obs)
             self._safety_violation_counter += int(not self.safe_set.is_geo_safe(self.obs_proc.proc(next_obs,
                                                                                                    proc_key='filter')))
+            if hasattr(self.agent, 'is_safety_criteria_violated'):
+                self._safety_criteria_violation_counter += int(self.agent.is_safety_criteria_violated(self.obs_proc.proc(next_obs,
+                                                                                                                proc_key='filter')))
             self._episode_return += rew
             self._episode_time += 1
             if done or self._episode_time >= self._max_episode_len:
@@ -83,37 +90,56 @@ class Sampler:
                 save_skip = 0
                 # reset environment
                 obs = self._env_reset()
+                self.agent.on_episode_reset(self.episode_completed)
+
                 # reset agent
-                self.agent.reset()
                 self._returns.append(self._episode_return)
                 self._safety_violations.append(self._safety_violation_counter)
+                self._safety_criteria_violations.append(self._safety_criteria_violation_counter)
                 if len(self._returns) % self._config.episodes_per_return_log == 0:        # log returns every n episodes completed
                     if self._config.episodes_per_return_log == 1:
                         logger.add_tabular({'Sampling/Return': self._returns[0],
-                                            'Sampling/SafetyViolations': self._safety_violations[0]}, stats=False, cat_key='episode')
+                                            'Sampling/SafetyViolations': self._safety_violations[0],
+                                            'Sampling/SafetyCriteriaViolations': self._safety_criteria_violations[0]},
+                                           stats=False, cat_key='episode')
                     else:
                         logger.add_tabular({'Sampling/Return': self._returns,
-                                            'Sampling/SafetyViolations': self._safety_violations}, stats=True, cat_key='episode')
+                                            'Sampling/SafetyViolations': self._safety_violations,
+                                            'Sampling/SafetyCriteriaViolations': self._safety_criteria_violations},
+                                           stats=True, cat_key='episode')
                     logger.dump_tabular(cat_key='episode', log=False, wandb_log=True, csv_log=False)
                     self._returns = []
                     self._safety_violations = []
+                    self._safety_criteria_violations = []
                 self._episode_return = 0
                 self._safety_violation_counter = 0
+                self._safety_criteria_violation_counter = 0
 
                 # dump plots
                 self.custom_plotter.dump_sampler_plots(self._episode_counter)
+                self.custom_plotter.dump_performance_plots(self._episode_counter)
                 if 'cbf_value' in logger._plot_queue.keys():
                     logger.dump_plot_with_key(plt_key="cbf_value",
                                               filename='cbf_value_episode_%d' % self._episode_counter,
                                               plt_info=dict(
                                                   xlabel=r'Timestep',
-                                                  ylabel=r'$h$'))
+                                                  ylabel=r'$h$'),
+                                              step_key='episode')
+                if 'cbf_deriv_value' in logger._plot_queue.keys():
+                    logger.dump_plot_with_key(plt_key="cbf_deriv_value",
+                                              filename='cbf_deriv_value_episode_%d' % self._episode_counter,
+                                              columns=['dh_dx', 'dh_ddotx'],
+                                              plt_info=dict(
+                                                  xlabel=r'Timestep',
+                                                  ylabel=[r'$\frac{\partial h}{\partial x}$',
+                                                          r'$\frac{\partial h}{\partial \dot x}$']),
+                                              step_key='episode')
             else:
                 obs = next_obs
 
             episode_steps += 1
             pbar.update(1)
-            if int(episode_steps / self._config.step_save_freq) >= self._episode_steps_per_itr and self.buffer_size() > self._min_buffer_size:
+            if int(episode_steps / self._config.step_save_freq) >= self._episode_steps_per_itr and self.buffer_size() >= self._min_buffer_size:
                 # add noise to data to be stored if required
                 if self._config.add_noise_when_buffering.is_true:
                     self._add_noise()
@@ -134,6 +160,8 @@ class Sampler:
         max_episode_len_eval = int(self._config.max_episode_len_eval)
 
         obs = self._env_reset(eval=True)
+        self.agent.on_episode_reset(self.episode_completed)
+
         episode_time = eval_episode = 0
         episode_return = 0
         episode_safety_violation = 0
@@ -153,6 +181,8 @@ class Sampler:
                 eval_episode += 1
                 episode_time = 0
                 obs = self._env_reset(eval=True)
+                self.agent.on_episode_reset(self.episode_completed)
+
                 returns.append(episode_return)
                 safety_violations.append(episode_safety_violation)
                 episode_return = 0
@@ -228,4 +258,3 @@ class Sampler:
         if not eval:
             return self.safe_set.safe_reset() if self._config.env_spec_config.safe_reset else self.env.reset()
         return self.safe_set_eval.safe_reset() if self._config.env_spec_config.safe_reset else self.env_eval.reset()
-
