@@ -22,7 +22,6 @@ class BaseTrainer:
         # initialize Logger
         logger.initialize(self.config, root_dir)
 
-
         # instantiate training environment, set train_iter
         self.make_train_env(setup)
 
@@ -164,6 +163,23 @@ class BaseTrainer:
                                           obs_proc=self.obs_proc,
                                           seed=self.eval_seed)
 
+    def train(self):
+        logger.log("Training started...")
+        # run training loop
+        for itr in range(self.train_iter):
+            logger.log("Training at iteration %d" % itr)
+
+            # train
+            self._train(itr)
+
+            # save checkpoint based on num_save_session
+            if self.config.save_models:
+                self._save_checkpoint(itr)
+
+            # evaluate based on num_evaluation_session
+            if self.config.do_evaluation:
+                self._evaluate(itr)
+
     def load_model_params(self):
         if self.config.load_models or self.config.resume or self.config.benchmark or self.config.evaluation_mode:
             if self.config.evaluation_mode:
@@ -189,23 +205,6 @@ class BaseTrainer:
 
     def initialize(self):
         pass
-
-    def train(self):
-        logger.log("Training started...")
-        # run training loop
-        for itr in range(self.train_iter):
-            logger.log("Training at iteration %d" % itr)
-
-            # train
-            self._train(itr)
-
-            # save checkpoint based on num_save_session
-            if self.config.save_models:
-                self._save_checkpoint(itr)
-
-            # evaluate based on num_evaluation_session
-            if self.config.do_evaluation:
-                self._evaluate(itr)
 
     def evaluate(self):
         logger.log("Evaluation started...")

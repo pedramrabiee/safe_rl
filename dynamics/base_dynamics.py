@@ -194,3 +194,5 @@ class BaseDynamics:
 
             return train_splits, AttrDict(valid_data)
 
+    def propagate_forward(self, obs):
+        raise NotImplementedError
