@@ -198,11 +198,15 @@ class SafeSetFromPropagation(SafeSetFromCriteria):
     def is_in_safe(self, obs):
         if torch.is_tensor(obs):
             obs = obs.numpy()
+        if np.isscalar(obs[0]):
+            return self.is_geo_safe(obs) and self.forward_propagate(obs)
         return e_and(self.is_geo_safe(obs), self.forward_propagate(obs))
 
     def is_in_unsafe(self, obs):
         if torch.is_tensor(obs):
             obs = obs.numpy()
+        if np.isscalar(obs[0]):
+            return self.is_geo_safe(obs) and not(self.forward_propagate(obs))
         return e_and(self.is_geo_safe(obs), e_not(self.forward_propagate(obs)))
 
     def is_unsafe(self, obs):
@@ -241,6 +245,9 @@ class SafeSetFromPropagation(SafeSetFromCriteria):
     def compute_next_obs(self, deriv_value, obs):
         raise NotImplementedError
 
+    def fast_criteria_check_for_single_obs(self, obs):
+        pass
+
 
 def get_safe_set(env_id, env, obs_proc, seed):
     safe_set = None
@@ -261,7 +268,10 @@ def get_safe_set(env_id, env, obs_proc, seed):
         safe_set = CBFTestSafeSetFromPropagation(env, obs_proc)
         # safe_set.in_safe_set.seed(seed)
         safe_set.geo_safe_set.seed(seed)
-
+    elif env_id == 'multi_mass_dashpot':
+        from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotSafeSetFromPropagation
+        safe_set = MultiDashpotSafeSetFromPropagation(env, obs_proc)
+        safe_set.geo_safe_set.seed(seed)
     else:
         raise NotImplementedError
     return safe_set

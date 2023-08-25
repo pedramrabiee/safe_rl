@@ -109,6 +109,8 @@ def get_obsproc_cls(train_env):
         if train_env['env_id'] == 'Point':
             from envs_utils.safety_gym.point_robot_utils import PointObsProc
             return PointObsProc
+        else:
+            raise NotImplementedError
     else:
         return NeutralObsProc
 
