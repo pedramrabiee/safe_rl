@@ -51,5 +51,8 @@ def get_nominal_dyn_cls(train_env, env):
         if train_env['env_id'] == 'cbf_test':
             from envs_utils.test_env.test_env_utils import CBFTestDynamics
             return CBFTestDynamics, params
+        if train_env['env_id'] == 'multi_mass_dashpot':
+            from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotDynamics
+            return MultiDashpotDynamics, params
     else:
         raise NotImplementedError

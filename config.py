@@ -76,7 +76,7 @@ class Config:
 
         # LOAD MODELS
         self.load_models = False
-        self.load_buffer = False
+        self.load_buffer = True
         self.load_run_name = 'run-20210914_145325-3nrejh0p'
         self.load_run_id = self.load_run_name[-8:]
         self.overwrite_config = False            # overwrite config file, with the loaded model env_config file
@@ -263,6 +263,7 @@ class Config:
             k_epsilon=1e24,  # slack variable weight
             k_delta=1.6,  # for confidence interval k_delta * std
             eta=0.99,  # alpha function coeficient: alpha(x) = eta * h(x)
+            diff_exe_eta=False, # use different eta for execution
             tau=0.1,  # used for polyak update
             stop_criteria_eps=5e-5,  # stop criteria for unsafe experience loss all being negative
             max_epoch=10,
@@ -285,6 +286,7 @@ class Config:
             use_filter_just_for_plot=False,
             train_on_max=True,
             constrain_control=True,
+
 
             # set this to None, if you don't want to preprocess observation for dynamics training
         )
@@ -348,8 +350,12 @@ def get_config_override(train_env):
             from envs_utils.safety_gym.point_robot_configs import config
             return config
     elif train_env['env_collection'] == 'misc':
-        from envs_utils.test_env.test_env_configs import config
-        return config
+        if train_env['env_id'] == 'cbf_test':
+            from envs_utils.test_env.test_env_configs import config
+            return config
+        if train_env['env_id'] == 'multi_mass_dashpot':
+            from envs_utils.test_env.multi_m_dashpot_configs import config
+            return config
     else:
         raise NotImplementedError
 

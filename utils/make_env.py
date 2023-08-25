@@ -37,6 +37,10 @@ def make_env(env_id,
             from envs_utils.test_env.test_env_utils import SimpleEnv
             env = SimpleEnv()
             max_episode_len = env.max_episode_len
+        if env_id == 'multi_mass_dashpot':
+            from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotEnv
+            env = MultiDashpotEnv()
+            max_episode_len = env.max_episode_len
 
     env = ActionScalerWrapper(env, ac_lim=ac_lim)
 
