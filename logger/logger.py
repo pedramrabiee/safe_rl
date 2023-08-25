@@ -202,7 +202,7 @@ def dump_plot(filename, plt_key, step_key=None):
 def dump_plot_with_key(plt_key, filename, plt_info=None,
                        plt_kwargs=None, subplot=True,
                        first_col_as_x=False, custom_col_config_list=None,
-                       columns=None, step_key=None):
+                       columns=None, step_key=None, keep_plt_key_in_queue_after_plot=False):
     global _plot_queue, _config
 
     if not _config.plot_custom_figs and not _config.save_custom_figs_data:
@@ -225,7 +225,8 @@ def dump_plot_with_key(plt_key, filename, plt_info=None,
 
     # reset _plot_queue corresponding to plt_key
     # _plot_queue[plt_key] = []
-    del _plot_queue[plt_key]
+    if not keep_plt_key_in_queue_after_plot:
+        del _plot_queue[plt_key]
 
 
 def _plot(data, plt_info, plt_kwargs=None, subplot=True, first_col_as_x=False, custom_col_config_list=None):

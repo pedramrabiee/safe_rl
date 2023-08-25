@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 from scipy.stats import truncnorm
 from dynamics.nominal_dynamics import NominalDynamics
 from envs_utils.test_env.test_env_configs import env_config
-from logger import logger
 from utils import scale
 from utils.custom_plotter import CustomPlotter
 from utils.misc import e_and, e_not
@@ -14,7 +13,6 @@ from utils.space_utils import Tuple
 import gym
 from gym.utils import seeding
 from copy import copy
-from agents.model_free.ddpg import DDPGAgent
 from utils.seed import rng
 from agents.base_agent import BaseAgent
 from scipy.linalg import block_diag
@@ -22,24 +20,41 @@ from control.matlab import *
 from utils.grads import get_jacobian
 from logger import logger
 
+def get_dynamics_matrices():
+    m = env_config.m
+    k = env_config.k
+    c = env_config.c
+    A = np.array([[0, 1], [-k / m, -c / m]])
+    B = np.array([[0.0], [1 / m]])
+    C = np.array([[1, 0]])
+    D = np.zeros((1, 1), dtype=np.float32)
+    return A, B, C, D
+
 class SimpleEnv(gym.Env):
+    env_config = env_config
     def __init__(self):
-        self.max_x = env_config.max_x
-        self.max_u = env_config.max_u
         self.dt = env_config.timestep
-        self.m = env_config.m
-        self.k = env_config.k
-        self.c = env_config.c
-        self.max_speed = env_config.max_speed
         self.timestep = env_config.timestep
         self.max_episode_len = int(env_config.max_episode_time / env_config.timestep)
 
-        A = np.array([[0, 1], [-self.k / self.m, -self.c / self.m]])
-        B = np.array([[0.0], [1 / self.m]])
-        C = np.array([[1, 0]])
-        D = np.zeros((1, 1), dtype=np.float32)
+        self.max_x = self.env_config.max_x
+        self.max_u = self.env_config.max_u
+        self.m = self.env_config.m
+        self.k = self.env_config.k
+        self.c = self.env_config.c
+        self.max_speed = self.env_config.max_speed
+
+        # parse parameters, initialize dynamics, action and observation spaces
+        self._initialize()
+
+        self.seed()
+        self.rng = np.random.default_rng(0)
+        self.reset_called = False
+
+    def _initialize(self):
+        A, B, C, D = get_dynamics_matrices()
         D1 = B
-        sys = ss(A, np.hstack((B, D1)), C, np.zeros((1, 2)))
+        sys = ss(A, np.hstack((B, D1)), C, np.zeros((1, B.shape[1]+D1.shape[1])))
         self.sys_d = c2d(sys, self.timestep)
 
         self.action_space = Box(
@@ -48,23 +63,22 @@ class SimpleEnv(gym.Env):
         high = np.array([self.max_x, self.max_speed], dtype=np.float32)
         self.observation_space = Box(low=-high, high=high, dtype=np.float32)
 
-        self.seed()
-        self.rng = np.random.default_rng(0)
-        self.reset_called = False
-
     def reset(self):
-        if env_config.fixed_reset and not self.reset_called:
+        if self.env_config.fixed_reset and not self.reset_called:
             self.rng = np.random.default_rng(0)
             self.reset_called = True
-        high = np.array([self.max_x, env_config.max_speed_for_safe_set_training])
-        self.state = self.rng.uniform(low=-high, high=high)
+        self.state = self._reset()
         return copy(self.state)
+
+    def _reset(self):
+        high = np.array([self.max_x, self.env_config.max_speed_for_safe_set_training])
+        return self.rng.uniform(low=-high, high=high)
 
     def step(self, u):
         if self.reset_called:
             self.reset_called = False
         # u = np.clip(u, -self.max_u, self.max_u)
-        state = self.sys_d.A.A @ self.state + self.sys_d.B.A @ np.hstack((u, np.zeros(1)))
+        state = self.sys_d.A.A @ self.state + self.sys_d.B.A @ np.hstack((u, np.zeros(u.shape[0])))
         # state[1] = np.clip(state[1], -self.max_speed, self.max_speed)
         self.state = state
         return copy(self.state).squeeze(), np.array([0.0])[0], np.array([0.0]).squeeze(), {}
@@ -146,14 +160,15 @@ class CBFTestSafeSetFromPropagation(SafeSetFromPropagation):
     def __init__(self, env, obs_proc):
         super().__init__(env, obs_proc)
         self.max_speed = env_config.max_speed_for_safe_set_training
-        self.max_x = env_config.max_x_for_safe_set
-        self.min_x = env_config.min_x_for_safe_set
+        # self.max_x = env_config.max_x_for_safe_set
+        # self.min_x = env_config.min_x_for_safe_set
         self.max_x_safe = env_config.max_x_safe
         self.min_x_safe = env_config.min_x_safe
 
         self.geo_safe_set = Tuple([Box(low=np.array([self.min_x_safe, -np.inf]),
                                        high=np.array([self.max_x_safe, np.inf]),
-                                       dtype=np.float64)])  # for wedge angle smaller than pi
+                                       dtype=np.float64)])
+
     def initialize(self, init_dict=None):
         super().initialize(init_dict)
         self.max_T = env_config.max_T_for_safe_set
@@ -203,32 +218,30 @@ class CBFTestSafeSetFromPropagation(SafeSetFromPropagation):
 
 
 class CBFTestAgent(BaseAgent):
+    env_config = env_config
     def initialize(self, params, init_dict=None):
-        self.m = env_config.m
-        self.k = env_config.k
-        self.c = env_config.c
-        self.max_u = env_config.max_u
-        self.max_speed = env_config.max_speed
-        self.omega = env_config.omega
+        self.m = self.env_config.m
+        self.k = self.env_config.k
+        self.c = self.env_config.c
+        self.max_u = self.env_config.max_u
+        self.max_speed = self.env_config.max_speed
+        self.omega = self.env_config.omega
 
         # get the observation dim from observation process class
         self._obs_dim = self.obs_proc.obs_dim(proc_key='mf')
         self.params = params
 
-        # make the system
-        A = np.array([[0, 1], [-self.k / self.m, -self.c / self.m]])
-        B = np.array([[0.0], [1 / self.m]])
-        C = np.array([[1, 0]])
-        D = np.zeros((1, 1), dtype=np.float32)
+        A, B, C, D = get_dynamics_matrices()
         D1 = B
         le = C.shape[0]
 
         # LQR DESIGN FOR SINUSOID COMMAND
         I = np.array([[0, -1], [1, 0]])
         Aip = block_diag(0.0, self.omega * np.pi * I)
+        self.imp_state_dim = Aip.shape[0]
         Ai = np.kron(np.eye(le), Aip)
 
-        Bip = np.ones((3, 1), dtype=np.float32)
+        Bip = np.ones((self.imp_state_dim, 1), dtype=np.float32)
         Bi = np.kron(np.eye(le), Bip)
 
         # Augmented Matrices
@@ -240,12 +253,8 @@ class CBFTestAgent(BaseAgent):
             [B],
             [np.matmul(-Bi, D)]
         ])
-        # Select R1 and R2
-        R1 = np.block([
-            [10 * np.eye(A.shape[0]), np.zeros((A.shape[0], Ai.shape[0]), dtype=np.float32)],
-            [np.zeros((Ai.shape[0], A.shape[0]), dtype=np.float32), 100 * np.eye(Ai.shape[0])]
-        ])
-        R2 = 100 * np.eye(le)
+
+        R1, R2 = self._get_lqr_weights(A, Ai, B)
 
         # LQR Gain
         Ka, S, E = lqr(Aa, Ba, R1, R2)
@@ -254,9 +263,9 @@ class CBFTestAgent(BaseAgent):
         self.K = Ka[:, :A.shape[0]]
         self.Ki = Ka[:, A.shape[0]:]
 
-        sys_c = ss(Ai, Bi, np.eye(Ai.shape[0]), np.zeros((3, 1)))
+        sys_c = ss(Ai, Bi, np.eye(Ai.shape[0]), np.zeros((self.imp_state_dim, 1)))
         self.sys_cd = c2d(sys_c, self._timestep)
-        self.xi = np.zeros(3, dtype=np.float32)
+        self.xi = np.zeros(self.imp_state_dim, dtype=np.float32)
         self.t = 0.0
         self.models = []
         self.optimizers = []
@@ -264,12 +273,20 @@ class CBFTestAgent(BaseAgent):
         self.optimizers_dict = {}
         self.extra_params_dict = {}
 
+    def _get_lqr_weights(self, A, Ai, B):
+        R1 = np.block([
+            [10 * np.eye(A.shape[0]), np.zeros((A.shape[0], Ai.shape[0]), dtype=np.float32)],
+            [np.zeros((Ai.shape[0], A.shape[0]), dtype=np.float32), 100 * np.eye(Ai.shape[0])]
+        ])
+        R2 = 100 * np.eye(B.shape[1])
+        return R1, R2
+
     def step(self, obs, explore=False, init_phase=False):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='mf')
         obs = obs.squeeze()
         # action = rng.uniform(-1.0, 1.0, (1, self._ac_dim))
-        command = env_config.command_amplitude * np.sin(self.omega * np.pi * self.t) + 4
+        command = self.env_config.command_amplitude * np.sin(self.omega * np.pi * self.t) + 4
         logger.push_plot(command.reshape(1, -1), plt_key='performance')
         self.t += self._timestep
         self.xi = self.sys_cd.A.A @ self.xi + (self.sys_cd.B.A * (command - obs[0])).squeeze()
@@ -280,14 +297,17 @@ class CBFTestAgent(BaseAgent):
 
     def on_episode_reset(self, episode):
         self.t = 0.0
-        self.xi = np.zeros(3, dtype=np.float32)
+        self.xi = np.zeros(self.imp_state_dim, dtype=np.float32)
 
 
 class CBFTestCustomPlotter(CustomPlotter):
+    env_config = env_config
+    x_index = 0
+    xdot_index = 1
     def sampler_push_obs(self, obs):
         # logger.push_plot(np.concatenate((state.reshape(1, -1), ac.reshape(1, -1) * scale.ac_old_bounds[1]), axis=1), plt_key="sampler_plots")
         logger.push_plot(obs.reshape(1, -1), plt_key="sampler_plots", row_append=True)
-        logger.push_plot(obs[0].reshape(1, -1), plt_key='performance', row_append=True)
+        logger.push_plot(obs[self.x_index].reshape(1, -1), plt_key='performance', row_append=True)
 
     def filter_push_action(self, ac):
         ac, ac_filtered = ac
@@ -333,18 +353,17 @@ class CBFTestCustomPlotter(CustomPlotter):
                                   )
 
     def safe_set_plotter(self, safe_samples, unsafe_samples):
-        plt.scatter(safe_samples[:, 0], safe_samples[:, 1], c='g', marker='.', linewidths=0.01, alpha=0.5)
-        plt.scatter(unsafe_samples[:, 0], unsafe_samples[:, 1], c='r', marker='.', linewidths=0.01, alpha=0.5)
-        plt.axvline(x=env_config.min_x_safe, color='k', linestyle='-')
-        plt.axvline(x=env_config.max_x_safe, color='k', linestyle='-')
-
+        plt.scatter(safe_samples[:, self.x_index], safe_samples[:, self.xdot_index], c='g', marker='.', linewidths=0.01, alpha=0.5)
+        plt.scatter(unsafe_samples[:, self.x_index], unsafe_samples[:, self.xdot_index], c='r', marker='.', linewidths=0.01, alpha=0.5)
+        plt.axvline(x=self.env_config.min_x_safe, color='k', linestyle='-')
+        plt.axvline(x=self.env_config.max_x_safe, color='k', linestyle='-')
 
         logger.dump_plot(filename='safe_unsafe_sets',
                          plt_key='safe_unsafe')
 
     def h_plotter(self, itr, filter_net):
-        speeds = env_config.max_speed_for_safe_set_training * np.linspace(-1.0, 1.0, num=9)
-        xs = np.linspace(env_config.min_x_for_safe_set, env_config.max_x_for_safe_set, num=200).reshape(-1, 1)
+        speeds = self.env_config.max_speed_for_safe_set_training * np.linspace(-1.0, 1.0, num=9)
+        xs = np.linspace(self.env_config.min_x_for_safe_set, self.env_config.max_x_for_safe_set, num=200).reshape(-1, 1)
         # plt.figure()
         for speed in speeds:
             x = np.concatenate((xs, np.ones_like(xs) * speed), axis=-1)
@@ -360,7 +379,7 @@ class CBFTestCustomPlotter(CustomPlotter):
         # plt.figure()
         # mpl.use('TkAgg')  # or can use 'TkAgg', whatever you have/prefer
         # plt.ion()
-        speeds = env_config.max_speed_for_safe_set_training * np.linspace(-1.0, 1.0, num=200)
+        speeds = self.env_config.max_speed_for_safe_set_training * np.linspace(-1.0, 1.0, num=200)
 
         X, Y = np.meshgrid(xs, speeds)
         # x = np.concatenate((np.cos(X), np.sin(X), Y))
@@ -419,7 +438,6 @@ class CBFTestCustomPlotter(CustomPlotter):
         ax.set_ylabel(r'$\dot x$')
         ax.set_zlabel(r'$\frac{\partial h}{\partial \dot x}$'),
         ax.view_init(50, 40)
-
 
         logger.dump_plot(filename='cbf_itr_%d_3D_dh_dx' % itr,
                          plt_key='cbf3d_dh_dx',

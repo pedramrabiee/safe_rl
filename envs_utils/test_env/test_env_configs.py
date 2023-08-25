@@ -9,7 +9,7 @@ config = {
         'max_episode_time': 20.0,
         'plot_custom_figs': True,
         'save_custom_figs_data': True,
-        'episode_steps_per_itr': 2000,
+        'episode_steps_per_itr': 20000,
         'n_training_episode': 20,
         'do_evaluation': False,
         'n_episodes_evaluation': 5,
@@ -40,6 +40,7 @@ config = {
     },
     'cbf_params': {
         'eta': 100.0,
+        'diff_exe_eta': False,
         'pretrain_max_epoch': 1000,
         'max_epoch': 100,
         'stop_criteria_eps': 0.0,
@@ -68,12 +69,12 @@ env_config = AttrDict(
     max_episode_time=20.0,
     do_obs_proc=False,
     safe_reset=True,
-    timestep=0.01,
-    max_u=20.0,
-    max_u_for_safe_set=20.0,
-    max_speed=np.inf,
-    max_speed_for_safe_set_training=20.0,
-    max_x=40.0,
+    timestep=0.001,
+    max_u=20.0,                 # not used, previously used for control saturation
+    max_u_for_safe_set=20.0,    # used in get_safe_action
+    max_speed=np.inf,           # only parsed in environment class to define obs space
+    max_speed_for_safe_set_training=20.0,   # used in env reset, and in safe set as the max_speed
+    max_x=40.0,                 # only parsed in environment class to define obs space. used in env reset
     max_x_for_safe_set=12,
     min_x_for_safe_set=-4.0,
     max_x_safe=5.5,
