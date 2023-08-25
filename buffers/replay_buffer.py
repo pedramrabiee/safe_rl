@@ -33,7 +33,7 @@ class ReplayBuffer:
 
     @property
     def buffer_size(self):
-        return self._rew.shape[0] if self._rew is not None else None
+        return self._rew.shape[0] if self._rew is not None else 0
 
     def get_random_indices(self, batch_size):
         return rng.choice(np.arange(self.buffer_size),
