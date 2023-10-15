@@ -16,6 +16,14 @@ from envs_utils.get_env_spec_config import get_env_spec_config
 
 class BaseTrainer:
     def __init__(self, setup, root_dir):
+        """
+        Initialize the base trainer with the given setup and root directory.
+
+        Args:
+            setup (AttrDict): The setup configuration.
+            root_dir (str): The root directory for logging and saving data.
+        """
+
         # instantiate config, override config, add setup to config, and load env specific config
         self.load_config(setup)
 
@@ -64,8 +72,13 @@ class BaseTrainer:
 
         logger.log("Trainer initialized...")
 
-
     def load_config(self, setup):
+        """
+            Load and configure the training environment based on the given setup.
+
+            Args:
+                setup (AttrDict): The setup configuration.
+        """
         # instantiate Config
         self.config_override = get_config_override(setup['train_env'])
 
@@ -85,6 +98,13 @@ class BaseTrainer:
 
 
     def make_train_env(self, setup):
+        """
+           Create and initialize the training environment based on the given setup.
+
+           Args:
+               setup (AttrDict): The setup configuration.
+
+       """
         self.env, env_info = make_env(env_id=setup['train_env']['env_id'],
                                       collection=setup['train_env']['env_collection'],
                                       ac_lim=self.config.ac_lim,
@@ -107,20 +127,50 @@ class BaseTrainer:
                 self.obstacle_locations = make_obstacles_location_dict(self.env)
 
     def setup_obs_proc(self, setup):
+        """
+        Set up the observation processor based on the given setup.
+
+        Args:
+            setup (AttrDict): The setup configuration.
+
+        """
         self.obs_proc = setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else NeutralObsProc(self.env)
         self.obs_proc.initialize()
         self.config.setup['obs_proc'] = self.obs_proc
 
     def setup_custom_plotter(self, setup):
+        """
+         Set up a custom plotter based on the given setup.
+
+         Args:
+             setup (AttrDict): The setup configuration.
+
+         """
         # instantiate CustomPlotter
         self.custom_plotter = setup['custom_plotter_cls'](self.obs_proc)
         self.config.setup['custom_plotter'] = self.custom_plotter
 
     def initialize_agent(self, setup):
+        """
+        Create and initialize an agent based on the given setup.
+
+        Args:
+            setup (AttrDict): The setup configuration.
+
+        Returns:
+            object: The initialized agent.
+        """
         agent_factory = AgentFactory(self.env, self.config)
         return agent_factory(setup['agent'])
 
     def make_eval_env(self, setup):
+        """
+        Create and initialize the evaluation environment based on the given setup.
+
+        Args:
+            setup (AttrDict): The setup configuration.
+
+        """
         # instantiate evaluation environment
         if self.config.save_video:
             video_dict = {}
@@ -151,6 +201,13 @@ class BaseTrainer:
             _ = self.env_eval.reset()
 
     def make_safe_sets(self, setup):
+        """
+        Create safe sets for the training and evaluation environments.
+
+        Args:
+            setup (AttrDict): The setup configuration.
+
+        """
         # instantiate safe_set
         self.safe_set = get_safe_set(env_id=setup.train_env.env_id,
                                      env=self.env,
@@ -164,6 +221,9 @@ class BaseTrainer:
                                           seed=self.eval_seed)
 
     def train(self):
+        """
+        Start the training process.
+        """
         logger.log("Training started...")
         # run training loop
         for itr in range(self.train_iter):
@@ -181,6 +241,9 @@ class BaseTrainer:
                 self._evaluate(itr)
 
     def load_model_params(self):
+        """
+         Load model parameters if the model loading is enabled.
+        """
         if self.config.load_models or self.config.resume or self.config.benchmark or self.config.evaluation_mode:
             if self.config.evaluation_mode:
                 logger.log("Loading models and optimizers for evaluation...", color='cyan')
@@ -190,6 +253,9 @@ class BaseTrainer:
             self._load()
 
     def save_configs(self):
+        """
+        Save various configuration settings, environment specifics, and related files.
+        """
         # save config as a py
         if not self.config.debugging_mode:
             save_config_as_py(logger.logdir)
@@ -204,25 +270,55 @@ class BaseTrainer:
         logger.dump_dict2json(self.config_override, 'config_override')
 
     def initialize(self):
+        """
+        Initialize the custom trainer. This method can be overridden in derived classes.
+        """
         pass
 
     def evaluate(self):
+        """
+        Start the evaluation process.
+        """
         logger.log("Evaluation started...")
         # run evaluation loop
         self._evaluate(itr=0)
 
     def _train(self, itr):
+        """
+        Perform the training loop for a single iteration.
+
+        Args:
+            itr (int): The current training iteration.
+        """
         raise NotImplementedError
 
     def _prep_optimizer_dict(self):
+        """
+        Prepare an optimizer dictionary for use. This method can be overridden in derived classes.
+
+        Returns:
+            dict: The optimizer dictionary.
+        """
         return dict()
 
     def _save_checkpoint(self, itr):
+        """
+        Save a checkpoint at the specified iteration.
+
+        Args:
+            itr (int): The current iteration.
+        """
         if itr % int(self.train_iter / self.config.num_save_sessions) == 0 or itr >= self.train_iter:
             logger.log('Saving checkpoint at episode %d...' % self.sampler.episode_completed)
             self._save(itr=itr, episode=self.sampler.episode_completed)
 
     def _evaluate(self, itr):
+        """
+        Perform the evaluation process.
+
+        Args:
+            itr (int): The current iteration.
+        """
         if self.config.evaluation_mode or itr % int(self.train_iter / self.config.num_evaluation_sessions) == 0 or itr >= self.train_iter:
             # set the plotter in evaluation mode: push_plot calls won't work
             logger.set_plotter_in_eval_mode()
@@ -231,6 +327,13 @@ class BaseTrainer:
             logger.dump_tabular(cat_key='evaluation_episode', wandb_log=True, csv_log=False)
 
     def _save(self, itr, episode):
+        """
+        Save a checkpoint with the specified iteration and episode.
+
+        Args:
+            itr (int): The current iteration.
+            episode (int): The current episode.
+        """
         filename = get_save_checkpoint_name(logger.logdir, episode)
         states = {}
         states['itr'] = itr
@@ -251,6 +354,9 @@ class BaseTrainer:
         logger.log('Checkpoint saved: %s' % filename)
 
     def _load(self):
+        """
+        Load model parameters and optionally buffers if loading is enabled.
+        """
         path = get_load_checkpoint_name(current_root=logger.logdir,
                                         load_run_name=self.config.load_run_name,
                                         timestamp=self.config.load_timestamp)
@@ -268,6 +374,12 @@ class BaseTrainer:
                 self.agent.init_buffer(checkpoint['buffer'])
 
     def _overwrite_config(self, new_config):
+        """
+        Overwrite the current configuration with a new configuration.
+
+        Args:
+            new_config (Config): The new configuration.
+        """
         # overwrite loaded config from the loaded run with the current config.
         # However, revert the changes for loading setting to continue with loading model in _load method
         load_models = copy(self.config.load_models)
@@ -280,6 +392,16 @@ class BaseTrainer:
         self.config.load_run_id = load_run_id
 
     def _obs_proc_from_samples_by_key(self, samples, proc_key):
+        """
+        Process observations in the samples by a specified processing key.
+
+        Args:
+            samples (dict): A dictionary of samples.
+            proc_key (str): The key for observation processing.
+
+        Returns:
+            dict: The samples with processed observations.
+        """
         samples['obs'] = self.obs_proc.proc(samples['obs'], proc_key=proc_key)
         samples['next_obs'] = self.obs_proc.proc(samples['next_obs'], proc_key=proc_key)
         return samples
