@@ -74,7 +74,7 @@ class BaseTrainer:
 
     def load_config(self, setup):
         """
-            Load and configure the training environment based on the given setup.
+            Instantiate configurations based on the given setup.
 
             Args:
                 setup (AttrDict): The setup configuration.
@@ -95,7 +95,6 @@ class BaseTrainer:
 
         self.config.setup = setup
         self.config.env_spec_config = get_env_spec_config(setup['train_env'])
-
 
     def make_train_env(self, setup):
         """
