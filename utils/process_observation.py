@@ -6,6 +6,12 @@ from utils.misc import isvec, torchify, np_object2dict
 
 class ObsProc:
     def __init__(self, env):
+        """
+        Initialize an observation processor.
+
+        Args:
+            env: The environment for which observation processing is done.
+        """
         self.env = env
         self._proc_keys = []
         self._unproc_keys = []
@@ -13,17 +19,31 @@ class ObsProc:
 
 
     def initialize(self, init_dict=None):
+        """
+        Initialize the observation processor with optional parameters.
+
+        Args:
+            init_dict: Optional dictionary for initialization.
+        """
         self._processors = {k: getattr(self, f'_proc_for_{k}') for k in self._proc_keys}
         self._unprocessors = {k: getattr(self, f'_unproc_from_{k}') for k in self._unproc_keys}
         self._obs_dims = {k: None for k in self._proc_keys}
 
     def obs_dim(self, proc_key=None):
-        """returns observation dimension after applying proc"""
+        """
+        Returns the observation dimension after applying processing.
+
+        Args:
+            proc_key: Key for the observation processor (optional).
+
+        Returns:
+            int: The observation dimension.
+        """
         raise NotImplementedError
 
     def proc(self, obs, proc_key=None, proc_dict=None):
         """
-        Processes observation. Implement the env dependent processor in the _proc method
+        Process observations. Implement the env dependent processor in the _proc method
         _proc method act as a default processor:
         Case 1: self._proc_keys is NOT empty
            - In this case, if proc_key is provided, then proc_key should match one of the keys in self._proc_keys;
@@ -31,6 +51,14 @@ class ObsProc:
            - If you wish to use the default processor, do not provide the proc_key
          Case 2: self._proc_keys is empty
            - In this case, no matter what is the value of proc_key, the default processor is used
+
+        Args:
+            obs: The observations to be processed.
+            proc_key: Key for the observation processor (optional).
+            proc_dict: Optional dictionary for processing.
+
+        Returns:
+            Processed observations.
         """
 
         if proc_key and self._proc_keys:    # if self._proc_keys is not None and proc_key is not empty
@@ -49,18 +77,57 @@ class ObsProc:
         return out
 
     def unproc(self, obs, proc_key=None, unproc_dict=None):
-        """Unprocess observation. Implement the env dependent unprocessor in the _unproc method"""
+        """
+        Reverse the observations processing.
+
+        Args:
+            obs: The observations to be reverse processing.
+            proc_key: Key for the observation reverse processing (optional).
+            unproc_dict: Optional dictionary for reverse processing.
+
+        Returns:
+            Reverse processed observations.
+        """
         out = self._unproc(self._prep(obs), unproc_dict=unproc_dict)
         out = self._post_prep(out)
         return out
 
     def _proc(self, obs, proc_dict=None):
+        """
+        Default observation processor. To be implemented by derived classes.
+
+        Args:
+            obs: The observations to be processed.
+            proc_dict: Optional dictionary for processing.
+
+        Returns:
+            Processed observations.
+        """
         raise NotImplementedError
 
     def _unproc(self, obs, unproc_dict=None):
+        """
+        Default observation reverse processor. To be implemented by derived classes.
+
+        Args:
+            obs: The observations to be reverse processed.
+            unproc_dict: Optional dictionary for reverse processing.
+
+        Returns:
+            Reverse processed observations.
+        """
         raise NotImplementedError
 
     def _prep(self, obs):   # TODO: FIX THIS
+        """
+        Prepares observations for processing.
+
+        Args:
+            obs: The observations to be prepared.
+
+        Returns:
+            Prepared observations.
+        """
         if torch.is_tensor(obs):
             if not self.tensor_blueprint: # only once we store tensor blueprint (assumes all the observations have the
                 # same dtype and device and requires grad)
@@ -78,6 +145,15 @@ class ObsProc:
 
 
     def _post_prep(self, obs):
+        """
+        Post-processes observations after processing.
+
+        Args:
+            obs: The observations to be post-prepped.
+
+        Returns:
+            Post-prepped observations.
+        """
         obs = self._prep(obs)       # expand numpy array dims if needed
         out = torchify(obs, **self.tensor_blueprint) if self.tensor_blueprint else obs
         return out
