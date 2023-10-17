@@ -1,6 +1,3 @@
-You're absolutely right, my previous explanation was missing some key details on the plotting functionality. Here is the full comprehensive tutorial covering all aspects of using the custom logger:
-
-
 # Overview
 The provided custom logger code includes functions for:
 
@@ -175,5 +172,3 @@ dump_plot_with_key('Loss Plot', 'losses', save_data=True)
 ```
 
 - Saves CSV file containing plot's raw data
-
-Let me know if you would like me to expand on any part of the plotting and logging capabilities!
