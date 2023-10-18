@@ -1,10 +1,15 @@
+import importlib
+
+
 def trainer_factory(agent_type):
-    if agent_type == 'mb':
-        from trainers.mb_trainer import MBTrainer
-        return MBTrainer
-    elif agent_type == 'ddpg':
-        from trainers.ddpg_trainer import DDPGTrainer
-        return DDPGTrainer
-    elif agent_type == 'sf':
-        from trainers.sf_trainer import SFTrainer
-        return SFTrainer
+    try:
+        trainer_module = importlib.import_module(f'trainers.{agent_type}_trainer')
+        trainer_class_name = f'{agent_type.upper()}Trainer'
+        trainer_class = getattr(trainer_module, trainer_class_name)
+        return trainer_class
+    except ImportError:
+        # Handle cases where the module or class is not found
+        raise ImportError(f"Trainer for agent_type '{agent_type}' not found")
+    except AttributeError:
+        # Handle cases where the class is not found in the module
+        raise AttributeError(f"Trainer class '{trainer_class_name}' not found")
