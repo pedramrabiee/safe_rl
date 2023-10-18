@@ -24,11 +24,8 @@ def make_setup(env_nickname, agent, load_config_path=None):
                     )
 
 if __name__ == "__main__":
-    # accepted environments nicknames:
-    # 'pendulum': Pendulum-v0 from gym
-    # 'point': Point from safety_gym
 
-
+    # See envs_utils.get_env_info for a list of acceptable environment nicknames
     setup = make_setup(env_nickname='pendulum',
                        agent='ddpg')
 
