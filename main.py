@@ -5,23 +5,20 @@ from utils.seed import set_seed
 from utils.process_observation import get_obsproc_cls
 from utils.custom_plotter import get_custom_plotter_cls
 from rewards.get_reward_gen import get_reward_gen
-
+from envs_utils.get_env_info import get_env_info
 from logger import logger
 
 
 def make_setup(env_nickname, agent, load_config_path=None):
-    nicknames = {
-        'pendulum': {'env_id': 'Pendulum-v0', 'env_collection': 'gym'},
-        'point': {'env_id': 'Point', 'env_collection': 'safety_gym'},
-        'cbf_test': {'env_id': 'cbf_test', 'env_collection': 'misc'},
-        'multi_mass_dashpot': {'env_id': 'multi_mass_dashpot', 'env_collection': 'misc'}
-    }
+    env_info = get_env_info(env_nickname)
 
     return AttrDict(agent=agent,
-                    train_env=dict(env_id=nicknames[env_nickname]['env_id'],
-                                   env_collection=nicknames[env_nickname]['env_collection']),
-                    eval_env=dict(env_id=nicknames[env_nickname]['env_id'],
-                                  env_collection=nicknames[env_nickname]['env_collection']),
+                    train_env=dict(env_id=env_info['env_id'],
+                                   env_collection=env_info['env_collection'],
+                                   env_nickname=env_nickname),
+                    eval_env=dict(env_id=env_info['env_id'],
+                                  env_collection=env_info['env_collection'],
+                                  env_nickname=env_nickname),
                     load_config_path=load_config_path,  # enter the env_config.pickle file path (don't include env_config.pickle itself)
                     # if you wish to load the env_config file. otherwise, set it None
                     )
@@ -31,8 +28,9 @@ if __name__ == "__main__":
     # 'pendulum': Pendulum-v0 from gym
     # 'point': Point from safety_gym
 
-    setup = make_setup(env_nickname='multi_mass_dashpot',
-                       agent='sf')
+
+    setup = make_setup(env_nickname='pendulum',
+                       agent='ddpg')
 
     # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all
     seed = set_seed()
