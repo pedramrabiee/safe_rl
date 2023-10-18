@@ -32,6 +32,10 @@ class BaseAgent:
         raise NotImplementedError
 
     def push_to_buffer(self, experience, push_to_all=False):
+        if not isinstance(self._buffer, list):
+            self.buffer.push(experience)
+            return
+
         if push_to_all:     # push experience to all buffers
             for buffer in self._buffer:
                 buffer.push(experience)
