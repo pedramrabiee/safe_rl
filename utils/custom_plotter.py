@@ -1,14 +1,41 @@
 class CustomPlotter:
+    """Class for custom plotting functionality for sampler"""
     def __init__(self, obs_proc):
+        """
+        Initialize plotter
+
+        Args:
+            obs_proc (ObservationProcessor): For processing observations before plotting
+        """
         self.obs_proc = obs_proc
 
     def sampler_push_obs(self, obs):
+
+        """
+        Add observation to plot
+
+        Args:
+            obs (np.ndarray): Observation
+        """
         pass
 
     def filter_push_action(self, ac):
+        """
+        Add action to plot
+
+        Args:
+            ac (np.ndarray): Action
+        """
         pass
 
+
     def dump_sampler_plots(self, episode_num):
+        """
+        Save sampler plots for given episode
+
+        Args:
+            episode_num (int): Episode number
+        """
         pass
 
 
