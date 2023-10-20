@@ -2,7 +2,7 @@ import numpy as np
 from dynamics.nominal_dynamics import NominalDynamics
 from envs_utils.misc_env.cbf_test.cbf_test_configs import env_config
 
-class CBFTestDynamics(NominalDynamics):
+class CbfTestDynamics(NominalDynamics):
     def _predict(self, obs, ac, split_return=False):
         c = env_config.c
         k = env_config.k

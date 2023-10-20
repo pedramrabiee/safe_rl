@@ -2,7 +2,7 @@ import numpy as np
 from dynamics.nominal_dynamics import NominalDynamics
 
 
-class PointRobotNominalDynamics(NominalDynamics):
+class PointNominalDynamics(NominalDynamics):
     def initialize(self, params, init_dict=None):
         #TODO: You should link this with the params, so that if you are normalizing the observation or action, apply the same thing here
         self.m = params['m']

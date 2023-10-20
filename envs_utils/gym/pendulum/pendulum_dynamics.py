@@ -3,7 +3,7 @@ from envs_utils.gym.pendulum.pendulum_configs import env_config
 from dynamics.nominal_dynamics import NominalDynamics
 
 
-class InvertedPendulumNominalDyn(NominalDynamics):
+class PendulumNominalDyn(NominalDynamics):
     def initialize(self, params, init_dict=None):
         #TODO: You should link this with the params, so that if you are normalizing the observation or action, apply the same thing here
         self.continous_time = init_dict['is_continuous']

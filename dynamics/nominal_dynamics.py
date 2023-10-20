@@ -1,5 +1,6 @@
 from utils.misc import scaler
 import torch
+import importlib
 
 class NominalDynamics:
     def __init__(self, obs_dim, ac_dim, out_dim, timestep, env_bounds):
@@ -35,24 +36,27 @@ class NominalDynamics:
 
 def get_nominal_dyn_cls(train_env, env):
     params = None
-    if train_env['env_collection'] == 'gym':
-        if train_env['env_id'] == 'Pendulum-v0':
-            from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumNominalDyn
-            return InvertedPendulumNominalDyn, params
-        else:
-            raise NotImplementedError
-    elif train_env['env_collection'] == 'safety_gym':
-        if train_env['env_id'] == 'Point':
-            from envs_utils.safety_gym.point_robot_utils import get_env_params
-            from envs_utils.safety_gym.point_robot_utils import PointRobotNominalDynamics
-            params = get_env_params(env)
-            return PointRobotNominalDynamics, params
-    elif train_env['env_collection'] == 'misc':
-        if train_env['env_id'] == 'cbf_test':
-            from envs_utils.test_env.test_env_utils import CBFTestDynamics
-            return CBFTestDynamics, params
-        if train_env['env_id'] == 'multi_mass_dashpot':
-            from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotDynamics
-            return MultiDashpotDynamics, params
-    else:
-        raise NotImplementedError
+
+    env_collection = train_env['env_collection']
+    nickname = train_env['env_nickname']
+
+    parts = nickname.split('_')
+    class_name = ''.join(part.capitalize() for part in parts)
+
+    # Construct the module and class names
+    module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_dynamics'
+    class_name = class_name + "NominalDynamics"
+    try:
+        nom_dyn_module = importlib.import_module(module_name)
+        nom_dyn_cls = getattr(nom_dyn_module, class_name)
+        if env_collection == 'safety_gym':
+            module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_utils'
+            utils_module = importlib.import_module(module_name)
+            params = getattr(utils_module, 'get_env_params')
+        return nom_dyn_cls, params
+    except ImportError:
+        # Handle cases where the module or class is not found
+        return NotImplementedError
+    except AttributeError:
+        # Handle cases where the class is not found in the module
+        return NotImplementedError
