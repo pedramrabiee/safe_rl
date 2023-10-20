@@ -63,7 +63,7 @@ config = {
 
 env_config = AttrDict(
     do_obs_proc=False,
-    safe_reset=True,
+    safe_reset=False,
     timestep=0.01,
     # Safe set width
     half_wedge_angle=1.5,

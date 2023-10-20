@@ -1,9 +1,9 @@
 import numpy as np
 from utils.misc import scaler
 
-def inverted_pendulum_reward_gen(bounds):
+def pendulum_reward_gen(bounds):
 
-    def inverted_pendulum_reward_func(obs, ac):
+    def pendulum_reward_func(obs, ac):
 
         obs = scaler(obs,
                      lim_from=(bounds.new.obs.low, bounds.new.obs.high),
@@ -19,4 +19,4 @@ def inverted_pendulum_reward_gen(bounds):
 
         return -(theta ** 2 + 0.1 * theta_dot ** 2 + 0.001 * ac ** 2)
 
-    return inverted_pendulum_reward_func
+    return pendulum_reward_func
