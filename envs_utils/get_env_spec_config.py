@@ -1,20 +1,20 @@
+import importlib
+
+
 def get_env_spec_config(train_env):
-    env_config = None
-    if train_env['env_collection'] == 'gym':
-        if train_env['env_id'] == 'Pendulum-v0':
-            from envs_utils.gym.pendulum.pendulum_configs import env_config
-        else:
-            raise NotImplementedError
-    elif train_env['env_collection'] == 'safety_gym':
-        if train_env['env_id'] == 'Point':
-            from envs_utils.safety_gym.point.point_configs import env_config
-            from envs_utils.safety_gym.point.point_configs import engine_config
+    collection = train_env['env_collection']
+    nickname = train_env['env_nickname']
+
+    module_name = f'envs_utils.{collection}.{nickname}.{nickname}_configs'
+
+    try:
+        env_config_module = importlib.import_module(module_name)
+        env_config = getattr(env_config_module, "env_config")
+        if collection == "safety_gym":
+            engine_config = getattr(env_config_module, "engine_config")
             env_config.update(engine_config)
-    elif train_env['env_collection'] == 'misc':
-        if train_env['env_id'] == 'cbf_test':
-            from envs_utils.misc_env.cbf_test.cbf_test_configs import env_config
-        if train_env['env_id'] == 'multi_dashpot':
-            from envs_utils.misc_env.multi_dashpot.multi_dashpot_configs import env_config
-    else:
+        return env_config
+    except ImportError:
         raise NotImplementedError
-    return env_config
+    except AttributeError:
+        raise NotImplementedError
