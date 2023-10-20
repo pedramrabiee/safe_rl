@@ -123,6 +123,7 @@ def _initialize_tabular():
     _tabular_queue = {k: {} for k in csv_file_names}
 
     # Initialize counters for each type of tabular data
+    # Initialize counters for each type of tabular data
     _steps = {k: 0 for k in csv_file_names}
 
 
@@ -508,7 +509,7 @@ def dump_plot_with_key(plt_key, filename, plt_info=None,
                   custom_col_config_list=custom_col_config_list
                   )
         dump_plot(filename, plt_key=plt_key, step_key=step_key)
-    if _config.save_custom_figs_data:
+    if _config.save_custom_figs_data and not _config.debugging_mode:
         path = osp.join(plotdir, plt_key)
         _save_csv(data=data, path=path, filename=filename, columns=columns)
 
@@ -814,6 +815,9 @@ def _email(subject, body):
 
     EMAIL_ADDRESS = os.environ.get('EMAIL_USER')
     EMAIL_PASSWORD = os.environ.get('EMAIL_PASS')
+    EMAIL_APPLICATION_PASSWORD = os.environ.get('G_APP_PASS')
+    if not EMAIL_ADDRESS or not (EMAIL_PASSWORD or EMAIL_APPLICATION_PASSWORD):
+        return
 
     msg = EmailMessage()
     msg['Subject'] = subject
@@ -821,9 +825,22 @@ def _email(subject, body):
     msg['To'] = EMAIL_ADDRESS
     msg.set_content(body)
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        smtp.send_message(msg)
+    # with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+    #     smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+    #     smtp.send_message(msg)
+
+    try:
+        # Attempt to connect and send the email using the application-specific password
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_APPLICATION_PASSWORD)
+            smtp.send_message(msg)
+            print("Email sent using application-specific password.")
+    except smtplib.SMTPAuthenticationError:
+        # If the application-specific password fails, try with the regular password
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)
+            print("Email sent using regular password.")
 
 def _save_csv(data, path, filename, columns=None, index=False):
     """
