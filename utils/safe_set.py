@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from utils.misc import e_and, e_not, euler_integrator
+from utils.misc import e_and, e_not
 from copy import copy
 
 
@@ -253,23 +253,23 @@ def get_safe_set(env_id, env, obs_proc, seed):
     safe_set = None
     if env_id == 'Pendulum-v0':
         # from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumSafeSet
-        from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumSafeSetFromPropagation
+        from envs_utils.gym.pendulum.pendulum_safety import InvertedPendulumSafeSetFromPropagation
         safe_set = InvertedPendulumSafeSetFromPropagation(env, obs_proc)
         # set the Tuple seed
         # safe_set.in_safe_set.seed(seed)
         safe_set.geo_safe_set.seed(seed)
     elif env_id == 'Point':
         # from envs.safety_gym.point_robot_utils import PointRobotSafeSetFromData
-        from envs_utils.safety_gym.point_robot_utils import PointRobotSafeSetFromCriteria
+        from envs_utils.safety_gym.point.point_utils import PointRobotSafeSetFromCriteria
         safe_set = PointRobotSafeSetFromCriteria(env, obs_proc)
          # TODO: Set seeds if needed
     elif env_id == 'cbf_test':
-        from envs_utils.test_env.test_env_utils import CBFTestSafeSet, CBFTestSafeSetFromPropagation
+        from envs_utils.misc_env.cbf_test.cbf_test_utils import CBFTestSafeSetFromPropagation
         safe_set = CBFTestSafeSetFromPropagation(env, obs_proc)
         # safe_set.in_safe_set.seed(seed)
         safe_set.geo_safe_set.seed(seed)
     elif env_id == 'multi_mass_dashpot':
-        from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotSafeSetFromPropagation
+        from envs_utils.misc_env.multi_dashpot.multi_dashpot_utils import MultiDashpotSafeSetFromPropagation
         safe_set = MultiDashpotSafeSetFromPropagation(env, obs_proc)
         safe_set.geo_safe_set.seed(seed)
     else:
