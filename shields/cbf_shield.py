@@ -1,4 +1,4 @@
-from filters.base_filter import BaseFilter
+from shields.base_shield import BaseSheild
 from networks.mlp import MLPNetwork
 import numpy as np
 import torch
@@ -23,7 +23,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 
 
-class CBFFilter(BaseFilter):
+class CBFSheild(BaseSheild):
     def initialize(self, params, init_dict=None):
         self.params = params
 

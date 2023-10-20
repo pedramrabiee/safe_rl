@@ -1,7 +1,7 @@
 from agents.base_agent import BaseAgent
 import torch
 
-class BaseFilter(BaseAgent):
+class BaseSheild(BaseAgent):
     def initialize(self, params, init_dict=None):
         raise NotImplementedError
 
