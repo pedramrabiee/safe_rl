@@ -7,18 +7,16 @@ class AgentFactory:
         self._config = config
 
     def __call__(self, agent_type):
-        if agent_type == 'mb':
-            return self.instantiate_mb_agent()
-        elif agent_type == 'ddpg':
-            return self.instantiate_ddpg_agent()
-        elif agent_type == 'sf':
-            return self.instantiate_sf_agent()
-        elif agent_type == 'cbf':
-            return self.instantiate_cbf_filter()
-        elif agent_type == 'cbftest_agent':
-            return self.instantiate_cbf_test_agent()
+        get_agent_instantiator_func_name = f"instantiate_{agent_type}_agent"
+        # params_attr_name = f"{key}_params"
+
+        if hasattr(self, get_agent_instantiator_func_name):
+            get_params_func = getattr(self, get_agent_instantiator_func_name)
+            return get_params_func()
         else:
-            raise NotImplementedError
+            # Handle cases where the agent_type is not found
+            raise ValueError(f"Agent instantiation method is not implemented: {agent_type}")
+
 
     def instantiate_mb_agent(self):
         from agents.model_based.mb import MBAgent
@@ -96,14 +94,13 @@ class AgentFactory:
                                                     safety_filter=self(params.filter)))
         return agent
 
-
     def instantiate_cbf_filter(self):
-        from filters.cbf_filter import CBFFilter
+        from shields.cbf_shield import CBFSheild
         from buffers.replay_buffer import ReplayBuffer
 
         agent_info = self._agent_info_from_env()
 
-        agent = CBFFilter(
+        agent = CBFSheild(
             agent_type='CBF',
             ac_dim=agent_info['ac_dim'],
             ac_lim=dict(low=agent_info['ac_lim_low'],
@@ -120,6 +117,28 @@ class AgentFactory:
 
         return agent
 
+    def instantiate_cbf_test_agent(self):
+        from agents.model_based.cbf_test import CBFTESTAgent
+        from buffers.replay_buffer import ReplayBuffer
+
+        agent_info = self._agent_info_from_env()
+
+        agent = CBFTESTAgent(
+            agent_type='CBFTest',
+            ac_dim=agent_info['ac_dim'],
+            ac_lim=dict(low=agent_info['ac_lim_low'],
+                        high=agent_info['ac_lim_high']),
+            timestep=agent_info['timestep'],
+            replay_buffer=ReplayBuffer(self._config.buffer_size),
+            discrete_action=agent_info['discrete_action'],
+            obs_proc=self._config.setup['obs_proc'],
+            custom_plotter=self._config.setup['custom_plotter']
+        )
+
+        params = self._config.get_agent_params('ddpg')
+        agent.initialize(params)
+
+        return agent
 
     # Helper functions
     def _agent_info_from_env(self):
@@ -148,25 +167,3 @@ class AgentFactory:
             bounds=self._env.action_bounds,
         )
 
-    def instantiate_cbf_test_agent(self):
-        from envs_utils.test_env.test_env_utils import CBFTestAgent
-        from buffers.replay_buffer import ReplayBuffer
-
-        agent_info = self._agent_info_from_env()
-
-        agent = CBFTestAgent(
-            agent_type='CBFTest',
-            ac_dim=agent_info['ac_dim'],
-            ac_lim=dict(low=agent_info['ac_lim_low'],
-                        high=agent_info['ac_lim_high']),
-            timestep=agent_info['timestep'],
-            replay_buffer=ReplayBuffer(self._config.buffer_size),
-            discrete_action=agent_info['discrete_action'],
-            obs_proc=self._config.setup['obs_proc'],
-            custom_plotter=self._config.setup['custom_plotter']
-        )
-
-        params = self._config.get_agent_params('ddpg')
-        agent.initialize(params)
-
-        return agent

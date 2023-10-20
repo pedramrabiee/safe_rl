@@ -1,3 +1,6 @@
+import importlib
+
+
 class CustomPlotter:
     """Class for custom plotting functionality for sampler"""
     def __init__(self, obs_proc):
@@ -40,20 +43,28 @@ class CustomPlotter:
 
 
 def get_custom_plotter_cls(train_env):
-    if train_env['env_collection'] == 'gym':
-        if train_env['env_id'] == 'Pendulum-v0':
-            from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumCustomPlotter
-            return InvertedPendulumCustomPlotter
-        else:
-            return CustomPlotter
-    elif train_env['env_collection'] == 'misc':
-        if train_env['env_id'] == 'cbf_test':
-            from envs_utils.test_env.test_env_utils import CBFTestCustomPlotter
-            return CBFTestCustomPlotter
-        if train_env['env_id'] == 'multi_mass_dashpot':
-            from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotCustomPlotter
-            return MultiDashpotCustomPlotter
-        else:
-            return CustomPlotter
-    else:
+    env_collection = train_env['env_collection']
+    nickname = train_env['env_nickname']
+
+    parts = nickname.split('_')
+    class_name = ''.join(part.capitalize() for part in parts)
+
+    # Construct the module and class names
+    module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_plotter'
+    class_name = class_name + "Plotter"
+
+    try:
+        custom_plotter_module = importlib.import_module(module_name)
+        custom_plotter_cls = getattr(custom_plotter_module, class_name)
+        return custom_plotter_cls
+    except ImportError:
+        # Handle cases where the module or class is not found
         return CustomPlotter
+    except AttributeError:
+        # Handle cases where the class is not found in the module
+        return CustomPlotter
+
+
+
+
+

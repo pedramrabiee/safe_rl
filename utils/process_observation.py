@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from utils.torch_utils import get_tensor_blueprint
 from utils.misc import isvec, torchify, np_object2dict
+import importlib
 
 
 class ObsProc:
@@ -175,19 +176,23 @@ class NeutralObsProc(ObsProc):
 
 
 def get_obsproc_cls(train_env):
-    if train_env['env_collection'] == 'gym':
-        if train_env['env_id'] == 'Pendulum-v0':
-            from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumObsProc
-            return InvertedPendulumObsProc
-        else:
-            raise NotImplementedError
-    elif train_env['env_collection'] == 'safety_gym':
-        if train_env['env_id'] == 'Point':
-            from envs_utils.safety_gym.point_robot_utils import PointObsProc
-            return PointObsProc
-        else:
-            raise NotImplementedError
-    else:
+    env_collection = train_env['env_collection']
+    nickname = train_env['env_nickname']
+
+    parts = nickname.split('_')
+    class_name = ''.join(part.capitalize() for part in parts)
+
+    # Construct the module and class names
+    module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_obs_proc'
+    class_name = class_name + "ObsProc"
+
+    try:
+        obs_proc_module = importlib.import_module(module_name)
+        obs_proc_cls = getattr(obs_proc_module, class_name)
+        return obs_proc_cls
+    except ImportError:
+        # Handle cases where the module or class is not found
         return NeutralObsProc
-
-
+    except AttributeError:
+        # Handle cases where the class is not found in the module
+        return NeutralObsProc

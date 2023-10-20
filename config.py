@@ -5,6 +5,7 @@ from controller.random_shoot_controller import RandomShootController
 from controller.cem_controller import CEMController
 from attrdict import AttrDict
 from utils.misc import deep_update
+import importlib
 
 
 class Config:
@@ -25,7 +26,7 @@ class Config:
         self.resume = False
         self.benchmark = False
         self.evaluation_mode = False
-        self.debugging_mode = False             # Turns wandb logging off/ saves nothing to files
+        self.debugging_mode = True             # Turns wandb logging off/ saves nothing to files
         self.plot_custom_figs = False
         self.save_custom_figs_data = False
 
@@ -96,19 +97,19 @@ class Config:
     ##############################
     ###### Agent params
     ##############################
+
     def get_agent_params(self, key):
-        if key == 'mb':
-            self.mb_params = deep_update(self._get_mb_params(), self.config_override_dict.get('mb_params'))
-            return self.mb_params
-        if key == 'ddpg':
-            self.ddpg_params = deep_update(self._get_ddpg_params(), self.config_override_dict.get('ddpg_params'))
-            return self.ddpg_params
-        if key == 'sf':
-            self.sf_params = deep_update(self._get_sf_params(), self.config_override_dict.get('sf_params'))
-            return self.sf_params
-        if key == 'cbf':
-            self.cbf_params = deep_update(self._get_cbf_filter_params(), self.config_override_dict.get('cbf_params'))
-            return self.cbf_params
+        get_params_func_name = f"_get_{key}_params"
+        params_attr_name = f"{key}_params"
+
+        if hasattr(self, get_params_func_name):
+            get_params_func = getattr(self, get_params_func_name)
+            params = deep_update(get_params_func(), self.config_override_dict.get(params_attr_name))
+            setattr(self, params_attr_name, params)
+            return params
+        else:
+            # Handle cases where the key is not found
+            raise ValueError(f"Unsupported key: {key}")
 
 
     # Model-based
@@ -245,7 +246,7 @@ class Config:
     ###### Filters
     ##############################
     # CBF Filter
-    def _get_cbf_filter_params(self):
+    def _get_cbf_params(self):
         cbf_params = AttrDict(
             # filter network
             filter_net_kwargs=dict(hidden_dim=512,
@@ -339,23 +340,20 @@ class Config:
 
 
 def get_config_override(train_env):
-    if train_env['env_collection'] == 'gym':
-        if train_env['env_id'] == 'Pendulum-v0':
-            from envs_utils.gym.pendulum.pendulum_configs import config
-            return config
-        else:
-            raise NotImplementedError
-    elif train_env['env_collection'] == 'safety_gym':
-        if train_env['env_id'] == 'Point':
-            from envs_utils.safety_gym.point_robot_configs import config
-            return config
-    elif train_env['env_collection'] == 'misc':
-        if train_env['env_id'] == 'cbf_test':
-            from envs_utils.test_env.test_env_configs import config
-            return config
-        if train_env['env_id'] == 'multi_mass_dashpot':
-            from envs_utils.test_env.multi_m_dashpot_configs import config
-            return config
-    else:
-        raise NotImplementedError
+    env_collection = train_env['env_collection']
+    nickname = train_env['env_nickname']
+
+    # Construct the module and class names
+    module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_configs'
+
+    try:
+        config_module = importlib.import_module(module_name)
+        config_dict = getattr(config_module, 'config')
+        return config_dict
+    except ImportError:
+        # Handle cases where the module or class is not found
+        return NotImplementedError
+    except AttributeError:
+        # Handle cases where the class is not found in the module
+        return NotImplementedError
 

@@ -1,9 +1,11 @@
 import gym
 from utils.wrappers.monitor import Monitor
 from utils.wrappers.scaler import ActionScalerWrapper
+import importlib
 
 
 def make_env(env_id,
+             env_nickname,
              collection='gym',
              ac_lim=(-1.0, 1.0),
              video_dict=None,
@@ -32,15 +34,24 @@ def make_env(env_id,
         if max_episode_time:
             env.num_steps = int(max_episode_time / env.robot.sim.model.opt.timestep)
         max_episode_len = env.num_steps
-    elif collection == 'misc':
-        if env_id == 'cbf_test':
-            from envs_utils.test_env.test_env_utils import SimpleEnv
-            env = SimpleEnv()
+    elif collection == 'misc_env':
+        parts = env_nickname.split('_')
+        class_name = ''.join(part.capitalize() for part in parts)
+
+        class_name = class_name + "Env"
+        module_name = f'envs_utils.{collection}.{env_nickname}.{env_nickname}_env'
+
+        try:
+            env_module = importlib.import_module(module_name)
+            env_cls = getattr(env_module, class_name)
+            env = env_cls()
             max_episode_len = env.max_episode_len
-        if env_id == 'multi_mass_dashpot':
-            from envs_utils.test_env.multi_m_dashpot_utils import MultiDashpotEnv
-            env = MultiDashpotEnv()
-            max_episode_len = env.max_episode_len
+        except ImportError:
+            # Handle cases where the module or class is not found
+            raise NotImplementedError
+        except AttributeError:
+            # Handle cases where the class is not found in the module
+            raise NotImplementedError
 
     env = ActionScalerWrapper(env, ac_lim=ac_lim)
 
