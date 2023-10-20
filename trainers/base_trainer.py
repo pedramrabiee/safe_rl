@@ -105,6 +105,7 @@ class BaseTrainer:
 
        """
         self.env, env_info = make_env(env_id=setup['train_env']['env_id'],
+                                      env_nickname=setup['train_env']['env_nickname'],
                                       collection=setup['train_env']['env_collection'],
                                       ac_lim=self.config.ac_lim,
                                       max_episode_time=self.config.max_episode_time,
@@ -184,6 +185,7 @@ class BaseTrainer:
             video_dict = None
 
         self.env_eval, env_eval_info = make_env(env_id=setup['eval_env']['env_id'],
+                                                env_nickname=setup['eval_env']['env_id'],
                                                 collection=setup['eval_env']['env_collection'],
                                                 video_dict=video_dict,
                                                 ac_lim=self.config.ac_lim,
