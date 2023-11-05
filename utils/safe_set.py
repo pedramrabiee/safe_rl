@@ -87,8 +87,6 @@ class SafeSetFromCriteria(SafeSet):
         """
 
         super().__init__(env, obs_proc)
-
-        # keys = ['geo_safe', 'in_safe', 'unsafe', 'out_cond_safe', 'out_cond_unsafe']
         keys = ['des_safe', 'safe', 'unsafe']
         self.criteria = {k: getattr(self, 'is_' + k) for k in keys}
 
@@ -198,6 +196,22 @@ class SafeSetFromCriteria(SafeSet):
     def _get_obs(self):
         raise NotImplementedError
 
+
+class SafeSetFromBarrierFunction(SafeSetFromCriteria):
+    def __init__(self, env, obs_proc):
+        super().__init__(env, obs_proc)
+
+    def des_safe_barrier(self, obs):
+        raise NotImplementedError
+
+    def safe_barrier(self, obs):
+        raise NotImplementedError
+
+    def is_des_safe(self, obs):
+        return self.des_safe_barrier(obs) >= 0
+
+    def is_safe(self, obs):
+        return self.safe_barrier(obs) >= 0
 
 
 def get_safe_set(env_id, env, obs_proc, seed):
