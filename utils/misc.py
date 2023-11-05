@@ -342,4 +342,11 @@ def deep_update(source, overrides):
 def euler_integrator(deriv_value, x, timestep):
     return x + deriv_value * timestep
 
+# TODO: This method can be replaced by np.atleast_1d. Remove it.
+def scalar_to_vector(arr):
+    if np.isscalar(arr) or arr.ndim==0:
+        return np.array([arr])  # Convert scalar to vector
+    else:
+        return arr  # Array is not a scalar, so return as is
+
 
