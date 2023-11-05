@@ -2,7 +2,7 @@ from shields.base_shield import BaseSheild
 from networks.mlp import MLPNetwork
 import numpy as np
 import torch
-from utils.grads import get_jacobian, get_grad
+from utils.grads import get_jacobian_from_net, get_grad_from_net
 from utils.optim import qp_from_np
 from utils.scale import action2newbounds, action2oldbounds
 from utils import scale
@@ -21,7 +21,6 @@ from utils.integration_utils import euler_integrate_time_inv_from_deriv
 from utils.misc import e_and
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
-
 
 class CBFSheild(BaseSheild):
     def initialize(self, params, init_dict=None):
@@ -58,7 +57,7 @@ class CBFSheild(BaseSheild):
         obs_torch = torch.tensor(obs, dtype=torch.float32)
         mu_f, mu_g, std_f, std_g = filter_dict['dyn_bd'].pred_dyn
         with torch.enable_grad():
-            dh_dx = get_jacobian(net=self.filter_net, x=obs_torch).detach().numpy()
+            dh_dx = get_jacobian_from_net(net=self.filter_net, x=obs_torch).detach().numpy()
         f_hat, g_hat = filter_dict['dyn_bd'].nom_dyn
 
         if not self.params.use_trained_dyn:
@@ -272,7 +271,7 @@ class CBFSheild(BaseSheild):
         dyn = dyn[mask, :]
         if obs.size(0) == 0:
             return None
-        grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
+        grad = get_grad_from_net(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
         deriv_loss = row_wise_dot(grad, torchify(dyn, device=obs.device))
         deriv_loss += self.params.eta * self.filter_net(obs)
         return deriv_loss
@@ -298,7 +297,7 @@ class CBFSheild(BaseSheild):
 
     def _compute_max_deriv_loss(self, obs):
         acs = self._get_max_acs()
-        grad = get_grad(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
+        grad = get_grad_from_net(self.filter_net, obs, create_graph=True).squeeze(dim=0) # TODO: implement sqeeuze on one output in get_grad like in get_jacobian and remove squeeze from this
         deriv_loss = []
         obs_np = obs.cpu().detach().numpy()
         for ac in acs:
