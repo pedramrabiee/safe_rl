@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from utils.custom_plotter import CustomPlotter
-from utils.grads import get_jacobian
+from utils.grads import get_jacobian_from_net
 from envs_utils.misc_env.cbf_test.cbf_test_configs import env_config
 from logger import logger
 import torch
@@ -120,7 +120,7 @@ class CbfTestPlotter(CustomPlotter):
                 x = np.array([X[i, j], Y[i, j]]).reshape(1, -1)
                 # out[i, j] = filter_net(torch.tensor(x, dtype=torch.float32)).detach().numpy().squeeze()
                 with torch.enable_grad():
-                    dh_dx = get_jacobian(net=filter_net, x=torch.tensor(x, dtype=torch.float32)).detach().numpy().squeeze()
+                    dh_dx = get_jacobian_from_net(net=filter_net, x=torch.tensor(x, dtype=torch.float32)).detach().numpy().squeeze()
                 out1[i, j] = dh_dx[0]
                 out2[i, j] = dh_dx[1]
 
