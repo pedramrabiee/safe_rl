@@ -88,3 +88,11 @@ def iterapply_on_dict(apply_to, func, arg):
     for k in apply_to.keys():
         iterapply_on_dict(apply_to=apply_to[k], func=func, arg=arg[k])
 
+
+def softmin(x, rho, conservative=False):
+    return softmax(x=x, rho=-rho, conservative=conservative)
+
+
+def softmax(x, rho, conservative=True):
+    res = 1 / rho * torch.logsumexp(rho * x, dim=0)
+    return res - np.log(x.size(0))/rho if conservative else res
