@@ -1,5 +1,7 @@
 from attrdict import AttrDict
 import numpy as np
+import torch
+
 
 
 config = {
@@ -73,6 +75,10 @@ env_config = AttrDict(
     g=10.0,
     m=1.0,
     l=1.0,
+    f_numpy=lambda y: np.array([y[1], 3 * g / (2 * l) * np.sin(y[0])]),  # Lambda function definition
+    g_numpy=lambda y: np.array([0.0, 1.0]),
+    f_torch=lambda y: torch.stack([y[1], 3 * g / (2 * l) * torch.sin(y[0])]),
+    g_torch=lambda y: torch.tensor([0.0, 1.0]),
     max_torque=60.0,
     max_speed=np.inf,
     max_speed_for_safe_set_training=20.0,
