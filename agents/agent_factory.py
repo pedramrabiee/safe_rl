@@ -91,7 +91,7 @@ class AgentFactory:
 
         agent.initialize(params, init_dict=AttrDict(mf_agent=self(params.mf),
                                                     mb_agent=self(params.mb),
-                                                    safety_filter=self(params.filter)))
+                                                    safety_filter=self(params.shield)))
         return agent
 
     def instantiate_cbf_filter(self):
@@ -140,6 +140,55 @@ class AgentFactory:
 
         return agent
 
+    def instantiate_backup_shield_agent(self):
+        from shields.backup_shield import BackupShield, get_backup_shield_info_from_env
+        agent_info = self._agent_info_from_env()
+
+        agent = BackupShield(
+            agent_type='BackupShield',
+            ac_dim=agent_info['ac_dim'],
+            ac_lim=dict(low=agent_info['ac_lim_low'],
+                        high=agent_info['ac_lim_high']),
+            timestep=agent_info['timestep'],
+            replay_buffer=None,
+            discrete_action=agent_info['discrete_action'],
+            obs_proc=self._config.setup['obs_proc'],
+            custom_plotter=self._config.setup['custom_plotter']
+        )
+
+        params = self._config.get_agent_params('backup_shield')
+        agent.initialize(params, init_dict=AttrDict(
+            **get_backup_shield_info_from_env(
+                env=self._env,
+                env_info=self._config.setup.train_env,
+                obs_proc=self._config.setup.obs_proc)))
+        return agent
+
+
+    def instantiate_bus_agent(self):
+        from shields.backup_shield import get_desired_policy
+        from agents.model_based.bus import BUS
+        agent_info = self._agent_info_from_env()
+        agent = BUS(
+            agent_type='BUS',
+            ac_dim=agent_info['ac_dim'],
+            ac_lim=dict(low=agent_info['ac_lim_low'],
+                        high=agent_info['ac_lim_high']),
+            timestep=agent_info['timestep'],
+            replay_buffer=None,
+            discrete_action=agent_info['discrete_action'],
+            obs_proc=self._config.setup['obs_proc'],
+            custom_plotter=self._config.setup['custom_plotter']
+        )
+
+        params = self._config.get_agent_params('bus')
+        agent.initialize(params, init_dict=AttrDict(shield=self('backup_shield'),
+                                                    desired_policy=get_desired_policy(self._config.setup.train_env)))
+
+        return agent
+
+
+
     # Helper functions
     def _agent_info_from_env(self):
         ac_dim, discrete_action = get_ac_space_info(self._env.action_space)
@@ -166,4 +215,3 @@ class AgentFactory:
             timestep=timestep,
             bounds=self._env.action_bounds,
         )
-
