@@ -42,6 +42,9 @@ class SafeSet:
         """
         raise NotImplementedError
 
+    def late_initialize(self, init_dict=None):
+        raise NotImplementedError
+
     def is_safe(self, obs):
         """
         Check if an observation is within the safe set.
@@ -189,7 +192,7 @@ class SafeSetFromCriteria(SafeSet):
     def safe_reset(self):
         while True:
             obs = self.env.reset()
-            if self.is_safe(self.obs_proc.proc(obs, proc_key='filter')):
+            if self.is_safe(self.obs_proc.proc(obs, proc_key='safe_set')):
                 break
         return obs
 
@@ -201,6 +204,9 @@ class SafeSetFromBarrierFunction(SafeSetFromCriteria):
     def __init__(self, env, obs_proc):
         super().__init__(env, obs_proc)
 
+    def initialize(self, init_dict=None):
+        raise NotImplementedError
+
     def des_safe_barrier(self, obs):
         raise NotImplementedError
 
@@ -208,35 +214,49 @@ class SafeSetFromBarrierFunction(SafeSetFromCriteria):
         raise NotImplementedError
 
     def is_des_safe(self, obs):
-        return self.des_safe_barrier(obs) >= 0
+        ans = self.des_safe_barrier(obs) >= 0
+        if torch.is_tensor(ans):
+            ans = ans.item()
+        return ans
 
     def is_safe(self, obs):
-        return self.safe_barrier(obs) >= 0
+        if self.is_des_safe(obs):
+            ans = self.safe_barrier(obs) >= 0
+            if torch.is_tensor(ans):
+                ans = ans.item()
+            return ans
+        return False
 
 
-def get_safe_set(env_id, env, obs_proc, seed):
+def get_safe_set(env_info, env, obs_proc, seed):
     safe_set = None
-    if env_id == 'Pendulum-v0':
-        # from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumSafeSet
-        from envs_utils.gym.pendulum.pendulum_safety import InvertedPendulumSafeSetFromPropagation
-        safe_set = InvertedPendulumSafeSetFromPropagation(env, obs_proc)
+    env_nickname = env_info['env_nickname']
+
+    if env_nickname == 'pendulum':
+        from envs_utils.gym.pendulum.pendulum_safety import safety_dict
+        # safe_set_cls = safety_dict['safe_set_cls_to_use']
+        safe_set_getter = safety_dict['safe_set_getter']
+        safe_set = safe_set_getter(env, obs_proc)
+
+        # # from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumSafeSet
+        # from envs_utils.gym.pendulum.pendulum_safety import InvertedPendulumSafeSetFromPropagation
         # set the Tuple seed
         # safe_set.in_safe_set.seed(seed)
-        safe_set.geo_safe_set.seed(seed)
-    elif env_id == 'Point':
-        # from envs.safety_gym.point_robot_utils import PointRobotSafeSetFromData
-        from envs_utils.safety_gym.point.point_utils import PointRobotSafeSetFromCriteria
-        safe_set = PointRobotSafeSetFromCriteria(env, obs_proc)
-         # TODO: Set seeds if needed
-    elif env_id == 'cbf_test':
-        from envs_utils.misc_env.cbf_test.cbf_test_utils import CBFTestSafeSetFromPropagation
-        safe_set = CBFTestSafeSetFromPropagation(env, obs_proc)
-        # safe_set.in_safe_set.seed(seed)
-        safe_set.geo_safe_set.seed(seed)
-    elif env_id == 'multi_mass_dashpot':
-        from envs_utils.misc_env.multi_dashpot.multi_dashpot_utils import MultiDashpotSafeSetFromPropagation
-        safe_set = MultiDashpotSafeSetFromPropagation(env, obs_proc)
-        safe_set.geo_safe_set.seed(seed)
+        # safe_set.geo_safe_set.seed(seed)
+    # elif env_nickname == 'point':
+    #     # from envs.safety_gym.point_robot_utils import PointRobotSafeSetFromData
+    #     from envs_utils.safety_gym.point.point_utils import PointRobotSafeSetFromCriteria
+    #     safe_set = PointRobotSafeSetFromCriteria(env, obs_proc)
+    #      # TODO: Set seeds if needed
+    # elif env_nickname == 'cbf_test':
+    #     from envs_utils.misc_env.cbf_test.cbf_test_utils import CBFTestSafeSetFromPropagation
+    #     safe_set = CBFTestSafeSetFromPropagation(env, obs_proc)
+    #     # safe_set.in_safe_set.seed(seed)
+    #     safe_set.geo_safe_set.seed(seed)
+    # elif env_nickname == 'multi_mass_dashpot':
+    #     from envs_utils.misc_env.multi_dashpot.multi_dashpot_utils import MultiDashpotSafeSetFromPropagation
+    #     safe_set = MultiDashpotSafeSetFromPropagation(env, obs_proc)
+    #     safe_set.geo_safe_set.seed(seed)
     else:
         raise NotImplementedError
     return safe_set
