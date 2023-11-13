@@ -168,6 +168,7 @@ class AgentFactory:
     def instantiate_bus_agent(self):
         from shields.backup_shield import get_desired_policy
         from agents.model_based.bus import BUS
+        from buffers.replay_buffer import ReplayBuffer
         agent_info = self._agent_info_from_env()
         agent = BUS(
             agent_type='BUS',
@@ -175,7 +176,7 @@ class AgentFactory:
             ac_lim=dict(low=agent_info['ac_lim_low'],
                         high=agent_info['ac_lim_high']),
             timestep=agent_info['timestep'],
-            replay_buffer=None,
+            replay_buffer=ReplayBuffer(self._config.buffer_size),
             discrete_action=agent_info['discrete_action'],
             obs_proc=self._config.setup['obs_proc'],
             custom_plotter=self._config.setup['custom_plotter']
