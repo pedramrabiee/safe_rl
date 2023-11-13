@@ -6,6 +6,9 @@ class PendulumObsProc(ObsProc):
     def obs_dim(self, proc_key=None):
         return int(3)
 
+    def obs_dim_processed(self, proc_key=None):
+        return int(2)
+
     def _proc(self, obs, proc_dict=None):
         return np.stack([np.arctan2(obs[..., 1], obs[..., 0]), obs[..., 2]], axis=-1)   # FIXME: fix this for ensemble and buffer
 

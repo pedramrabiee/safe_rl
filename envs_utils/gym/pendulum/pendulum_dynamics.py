@@ -1,7 +1,8 @@
 import numpy as np
 from envs_utils.gym.pendulum.pendulum_configs import env_config
 from dynamics.nominal_dynamics import NominalDynamics
-
+from dynamics.torch_dynamics import AffineInControlTorchDyn
+import torch
 
 class PendulumNominalDyn(NominalDynamics):
     def initialize(self, params, init_dict=None):
@@ -50,3 +51,14 @@ class PendulumNominalDyn(NominalDynamics):
         G = np.expand_dims(G, axis=-1)
 
         return (f, G) if split_return else f + np.matmul(G, ac).squeeze(-1)
+
+
+
+class PendulumTorchDyn(AffineInControlTorchDyn):
+    def f(self, state):
+        # TODO: Change it to accept batch
+        return torch.stack([state[1], 3 * env_config.g / (2 * env_config.l) * torch.sin(state[0])])
+
+    def g(self, state):
+        # TODO: Change it to accept batch
+        return torch.tensor([0.0, 3/(env_config.m * env_config.l**2)])

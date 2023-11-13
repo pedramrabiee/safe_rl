@@ -26,7 +26,6 @@ config = {
         'step_save_freq': 1,
         'load_run_name': 'run-20210914_160746-a7mp6vyc',
         'load_timestamp': '20210914_161734_ep0',
-
     },
     'ddpg_params': {
         'init_phase_coef': 0.5
@@ -64,24 +63,22 @@ config = {
 }
 
 env_config = AttrDict(
-    do_obs_proc=False,
-    safe_reset=False,
-    timestep=0.01,
+    do_obs_proc=True,
+    safe_reset=True,
+    timestep=0.1,
     # Safe set width
-    half_wedge_angle=1.5,
+    # half_wedge_angle=1.5,
     # mid_safe_set_width=0.2,
-    outer_safe_set_width=0.2,
+    # outer_safe_set_width=0.2,
     # Pendulum dynamics parameters
     g=10.0,
-    m=1.0,
-    l=1.0,
-    f_numpy=lambda y: np.array([y[1], 3 * g / (2 * l) * np.sin(y[0])]),  # Lambda function definition
-    g_numpy=lambda y: np.array([0.0, 1.0]),
-    f_torch=lambda y: torch.stack([y[1], 3 * g / (2 * l) * torch.sin(y[0])]),
-    g_torch=lambda y: torch.tensor([0.0, 1.0]),
-    max_torque=60.0,
+    m=3/225,
+    l=15.0,
+    max_torque=1.5,
     max_speed=np.inf,
-    max_speed_for_safe_set_training=20.0,
-    max_T_for_safe_set=100,
-    sample_velocity_gaussian=True       # velocity distribution will be truncated normal distribution
+    use_wrapper=True,
+    wrapper_name='RK45PendulumWrapper',
+    # max_speed_for_safe_set_training=20.0,
+    # max_T_for_safe_set=100,
+    # sample_velocity_gaussian=True       # velocity distribution will be truncated normal distribution
 )
