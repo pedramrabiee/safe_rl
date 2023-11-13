@@ -25,6 +25,29 @@ def get_grad(func, x, **kwargs):
     x.requires_grad_(requires_grad=requires_grad)
     return output[0]
 
+def get_value_and_grad(func, x, **kwargs):
+    """
+    Compute the gradient of a given function with respect to its input and return the function's value.
+
+    This function calculates the gradient of the function 'func' with respect to the input 'x' and also returns
+    the value of the function 'func(x)'. It temporarily sets 'x' to require gradients, computes the gradient,
+    and then restores the original gradient requirement.
+
+    Args:
+        func (callable): The function for which the gradient is computed.
+        x (torch.Tensor): The input data with respect to which differentiation is performed.
+        **kwargs: Additional keyword arguments passed to torch.autograd.grad.
+
+    Returns:
+        (torch.Tensor, torch.Tensor): Tuple containing the gradient of 'func' with respect to 'x' and the value of 'func(x)'.
+    """
+    requires_grad = x.requires_grad
+    x.requires_grad_()
+    output = func(x)  # Calculate func(x) before computing the gradient
+    gradient = grad(output, x, **kwargs)
+    x.requires_grad_(requires_grad=requires_grad)
+    return output, gradient[0]
+
 
 def get_jacobian_from_net(net, x, batch_dim_first=False, squeeze_on_one_output=True, create_graph=False):
     """

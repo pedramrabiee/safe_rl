@@ -68,8 +68,12 @@ def solve_lp(c, A, b):
     # Formulate the LP problem
     problem = cp.Problem(objective, constraints)
 
+
+    # Set solver options
+    solver_options = {'eps': 1e-7}
+    problem.solve(solver=cp.SCS, **solver_options)
     # Solve the LP problem
-    problem.solve()
+    # problem.solve()
 
     # Extract the optimal solution
     optimal_x = x.value
