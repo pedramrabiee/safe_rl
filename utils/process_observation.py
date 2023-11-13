@@ -18,7 +18,6 @@ class ObsProc:
         self._unproc_keys = []
         self.tensor_blueprint = None
 
-
     def initialize(self, init_dict=None):
         """
         Initialize the observation processor with optional parameters.
@@ -40,6 +39,9 @@ class ObsProc:
         Returns:
             int: The observation dimension.
         """
+        raise NotImplementedError
+
+    def obs_dim_processed(self, proc_key=None):
         raise NotImplementedError
 
     def proc(self, obs, proc_key=None, proc_dict=None):
