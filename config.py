@@ -6,7 +6,7 @@ from controller.cem_controller import CEMController
 from attrdict import AttrDict
 from utils.misc import deep_update
 import importlib
-
+from torch import linspace
 
 class Config:
     def __init__(self, config_override_dict=None):
@@ -118,7 +118,6 @@ class Config:
         from buffers.replay_buffer import ReplayBuffer
         from dynamics.affine_in_action import AffineInActionGaussian
         from dynamics.affine_in_action_gaussian_dynamics import AffineInActionGaussianDynamics
-
 
         controller_cls = [RandomController, CEMController]
         replay_buffer_cls = ReplayBuffer
@@ -242,10 +241,34 @@ class Config:
         )
         return sf_params
 
-    ##############################
-    ###### Filters
-    ##############################
-    # CBF Filter
+    def _get_bus_params(self):
+        bus_params = AttrDict()
+        return bus_params
+
+
+    # ========================================
+    #              Shields
+    # ========================================
+    # Backup Shield
+    def _get_backup_shield_params(self):
+        bus_params = AttrDict(
+            eps_buffer=0.0,
+            softmin_gain=100,
+            softmax_gain=300,
+            h_scale=0.05,
+            feas_scale=0.05,
+            alpha=1.0,
+            horizon=5,
+            backup_timestep=0.1
+        )
+        num_backup_steps = int(bus_params.horizon/bus_params.backup_timestep) + 1
+        backup_t_seq = linspace(0,
+                                bus_params.horizon,
+                                num_backup_steps)
+        bus_params.backup_t_seq = backup_t_seq
+        return bus_params
+
+    # CBF Shield
     def _get_cbf_params(self):
         cbf_params = AttrDict(
             # filter network
@@ -293,9 +316,9 @@ class Config:
         )
         return cbf_params
 
-    ##############################
-    ###### Controllers params
-    ##############################
+    # ==============================
+    #     Controllers params
+    # ==============================
     # Random Shooter
     def get_random_shooter_params(self):
         return AttrDict(
