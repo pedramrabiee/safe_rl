@@ -185,7 +185,7 @@ class BaseTrainer:
             video_dict = None
 
         self.env_eval, env_eval_info = make_env(env_id=setup['eval_env']['env_id'],
-                                                env_nickname=setup['eval_env']['env_id'],
+                                                env_nickname=setup['eval_env']['env_nickname'],
                                                 collection=setup['eval_env']['env_collection'],
                                                 video_dict=video_dict,
                                                 ac_lim=self.config.ac_lim,
@@ -210,13 +210,13 @@ class BaseTrainer:
 
         """
         # instantiate safe_set
-        self.safe_set = get_safe_set(env_id=setup.train_env.env_id,
+        self.safe_set = get_safe_set(env_info=setup.train_env,
                                      env=self.env,
                                      obs_proc=self.obs_proc,
                                      seed=get_seed())
 
         # instantiate safe_set for evaluation enviornment
-        self.safe_set_eval = get_safe_set(env_id=setup.eval_env.env_id,
+        self.safe_set_eval = get_safe_set(env_info=setup.eval_env,
                                           env=self.env_eval,
                                           obs_proc=self.obs_proc,
                                           seed=self.eval_seed)
