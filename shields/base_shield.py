@@ -9,8 +9,7 @@ class BaseSheild(BaseAgent):
     def act(self, obs, explore=True):
         raise NotImplementedError
 
-    @torch.no_grad()
-    def filter(self, obs, ac, filter_dict=None):
+    def shield(self, obs, ac, filter_dict=None):
         raise NotImplementedError
 
     def pre_train(self, samples, pre_train_dict=None):
