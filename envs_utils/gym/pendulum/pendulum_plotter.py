@@ -11,7 +11,7 @@ class PendulumPlotter(CustomPlotter):
         theta = np.arctan2(obs[1], obs[0])
         state = np.array([theta, obs[2]])
         # logger.push_plot(np.concatenate((state.reshape(1, -1), ac.reshape(1, -1) * scale.ac_old_bounds[1]), axis=1), plt_key="sampler_plots")
-        logger.push_plot(state.reshape(1, -1), plt_key="sampler_plots", row_append=False)
+        logger.push_plot(state.reshape(1, -1), plt_key="sampler_plots", row_append=True)
 
     def filter_push_action(self, ac):
         ac, ac_filtered = ac
@@ -20,23 +20,23 @@ class PendulumPlotter(CustomPlotter):
     def dump_sampler_plots(self, episode_num):
         logger.dump_plot_with_key(plt_key="sampler_plots",
                                   filename='states_action_episode_%d' % episode_num,
-                                  custom_col_config_list=[[0], [1]],  # 0, 1: u's , 2: theta, 3: theta_dot
-                                  columns=['theta', 'theta_dot'],
-                                  # custom_col_config_list=[[2], [3], [0, 1]],    # 0, 1: u's , 2: theta, 3: theta_dot
-                                  # columns=['u_mf', 'u_filtered', 'theta', 'theta_dot'],
+                                  # custom_col_config_list=[[0], [1]],  # 0, 1: u's , 2: theta, 3: theta_dot
+                                  # columns=['theta', 'theta_dot'],
+                                  custom_col_config_list=[[2], [3], [0, 1]],    # 0, 1: u's , 2: theta, 3: theta_dot
+                                  columns=['u_des', 'u_f', 'theta', 'theta_dot'],
                                   plt_info=dict(
                                       xlabel=r'Timestep',
-                                      # ylabel=[r'$\theta$',
-                                      #         r'$\dot \theta$',
-                                      #         r'$u$'],
-                                      # legend=[None,
-                                      #         None,
-                                      #         [r'$u_{\rm mf}$',
-                                      #          r'$u_{\rm filtered}$']
-                                      #         ]
                                       ylabel=[r'$\theta$',
-                                              r'$\dot \theta$'
-                                              ],
+                                              r'$\dot \theta$',
+                                              r'$u$'],
+                                      legend=[None,
+                                              None,
+                                              [r'$u_{\rm des}$',
+                                               r'$u_{\rm filtered}$']
+                                              ]
+                                      # ylabel=[r'$\theta$',
+                                      #         r'$\dot \theta$'
+                                      #         ],
                                   )
                                   )
 

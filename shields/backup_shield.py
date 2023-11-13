@@ -58,8 +58,9 @@ class BackupShield(BaseSheild):
                                                        u_bound=self._ac_bounds)
 
         beta = (1 if gamma >= 1 else gamma) if gamma > 0 else 0
-
-        return (1 - beta) * u_b_select + beta * u
+        u = (1 - beta) * u_b_select + beta * u
+        self.custom_plotter.filter_push_action((ac, u))
+        return u
 
     def get_h(self, obs):
         obs = torch.from_numpy(obs).squeeze()

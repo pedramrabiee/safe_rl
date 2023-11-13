@@ -56,7 +56,7 @@ _backup_sets_dict = dict(c=[0.17, 0.07, 0.07],
                          center=[0.0, pi/2, -pi/2]
 )
 
-_num_backup_sets_to_consider = 1
+_num_backup_sets_to_consider = 3
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
     for i, backup_set in enumerate(backup_sets):
