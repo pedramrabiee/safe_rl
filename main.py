@@ -7,6 +7,9 @@ from utils.custom_plotter import get_custom_plotter_cls
 from utils.get_reward_gen import get_reward_gen
 from envs_utils.get_env_info import get_env_info
 from logger import logger
+import torch
+
+torch.set_default_dtype(torch.float64)
 
 
 def make_setup(env_nickname, agent, load_config_path=None):
@@ -32,7 +35,7 @@ if __name__ == "__main__":
 
     # See envs_utils.get_env_info for a list of acceptable environment nicknames
     setup = make_setup(env_nickname='pendulum',
-                       agent='ddpg')
+                       agent='bus')
 
     # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all
     seed = set_seed()

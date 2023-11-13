@@ -43,7 +43,7 @@ class CBFSheild(BaseSheild):
         self.dyn_predictor = predictor
 
     @torch.no_grad()
-    def filter(self, obs, ac, filter_dict=None):
+    def shield(self, obs, ac, filter_dict=None):
         # TODO: this method only works for single-obs single-ac (does not support mutliprocessing
         # process observation to match the models' input requirement
         # obs_in = copy(obs)
