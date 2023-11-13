@@ -95,8 +95,9 @@ class BaseAgent:
         params = {}
         # params['models'] = {k: model.state_dict() for k, model in enumerate(self.models)}
         # params['optimizers'] = {k: optim.state_dict() for k, optim in enumerate(self.optimizers)}
-        params['models'] = itermap_on_dict(x=self.models_dict, func=lambda x: x.state_dict())
-        params['optimizers'] = itermap_on_dict(x=self.optimizers_dict, func=lambda x: x.state_dict())
+        if self.models_dict is not None:
+            params['models'] = itermap_on_dict(x=self.models_dict, func=lambda x: x.state_dict())
+            params['optimizers'] = itermap_on_dict(x=self.optimizers_dict, func=lambda x: x.state_dict())
 
         if hasattr(self, 'extra_params_dict'):
             # params['extra_params'] = itermap_on_dict(x=self.extra_params_dict, func=lambda x: x.detach())
