@@ -7,6 +7,12 @@ from buffers.replay_buffer import ReplayBuffer
 from utils.seed import rng
 
 class BufferQueue(ReplayBuffer):
+    """
+            BufferQueue class inheriting from ReplayBuffer, managing a queue of experiences and their processing.
+
+            Args:
+                max_size (int): Maximum size of the buffer queue (default: 100).
+    """
     # init gets obs_proc, initializes attribute name strings as None, gets the pipeline
     def __init__(self, max_size=int(100)):
         super().__init__(max_size)
