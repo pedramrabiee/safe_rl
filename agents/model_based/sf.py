@@ -43,7 +43,7 @@ class SFAgent(BaseAgent):
         info = None
         # pass action, and dynamics to filter and get the filtered action
         if self.params.safety_filter_is_on:
-            ac_filtered, dyn_out = self.safety_filter.filter(obs, ac_mf, filter_dict=dict(dyn_bd=dyn_bd))
+            ac_filtered, dyn_out = self.safety_filter.shield(obs, ac_mf, filter_dict=dict(dyn_bd=dyn_bd))
             info = dict(dyn_out=dyn_out)    # FIXME: rename dyn_out to filter_info
         else:
             ac_filtered = ac_mf

@@ -17,7 +17,7 @@ def make_env(env_id,
     max_episode_len = None
     if collection == 'gym':
         env = gym.make(env_id)
-        env = customize_env(env_id, env) if use_custom_env else env
+        env = customize_env(env_nickname, env) if use_custom_env else env
         if max_episode_time:
             env._max_episode_steps = int(max_episode_time / env.unwrapped.dt)   # _max_episode_steps is an attribute of TimeLimit
         max_episode_len = env._max_episode_steps
@@ -65,10 +65,16 @@ def make_env(env_id,
     env_info = dict(max_episode_len=max_episode_len)
     return env, env_info
 
-
-def customize_env(env_id, env):
-    if env_id == 'Pendulum-v0':
-        from envs_utils.gym.pendulum.pendulum_utils import inverted_pendulum_customize
-        return inverted_pendulum_customize(env)
+# TODO: Fix this to be unified import for all environments
+def customize_env(env_nickname, env):
+    if env_nickname == 'pendulum':
+        from envs_utils.gym.pendulum.pendulum_env_utils import pendulum_customize
+        from envs_utils.gym.pendulum.pendulum_configs import env_config
+        env = pendulum_customize(env)
+        if env_config.use_wrapper:
+            module = importlib.import_module('envs_utils.gym.pendulum.pendulum_env_utils')
+            wrapper_cls = getattr(module, env_config.wrapper_name)
+            return wrapper_cls(env)
+        return env
     else:
         raise NotImplementedError
