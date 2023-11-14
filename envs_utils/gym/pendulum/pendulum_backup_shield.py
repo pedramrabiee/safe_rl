@@ -97,6 +97,9 @@ def get_backup_policies():
         center=_backup_policies_dict['center'][i],
         ac_lim=_backup_policies_dict['ac_lim']) for i in range(_num_backup_sets_to_consider)]
 
-def desired_policy(obs):
-    return np.array([0.0])
+
+
+class PendulumDesiredPolicy:
+    def act(self, obs):
+        return np.array([0.0])
 

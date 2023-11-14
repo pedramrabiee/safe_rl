@@ -11,4 +11,4 @@ class BUS(BaseAgent):
     def step(self, obs, explore=False, init_phase=False):
         # TODO: CHECK SCALING, CHECK NUMPY
         obs = self.obs_proc.proc(obs, proc_key='shield').squeeze()
-        return self.shield.shield(obs, self.desired_policy(obs)), None
+        return self.shield.shield(obs, self.desired_policy.act(obs)), None

@@ -157,13 +157,43 @@ class AgentFactory:
         )
 
         params = self._config.get_agent_params('backup_shield')
-        agent.initialize(params, init_dict=AttrDict(
-            **get_backup_shield_info_from_env(
-                env=self._env,
-                env_info=self._config.setup.train_env,
-                obs_proc=self._config.setup.obs_proc)))
+        agent.initialize(params,
+                         init_dict=AttrDict(
+                             **get_backup_shield_info_from_env(
+                                 env=self._env,
+                                 env_info=self._config.setup.train_env,
+                                 obs_proc=self._config.setup.obs_proc)))
         return agent
 
+
+    def instantiate_rl_backup_shield(self):
+        from shields.rl_backup_shield import RLBackupShield
+        from shields.backup_shield import get_backup_shield_info_from_env
+        from buffers.replay_buffer import ReplayBuffer
+        agent_info = self._agent_info_from_env()
+
+        agent = RLBackupShield(
+            agent_type='RLBackupShield',
+            ac_dim=agent_info['ac_dim'],
+            ac_lim=dict(low=agent_info['ac_lim_low'],
+                        high=agent_info['ac_lim_high']),
+            timestep=agent_info['timestep'],
+            replay_buffer=ReplayBuffer(self._config.buffer_size),
+            discrete_action=agent_info['discrete_action'],
+            obs_proc=self._config.setup['obs_proc'],
+            custom_plotter=self._config.setup['custom_plotter']
+        )
+
+        params = self._config.get_agent_params('rl_backup_shield')
+        agent.initialize(params,
+                         init_dict=AttrDict(
+                             **get_backup_shield_info_from_env(
+                                 env=self._env,
+                                 env_info=self._config.setup.train_env,
+                                 obs_proc=self._config.setup.obs_proc),
+                             rl_backup=self(params.rl_backup_agent)
+                         ))
+        return agent
 
     def instantiate_bus_agent(self):
         from shields.backup_shield import get_desired_policy
@@ -183,11 +213,39 @@ class AgentFactory:
         )
 
         params = self._config.get_agent_params('bus')
+        desired_policy = get_desired_policy(self._config.setup.train_env)()
         agent.initialize(params, init_dict=AttrDict(shield=self('backup_shield'),
-                                                    desired_policy=get_desired_policy(self._config.setup.train_env)))
+                                                    desired_policy=desired_policy))
 
         return agent
 
+
+    def instantiate_rlbus_agent(self):
+        from shields.backup_shield import get_desired_policy
+        from agents.model_based.rlbus import RLBUS
+        from buffers.replay_buffer import ReplayBuffer
+
+        agent_info = self._agent_info_from_env()
+        agent = RLBUS(
+            agent_type='BUS',
+            ac_dim=agent_info['ac_dim'],
+            ac_lim=dict(low=agent_info['ac_lim_low'],
+                        high=agent_info['ac_lim_high']),
+            timestep=agent_info['timestep'],
+            replay_buffer=ReplayBuffer(self._config.buffer_size),
+            discrete_action=agent_info['discrete_action'],
+            obs_proc=self._config.setup['obs_proc'],
+            custom_plotter=self._config.setup['custom_plotter']
+        )
+
+        params = self._config.get_agent_params('rlbus')
+        if params.use_mf_performance_policy:
+            desired_policy = self(params.use_mf_performance_policy)
+        else:
+            desired_policy = get_desired_policy(self._config.setup.train_env)()
+
+        agent.initialize(params, init_dict=AttrDict(shield=self('rl_backup_shield'),
+                                                    desired_policy=desired_policy))
 
 
     # Helper functions

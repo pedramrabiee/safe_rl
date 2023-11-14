@@ -149,9 +149,12 @@ def get_backup_prerequisites(env, env_info, obs_proc):
 
 def get_desired_policy(env_info):
     module_name = _get_module_name(env_info)
+    nickname = env_info['env_nickname']
+    parts = nickname.split('_')
+    class_name = ''.join(part.capitalize() for part in parts) + "DesiredPolicy"
     try:
         module = importlib.import_module(module_name)
-        return getattr(module, 'desired_policy')
+        return getattr(module, class_name)
     except ImportError:
         # Handle cases where the module or class is not found
         raise ImportError('Module is not found')
