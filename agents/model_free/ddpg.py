@@ -57,7 +57,7 @@ class DDPGAgent(BaseAgent):
     def step(self, obs, explore=False, init_phase=False):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='mf')
-        obs = torch.as_tensor(obs, dtype=torch.float32)
+        obs = torch.as_tensor(obs, dtype=torch.float64)
         if init_phase:
             return self.init_phase_step(obs, explore), None
 
