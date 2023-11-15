@@ -9,7 +9,7 @@ from logger import logger
 import torch
 from utils import scale
 from utils.safe_set import get_safe_set
-from utils.process_observation import NeutralObsProc
+from utils.process_observation import ObsProc
 from copy import copy
 from envs_utils.get_env_spec_config import get_env_spec_config
 
@@ -134,7 +134,7 @@ class BaseTrainer:
             setup (AttrDict): The setup configuration.
 
         """
-        self.obs_proc = setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else NeutralObsProc(self.env)
+        self.obs_proc = setup['obs_proc_cls'](self.env) if self.config.env_spec_config.do_obs_proc else ObsProc(self.env)
         self.obs_proc.initialize()
         self.config.setup['obs_proc'] = self.obs_proc
 
