@@ -4,6 +4,9 @@ from math import pi
 from attrdict import AttrDict
 import numpy as np
 from envs_utils.gym.pendulum.pendulum_configs import env_config
+from utils.seed import rng
+from scipy.stats import truncnorm
+from envs_utils.gym.pendulum.pendulum_obs_proc import PendulumObsProc
 
 
 class PendulumBackupSet(SafeSetFromBarrierFunction):
@@ -35,6 +38,14 @@ class PendulumSafeSet(SafeSetFromBarrierFunction):
     def safe_barrier(self, obs):
         h, _, _ = self.backup_agent.get_h(obs)
         return h
+
+    def _get_obs(self):
+        # max_speed = self.env.observation_space.high[2]
+        max_speed = _safe_set_dict.bounds[1]
+        theta = rng.uniform(low=-_safe_set_dict.bounds[0], high=_safe_set_dict.bounds[0])
+        thetadot = truncnorm.rvs(-1, 1, scale=max_speed) if env_config.sample_velocity_gaussian \
+            else rng.uniform(low=-max_speed, high=max_speed)
+        return np.array([np.cos(theta), np.sin(theta), thetadot])
 
 
 class PendulumBackupControl:
@@ -97,9 +108,26 @@ def get_backup_policies():
         center=_backup_policies_dict['center'][i],
         ac_lim=_backup_policies_dict['ac_lim']) for i in range(_num_backup_sets_to_consider)]
 
-
-
 class PendulumDesiredPolicy:
     def act(self, obs):
         return np.array([0.0])
 
+
+
+class PendulumObsProcBackupShield(PendulumObsProc):
+    def __init__(self, env):
+        super().__init__(env)
+
+        self.env = env
+        self._proc_keys_indices = dict()    # Implement in subclasses
+
+        self._proc_keys_indices = dict(
+            backup_set='_trig_to_theta',
+            safe_set='_trig_to_theta',
+            backup_policy='_trig_to_theta',
+            shield='_trig_to_theta',
+        )
+        self._reverse_proc_dict = dict(
+            _trig_to_theta='_theta_to_trig',
+            _theta_to_trig='_trig_to_theta'
+        )
