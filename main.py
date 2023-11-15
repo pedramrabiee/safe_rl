@@ -27,18 +27,18 @@ def make_setup(env_nickname, agent, load_config_path=None):
 
     setup['custom_plotter_cls'] = get_custom_plotter_cls(setup['train_env'])
     setup['reward_gen'] = get_reward_gen(setup['train_env'])
-    setup['obs_proc_cls'] = get_obsproc_cls(setup['train_env'])
+    setup['obs_proc_cls'] = get_obsproc_cls(setup['train_env'], agent=agent)
 
     return setup
 
 if __name__ == "__main__":
+    # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all
+    seed = set_seed()
 
     # See envs_utils.get_env_info for a list of acceptable environment nicknames
     setup = make_setup(env_nickname='pendulum',
-                       agent='bus')
+                       agent='rlbus')
 
-    # Set random.seed, generate default_rng, torch.manual_seed, torch.cuda.manual_seed_all
-    seed = set_seed()
 
     root_dir = os.path.dirname(os.path.realpath(__file__))
 

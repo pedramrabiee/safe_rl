@@ -245,7 +245,22 @@ class Config:
         bus_params = AttrDict()
         return bus_params
 
-
+    def _get_rlbus_params(self):
+        rlbus_params = AttrDict(
+            # rl backup policy
+            rl_backup_pretrain_is_on=True,
+            rl_backup_pretrain_sample_size=500,
+            rl_backup_train_is_on=True,
+            rl_backup_update_freq=1,
+            rl_backup_train_batch_size=128,
+            # desired policy
+            use_mf_desired_policy=True,
+            desired_policy_agent='ddpg',
+            desired_policy_train_in_on=True,
+            desired_policy_update_freq=1,
+            desired_policy_train_batch_size=128,
+        )
+        return rlbus_params
     # ========================================
     #              Shields
     # ========================================
@@ -267,6 +282,29 @@ class Config:
                                 num_backup_steps)
         bus_params.backup_t_seq = backup_t_seq
         return bus_params
+
+
+    def _get_rl_backup_shield_params(self):
+        rlbus_params = AttrDict(
+            eps_buffer=0.0,
+            softmin_gain=100,
+            softmax_gain=300,
+            h_scale=0.05,
+            feas_scale=0.05,
+            alpha=1.0,
+            horizon=5,
+            melt_law_gain=4,
+            pretraining_melt_law_gain=0.05,
+            rl_backup_backup_set_softmax_gain=100,
+            backup_timestep=0.1,
+            rl_backup_agent='ddpg',
+        )
+        num_backup_steps = int(rlbus_params.horizon / rlbus_params.backup_timestep) + 1
+        backup_t_seq = linspace(0,
+                                rlbus_params.horizon,
+                                num_backup_steps)
+        rlbus_params.backup_t_seq = backup_t_seq
+        return rlbus_params
 
     # CBF Shield
     def _get_cbf_params(self):
@@ -310,7 +348,6 @@ class Config:
             use_filter_just_for_plot=False,
             train_on_max=True,
             constrain_control=True,
-
 
             # set this to None, if you don't want to preprocess observation for dynamics training
         )
