@@ -16,12 +16,11 @@ class BackupShield(BaseSheild):
     """
 
     def initialize(self, params, init_dict=None):
-        # TODO: Implement obs_dim
-        self._obs_dim = self.obs_proc.obs_dim_processed()
+        self._obs_dim = self.obs_proc.obs_dim()
         self.params = params
         self.dynamics = init_dict.dynamics_cls()
-        self.backup_sets = init_dict.backup_sets
-        self.backup_policies = init_dict.backup_policies
+        self.backup_sets = init_dict['backup_sets'] # AttrDict returns tuple instead of list when a key is called as attribute, use normal dictionary syntax instead
+        self.backup_policies = init_dict['backup_policies']
         self.safe_set = init_dict.safe_set
         # TODO: check if self.set and self.backup_sets are instance of SafeSetFromBarrieFunc
         assert len(self.backup_policies) == len(self.backup_sets),\
@@ -29,9 +28,11 @@ class BackupShield(BaseSheild):
         self._num_backup = len(self.backup_policies)
         self._backup_t_seq = params.backup_t_seq
         self._ac_bounds = _from_ac_lim_to_bounds_array(self._ac_lim)
+        self._obs_dim_backup_policy = self.obs_proc.obs_dim(proc_key='backup_policy')
 
     @torch.enable_grad()
     def shield(self, obs, ac, filter_dict=None):
+        obs = self.obs_proc.proc(obs, proc_key='shield').squeeze()
         obs = torch.from_numpy(obs)
 
         h, h_grad, h_values, h_min_values, h_argmax = self._get_softmax_softmin_backup_h_grad_h(obs)
@@ -67,13 +68,7 @@ class BackupShield(BaseSheild):
         return self._get_h(self._get_trajs(obs))
 
     def _get_softmax_softmin_backup_h_grad_h(self, obs):
-        # TODO: obs probably is numpy array, you have to convert it
         obs.requires_grad_()
-        # TODO: Currently, this doesn't support different t_seq corresponding to different policies. In order to do that,
-        #  we have two options:
-        #  1. If the timesteps are the same, forward propagate upto the max horizon, then trim each
-        #  trajectory based on their required horizon.
-        #  2. Do not stack dynamics, and deal with each fwd. prop. separately.
         trajs = self._get_trajs(obs)
         h, h_grad, h_values, h_min_values, h_argmax = self._get_h_grad_h(obs, trajs)
         # TODO: Convert obs back to numpy array if required
@@ -93,16 +88,19 @@ class BackupShield(BaseSheild):
         # FIXME: make this function efficient
         mask = h_min_values >= self.params.eps_buffer
         u_b_valid = np.array(self.backup_policies)[mask.detach().numpy()].tolist()
-        return torch.sum((h_min_values[mask] - self.params.eps_buffer) * torch.stack(
-            [policy(obs) for policy in u_b_valid])) / torch.sum(h_min_values[mask] - self.params.eps_buffer)
+
+        numerator = torch.sum((h_min_values[mask] - self.params.eps_buffer) * torch.stack(
+            [policy(obs) for policy in u_b_valid]))
+        denominator = torch.sum(h_min_values[mask] - self.params.eps_buffer)
+        return numerator / denominator
+
 
 
     def _get_trajs(self, obs):
         trajs = odeint(
             lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
-                                    for yy, policy in zip(y.split(self._obs_dim), self.backup_policies)], dim=0),
-            obs.repeat(self._num_backup), self._backup_t_seq).split(self._obs_dim, dim=1)
-
+                                    for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies)], dim=0),
+            obs.repeat(self._num_backup), self._backup_t_seq).split(self._obs_dim_backup_policy, dim=1)
         return trajs
 
     def _get_h_grad_h(self, obs, trajs):
