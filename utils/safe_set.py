@@ -161,7 +161,7 @@ class SafeSetFromCriteria(SafeSet):
                     completed[i] = True
                 if completed[i]:
                     continue
-                if self.criteria[k](obs):
+                if self.criteria[k](self.obs_proc.proc(obs, proc_key='safe_set')):
                     samples[i].append(obs)
                     break
 
