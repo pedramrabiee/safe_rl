@@ -2,6 +2,7 @@ import numpy as np
 from attrdict import AttrDict
 from utils.misc import torchify, add_noise
 from utils.seed import rng
+import torch
 
 class ReplayBuffer:
     def __init__(self, max_size=int(100)):
@@ -41,11 +42,12 @@ class ReplayBuffer:
                           replace=False)
 
     def sample_by_indices(self, inds, device='cpu'):
-        return AttrDict(obs=torchify(self._obs[inds], device=device),
-                        ac=torchify(self._ac[inds], device=device),
-                        rew=torchify(self._rew[inds], device=device),
-                        next_obs=torchify(self._next_obs[inds], device=device),
-                        done=torchify(self._done[inds], device=device),
+        dtype = torch.float64
+        return AttrDict(obs=torchify(self._obs[inds], device=device, dtype=dtype),
+                        ac=torchify(self._ac[inds], device=device, dtype=dtype),
+                        rew=torchify(self._rew[inds], device=device, dtype=dtype),
+                        next_obs=torchify(self._next_obs[inds], device=device, dtype=dtype),
+                        done=torchify(self._done[inds], device=device, dtype=dtype),
                         info=self._info[inds])
 
     def sample(self, batch_size, device='cpu'):
@@ -73,11 +75,12 @@ class ReplayBuffer:
 
     def get_buffer(self, to_tensor=False, device="cpu"):
         if to_tensor:
-            return AttrDict(obs=torchify(self._obs, device=device),
-                            ac=torchify(self._ac, device=device),
-                            rew=torchify(self._rew, device=device),
-                            next_obs=torchify(self._next_obs, device=device),
-                            done=torchify(self._done, device=device),
+            dtype = torch.float64
+            return AttrDict(obs=torchify(self._obs, device=device, dtype=dtype),
+                            ac=torchify(self._ac, device=device, dtype=dtype),
+                            rew=torchify(self._rew, device=device, dtype=dtype),
+                            next_obs=torchify(self._next_obs, device=device, dtype=dtype),
+                            done=torchify(self._done, device=device, dtype=dtype),
                             info=self._info)
         else:
             return AttrDict(obs=self._obs,
