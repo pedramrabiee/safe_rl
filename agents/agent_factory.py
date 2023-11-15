@@ -166,7 +166,7 @@ class AgentFactory:
         return agent
 
 
-    def instantiate_rl_backup_shield(self):
+    def instantiate_rl_backup_shield_agent(self):
         from shields.rl_backup_shield import RLBackupShield
         from shields.backup_shield import get_backup_shield_info_from_env
         from buffers.replay_buffer import ReplayBuffer
@@ -239,13 +239,15 @@ class AgentFactory:
         )
 
         params = self._config.get_agent_params('rlbus')
-        if params.use_mf_performance_policy:
-            desired_policy = self(params.use_mf_performance_policy)
+        if params.use_mf_desired_policy:
+            desired_policy = self(params.desired_policy_agent)
         else:
             desired_policy = get_desired_policy(self._config.setup.train_env)()
 
         agent.initialize(params, init_dict=AttrDict(shield=self('rl_backup_shield'),
                                                     desired_policy=desired_policy))
+
+        return agent
 
 
     # Helper functions
