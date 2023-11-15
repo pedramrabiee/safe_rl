@@ -115,10 +115,11 @@ class Sampler:
                 next_obs_proc = next_obs_proc if isinstance(next_obs_proc, np.ndarray) else obs_proc
 
                 # Add transition
-                self._buffer_queue(obs_proc,
+                # TODO: Changed ob
+                self._buffer_queue(obs_proc.reshape(1, -1),
                                    ac.reshape(1, -1),
                                    rew.reshape(1, -1),
-                                   next_obs_proc,
+                                   next_obs_proc.reshape(1, -1),
                                    done.reshape(1, -1),
                                    info)
 
@@ -135,7 +136,7 @@ class Sampler:
             # TODO: Fix this after you fixed safety class
             # Check safety violation
             self._safety_violation_counter += int(not self.safe_set.is_des_safe(self.obs_proc.proc(next_obs,
-                                                                                                   proc_key='filter')))
+                                                                                                   proc_key='safe_set')))
             # TODO: Fix this after you fixed safety class
             # Check if agent has custom safety criteria
             # if hasattr(self.agent, 'is_safety_criteria_violated'):
