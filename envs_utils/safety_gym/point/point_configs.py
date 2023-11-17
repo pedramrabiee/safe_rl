@@ -1,4 +1,5 @@
 from attrdict import AttrDict
+from point_utils import moment_of_inertia
 
 config = {
     'init':{
@@ -39,31 +40,53 @@ config = {
 
 env_config = AttrDict(
     do_obs_proc=True,
-    safe_reset=True,        # if true, robot is located in in_safe set
+    safe_reset=True, # if true, robot is located in in_safe set
+    timestep=0.002,
+    integrator='RK4',
     w_o=0.1,
     w_m=0.1,
     robot_keepout=0.15,
     ext=0.5,
     max_speed=10.0,
     sample_velocity_gaussian=True,        # velocity distribution will be Gaussian with std = max_speed / 3
-    use_same_layout_for_eval=True
+    use_same_layout_for_eval=True,
+    c_slide=0.01,
+    c_hinge=0.005,
+    density=1.0,
+    r_sphere=0.1,
+    l_cube=2*0.05,
 )
 
-engine_config = {
-    'robot_base': 'xmls/point_m.xml',
-    'sensors_obs': ['accelerometer', 'velocimeter', 'gyro', 'magnetometer', 'framepos', 'framequat', 'framexaxis', 'frameangvel'],
-    'task': 'goal',
-    'observe_goal_lidar': True,
-    'observe_hazards': True,
-    'observation_flatten': False,
-    'lidar_max_dist': 3,
-    'lidar_type': 'natural',
-    'hazards_num': 7,
-    'lidar_num_bins': 16,
-    'render_lidar_size': 0.01,
-    'hazards_keepout': 0.5,
-    'randomize_layout': True,
-    'fixed_obstacles': True
-}
+
+obstacle_config = AttrDict(
+
+    )
+
+engine_config = dict(
+    robot_base= 'xmls/point_m.xml',
+    # sensors_obs= ['accelerometer', 'velocimeter', 'gyro', 'magnetometer', 'framepos', 'framequat', 'framexaxis', 'frameangvel'],
+    task='goal',
+    hazards_num=6,
+    hazards_size=0.3,     # is this the radius? yes ok man miram unvar safe set besazam
+    hazards_pos=[[0.2,0.7],
+                 [4.8,4.5],
+                 [2.3,1.1],
+                 [1.6,3.9],
+                 [4.9,0.2],
+                 [2.4,3.6]],
+    hazards_keepout=0.5,
+    randomize_layout=False,
+    # observe_goal_lidar=True,
+    # observe_hazards=True,
+    # observation_flatten=False,
+    lidar_max_dist=3,
+    lidar_type='natural',
+    lidar_num_bins=16,
+    render_lidar_size=0.01,
+    frameskip_binom_n=10,
+    num_steps=1000000,
+
+)
+
 
 

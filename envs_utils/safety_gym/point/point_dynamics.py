@@ -1,5 +1,8 @@
 import numpy as np
 from dynamics.nominal_dynamics import NominalDynamics
+from envs_utils.gym.pendulum.pendulum_configs import env_config
+from dynamics.torch_dynamics import AffineInControlTorchDyn
+import torch
 
 
 class PointNominalDynamics(NominalDynamics):
@@ -72,3 +75,27 @@ class PointNominalDynamics(NominalDynamics):
             f = np.stack(list(map(f_func, x3, x4, x5, x6, x7)), axis=0)
             G = np.stack(list(map(G_func, x3, x4)), axis=0)
         return (f, G) if split_return else f + np.matmul(G, ac).squeeze(-1)
+
+
+class PointTorchDyn(AffineInControlTorchDyn):
+    def f(self, state):
+        # TODO: Change it to accept batch
+        return torch.stack([state[1],
+                            -env_config.c_slide / env_config.m * (state[1] - env_config.r * state[5] * torch.sin(state[4])),
+                            state[3],
+                            -env_config.c_slide / env_config.m * (state[3] + env_config.r * state[5] * torch.cos(state[4])),
+                            state[5],
+                            -(env_config.c_hinge + env_config.c_slide * env_config.r ** 2) / env_config.I * state[5] - (env_config.r * env_config.c_slide / env_config.I) * (
+                                        -state[1] * torch.sin(state[4]) + state[3] * torch.cos(state[4]))
+                            ])
+
+    def g(self, state):
+        # TODO: Change it to accept batch
+        g = torch.stack([
+            torch.tensor([0.0, 0.0]),
+            torch.tensor([torch.cos(state[4]) / env_config.m, 0.0]),
+            torch.tensor([0.0, 0.0]),
+            torch.tensor([torch.sin(state[4]) / env_config.m, 0.0]),
+            torch.tensor([0.0, 0.0]),
+            torch.tensor([0.0, 1.0 / env_config.I])
+        ])
