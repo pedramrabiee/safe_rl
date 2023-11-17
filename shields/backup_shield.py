@@ -92,7 +92,7 @@ class BackupShield(BaseSheild):
         numerator = torch.sum((h_min_values[mask] - self.params.eps_buffer) * torch.stack(
             [policy(obs) for policy in u_b_valid]))
         denominator = torch.sum(h_min_values[mask] - self.params.eps_buffer)
-        return numerator / denominator
+        return (numerator / denominator).unsqueeze(dim=0)
 
 
 

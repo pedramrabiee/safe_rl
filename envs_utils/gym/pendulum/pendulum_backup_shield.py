@@ -55,7 +55,8 @@ class PendulumBackupControl:
         self.ac_lim = ac_lim
 
     def __call__(self, obs):
-        return self.ac_lim * torch.tanh(torch.dot(self.gain, (obs - self.center)) / self.ac_lim)
+        ac = self.ac_lim * torch.tanh(torch.dot(self.gain, (obs - self.center)) / self.ac_lim)
+        return ac.unsqueeze(dim=0)
 
 
 _backup_sets_dict = dict(c=[0.17, 0.07, 0.07],
@@ -67,7 +68,7 @@ _backup_sets_dict = dict(c=[0.17, 0.07, 0.07],
                          center=[0.0, pi/2, -pi/2]
 )
 
-_num_backup_sets_to_consider = 3
+_num_backup_sets_to_consider = 1
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
     for i, backup_set in enumerate(backup_sets):
@@ -77,7 +78,7 @@ def get_backup_sets(env, obs_proc):
     return backup_sets
 
 
-_safe_set_dict = AttrDict(bounds=[pi, pi],
+_safe_set_dict = AttrDict(bounds=[pi-0.5, 2],
                           center=[0.0, 0.0],
                           p_norm=100)
 

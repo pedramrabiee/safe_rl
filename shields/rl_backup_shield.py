@@ -59,7 +59,7 @@ class RLBackupShield(BackupShield):
         # TODO: Check if we need to call act here instead of step
         rl_backup_ac, _ = self.rl_backup.step(self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True))
         # TODO: This is not correct when multiple backups have nonzero beta values
-        return ((1 - torch.sum(beta)) * rl_backup_ac + torch.sum(backup_policies_vals * beta.view(-1, 1))).squeeze()
+        return (1 - torch.sum(beta)) * rl_backup_ac + torch.sum(backup_policies_vals * beta.view(-1, 1))
 
     def melt_law(self, h):
         """
