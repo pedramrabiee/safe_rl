@@ -169,23 +169,34 @@ def get_obsproc_cls(train_env, agent):
     parts = nickname.split('_')
     class_name = ''.join(part.capitalize() for part in parts)
 
-    # Construct the module and class names
-    module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_obs_proc'
+    # Construct the module and class names: we are looking for obs_proc_index_dict in the following module
+    module_address = f'envs_utils.{env_collection}.{nickname}'
+    module_name = f'{module_address}.{nickname}_obs_proc'
 
+    # Default ObsProc class for a given Environment
     class_name = class_name + "ObsProc"
 
     try:
+        # import the environment's obs proc module
         obs_proc_module = importlib.import_module(module_name)
+        # get the obs_proc_index_dict
         index_dict = getattr(obs_proc_module, 'obs_proc_index_dict')
         if agent in index_dict:
-            obs_proc_module = index_dict[agent]['module']
+            # if the agent listed in obs_proc_index_dict, then look for the module and
+            # class name of the observation process
+            obs_proc_module_name = index_dict[agent]['module']
+            obs_proc_module_name = f'{module_address}.{obs_proc_module_name}'
+
             class_name = index_dict[agent]['cls_name']
-            obs_proc_module = importlib.import_module(obs_proc_module)
+            # import the observation processor class corresponding to the agent
+            obs_proc_module = importlib.import_module(obs_proc_module_name)
             obs_proc_cls = getattr(obs_proc_module, class_name)
         elif hasattr(obs_proc_module, class_name):
+            # if agent is not in obs_proc_index_dict, then use the default observation processor for the environment
             obs_proc_cls = getattr(obs_proc_module, class_name)
         else:
-            print('NeutralObsProc is used as observation processor')
+            # if the default observation processor for the environment is not implemented then just use ObsProc
+            print('ObsProc is used as observation processor')
             obs_proc_cls = ObsProc
         return obs_proc_cls
     except ImportError:

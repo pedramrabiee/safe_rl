@@ -4,8 +4,8 @@ import torch
 
 
 obs_proc_index_dict = dict(
-    rlbus=dict(module='envs_utils.gym.pendulum.pendulum_backup_shield', cls_name='PendulumObsProcBackupShield'),
-    bus=dict(module='envs_utils.gym.pendulum.pendulum_backup_shield', cls_name='PendulumObsProcBackupShield')
+    rlbus=dict(module='pendulum_backup_shield', cls_name='PendulumObsProcBackupShield'),
+    bus=dict(module='pendulum_backup_shield', cls_name='PendulumObsProcBackupShield'),
 )
 
 
@@ -14,6 +14,13 @@ obs_proc_index_dict = dict(
 class PendulumObsProc(ObsProc):
     def __init__(self, env):
         super().__init__(env)
+        self._proc_keys_indices = dict(
+            safe_set='_trig_to_theta',
+        )
+        self._reverse_proc_dict = dict(
+            _trig_to_theta='_theta_to_trig',
+            _theta_to_trig='_trig_to_theta'
+        )
         self._obs_dims = dict(_trig_to_theta=2,
                               _theta_to_trig=3)
     def _trig_to_theta(self, obs, proc_dict=None):
