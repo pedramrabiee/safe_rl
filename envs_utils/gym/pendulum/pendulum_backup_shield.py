@@ -3,7 +3,7 @@ import torch
 from math import pi
 from attrdict import AttrDict
 import numpy as np
-from envs_utils.gym.pendulum.pendulum_configs import env_config
+from envs_utils.gym.pendulum.pendulum_configs import env_config, safe_set_dict
 from utils.seed import rng
 from scipy.stats import truncnorm
 from envs_utils.gym.pendulum.pendulum_obs_proc import PendulumObsProc
@@ -41,8 +41,8 @@ class PendulumSafeSet(SafeSetFromBarrierFunction):
 
     def _get_obs(self):
         # max_speed = self.env.observation_space.high[2]
-        max_speed = _safe_set_dict.bounds[1]
-        theta = rng.uniform(low=-_safe_set_dict.bounds[0], high=_safe_set_dict.bounds[0])
+        max_speed = safe_set_dict.bounds[1]
+        theta = rng.uniform(low=-safe_set_dict.bounds[0], high=safe_set_dict.bounds[0])
         thetadot = truncnorm.rvs(-1, 1, scale=max_speed) if env_config.sample_velocity_gaussian \
             else rng.uniform(low=-max_speed, high=max_speed)
         return np.array([np.cos(theta), np.sin(theta), thetadot])
@@ -78,13 +78,11 @@ def get_backup_sets(env, obs_proc):
     return backup_sets
 
 
-_safe_set_dict = AttrDict(bounds=[pi-0.5, 2],
-                          center=[0.0, 0.0],
-                          p_norm=100)
+
 
 def get_safe_set(env, obs_proc):
     safe_set = PendulumSafeSet(env, obs_proc)
-    safe_set.initialize(init_dict=_safe_set_dict)
+    safe_set.initialize(init_dict=safe_set_dict)
     return safe_set
 
 
@@ -127,8 +125,4 @@ class PendulumObsProcBackupShield(PendulumObsProc):
             safe_set='_trig_to_theta',
             backup_policy='_trig_to_theta',
             shield='_trig_to_theta',
-        )
-        self._reverse_proc_dict = dict(
-            _trig_to_theta='_theta_to_trig',
-            _theta_to_trig='_trig_to_theta'
         )

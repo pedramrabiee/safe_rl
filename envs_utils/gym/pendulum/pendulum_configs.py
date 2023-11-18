@@ -1,17 +1,16 @@
 from attrdict import AttrDict
 import numpy as np
-import torch
-
+from math import pi
 
 
 config = {
     'init': {
         'debugging_mode': False,
         'use_custom_env': True,
-        'max_episode_time': 5.0,
+        'max_episode_time': 10.0,
         'max_episode_time_eval': 10.0,
-        'plot_custom_figs': True,
-        'save_custom_figs_data': True,
+        'plot_custom_figs': False,
+        'save_custom_figs_data': False,
         'episode_steps_per_itr': 1,
         'n_training_episode': 39,
         'do_evaluation': False,
@@ -24,8 +23,8 @@ config = {
         'load_buffer': True,
         'n_episode_init_phase': 4,
         'step_save_freq': 1,
-        'load_run_name': 'run-20210914_160746-a7mp6vyc',
-        'load_timestamp': '20210914_161734_ep0',
+        'load_run_name': 'run-20231117_172837-jl0i22ye',
+        'load_timestamp': '20231117_173341_ep32',
     },
     'ddpg_params': {
         'init_phase_coef': 0.5
@@ -72,9 +71,13 @@ env_config = AttrDict(
     # outer_safe_set_width=0.2,
     # Pendulum dynamics parameters
     g=10.0,
-    m=3/225,
-    l=15.0,
+    # m=3/225,
+    m=1.0,
+    # l=15.0,
+    l=1.0,
+    # max_torque=5.0,
     max_torque=5.0,
+    # max_speed=8.0,
     max_speed=np.inf,
     use_wrapper=True,
     wrapper_name='RK45PendulumWrapper',
@@ -82,3 +85,8 @@ env_config = AttrDict(
     # max_T_for_safe_set=100,
     sample_velocity_gaussian=True       # velocity distribution will be truncated normal distribution
 )
+
+
+safe_set_dict = AttrDict(bounds=[pi-0.5, 2],
+                         center=[0.0, 0.0],
+                         p_norm=100)

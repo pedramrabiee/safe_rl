@@ -213,12 +213,14 @@ class BaseTrainer:
         self.safe_set = get_safe_set(env_info=setup.train_env,
                                      env=self.env,
                                      obs_proc=self.obs_proc,
+                                     agent=setup.agent,
                                      seed=get_seed())
 
         # instantiate safe_set for evaluation enviornment
         self.safe_set_eval = get_safe_set(env_info=setup.eval_env,
                                           env=self.env_eval,
                                           obs_proc=self.obs_proc,
+                                          agent=setup.agent,
                                           seed=self.eval_seed)
 
     def train(self):

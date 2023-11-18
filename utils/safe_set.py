@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from utils.misc import e_and, e_not
 from copy import copy
+import importlib
 
 
 # TODO: add boolean for obs_proc, if the safe_set is defined based on the processed observation, then you need to use obs_prpoc,
@@ -211,7 +212,7 @@ class SafeSetFromBarrierFunction(SafeSetFromCriteria):
         raise NotImplementedError
 
     def safe_barrier(self, obs):
-        raise NotImplementedError
+        return self.des_safe_barrier(obs)
 
     def is_des_safe(self, obs):
         ans = self.des_safe_barrier(obs) >= 0
@@ -228,16 +229,47 @@ class SafeSetFromBarrierFunction(SafeSetFromCriteria):
         return False
 
 
-def get_safe_set(env_info, env, obs_proc, seed):
-    safe_set = None
-    env_nickname = env_info['env_nickname']
+def get_safe_set(env_info, env, obs_proc, agent, seed):
+    safe_set_getter = None
+    env_collection = env_info['env_collection']
+    nickname = env_info['env_nickname']
 
-    if env_nickname == 'pendulum':
-        from envs_utils.gym.pendulum.pendulum_safety import safety_dict
-        # safe_set_cls = safety_dict['safe_set_cls_to_use']
-        safe_set_getter = safety_dict['safe_set_getter']
+    # Construct the module and class names: we are looking for safety_dict in the following module
+    module_address = f'envs_utils.{env_collection}.{nickname}'
+    module_name = f'{module_address}.{nickname}_safety'
+    try:
+        # import the environment's safety module
+        safety_module = importlib.import_module(module_name)
+
+        # get tge default environment's safe set getter if it exists
+        if hasattr(safety_module, 'get_safe_set'):
+            safe_set_getter = getattr(safety_module, 'get_safe_set')
+
+        # get the safety_dict
+        if hasattr(safety_module, 'safety_dict'):
+            safety_dict = getattr(safety_module, 'safety_dict')
+            # overwrite safe_set_cls if agent is in safety_dict
+            if agent in safety_dict:
+                # if the agent listed in safety_dict, then look for the module and
+                # class name of the safe set
+                safe_set_module_name = safety_dict[agent]['module']
+                safe_set_module_name = f'{module_address}.{safe_set_module_name}'
+                safety_module = importlib.import_module(safe_set_module_name)
+
+                safe_set_getter = getattr(safety_module, 'get_safe_set')
+
         safe_set = safe_set_getter(env, obs_proc)
+        # TODO: set seed for safe_set
+        return safe_set
+    except ImportError:
+        raise NotImplementedError
+    except AttributeError:
+        raise NotImplementedError
 
+
+    # if nickname == 'pendulum':
+    #     from envs_utils.gym.pendulum.pendulum_safety import get_safe_set
+    #     safe_set = get_safe_set(env, obs_proc)
         # # from envs_utils.gym.pendulum.pendulum_utils import InvertedPendulumSafeSet
         # from envs_utils.gym.pendulum.pendulum_safety import InvertedPendulumSafeSetFromPropagation
         # set the Tuple seed
@@ -257,8 +289,8 @@ def get_safe_set(env_info, env, obs_proc, seed):
     #     from envs_utils.misc_env.multi_dashpot.multi_dashpot_utils import MultiDashpotSafeSetFromPropagation
     #     safe_set = MultiDashpotSafeSetFromPropagation(env, obs_proc)
     #     safe_set.geo_safe_set.seed(seed)
-    else:
-        raise NotImplementedError
+    # else:
+    #     raise NotImplementedError
     return safe_set
 
 

@@ -1,12 +1,40 @@
-from envs_utils.gym.pendulum.pendulum_backup_shield import PendulumSafeSet, get_safe_set
-
+import torch
 from utils.safe_set import SafeSetFromBarrierFunction
+from utils.seed import rng
+from scipy.stats import truncnorm
+import numpy as np
+from envs_utils.gym.pendulum.pendulum_configs import env_config, safe_set_dict
 
 
 safety_dict = dict(
-    safe_set_cls_to_use=PendulumSafeSet,
-    safe_set_getter=get_safe_set
+    bus=dict(module='pendulum_backup_shield'),
+    rlbus=dict(module='pendulum_backup_shield')
 )
+
+def get_safe_set(env, obs_proc):
+    safe_set = PendulumSafeSet(env, obs_proc)
+    safe_set.initialize(init_dict=safe_set_dict)
+    return safe_set
+
+class PendulumSafeSet(SafeSetFromBarrierFunction):
+    def initialize(self, init_dict=None):
+        self.bounds = torch.tensor(init_dict.bounds).unsqueeze(dim=0)
+        self.center = torch.tensor(init_dict.center).unsqueeze(dim=0)
+        self.p_norm = init_dict.p_norm
+
+    def des_safe_barrier(self, obs):
+        if not torch.is_tensor(obs):
+            obs = torch.from_numpy(obs)
+        return 1 - torch.norm((torch.atleast_1d(obs) - self.center) / self.bounds, p=self.p_norm, dim=1)
+
+    def _get_obs(self):
+        # max_speed = self.env.observation_space.high[2]
+        max_speed = safe_set_dict.bounds[1]
+        theta = rng.uniform(low=-safe_set_dict.bounds[0], high=safe_set_dict.bounds[0])
+        thetadot = truncnorm.rvs(-1, 1, scale=max_speed) if env_config.sample_velocity_gaussian \
+            else rng.uniform(low=-max_speed, high=max_speed)
+        return np.array([np.cos(theta), np.sin(theta), thetadot])
+
 
 # class InvertedPendulumSafeSet(SafeSetFromBarrierFunction):
 #     # TODO: Implement new safe set for pendulum
