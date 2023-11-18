@@ -163,6 +163,8 @@ class ObsProc:
 
 
 def get_obsproc_cls(train_env, agent):
+    obs_proc_cls = None
+
     env_collection = train_env['env_collection']
     nickname = train_env['env_nickname']
 
@@ -176,17 +178,16 @@ def get_obsproc_cls(train_env, agent):
     # Default ObsProc class for a given Environment
     class_name = class_name + "ObsProc"
 
-    obs_proc_cls = None
     try:
         # import the environment's obs proc module
         obs_proc_module = importlib.import_module(module_name)
-        # get the default environemnt's obs_proc if it exist
+        # get the default environemnt's obs_proc if it exists
         if hasattr(obs_proc_module, class_name):
             obs_proc_cls = getattr(obs_proc_module, class_name)
 
         # get the obs_proc_index_dict
         index_dict = getattr(obs_proc_module, 'obs_proc_index_dict')
-        # overwrite obs_proc_cls if agent is in index_dict
+        # overwrite obs_proc_cls if agent is in obs_proc_index_dict
         if agent in index_dict:
             # if the agent listed in obs_proc_index_dict, then look for the module and
             # class name of the observation process
