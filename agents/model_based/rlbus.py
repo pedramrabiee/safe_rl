@@ -31,7 +31,11 @@ class RLBUS(BUS):
             u_des, _ = self.desired_policy.act(obs)
         else:
             u_des = self.desired_policy.act(obs)
-        return self.shield.shield(obs, u_des), None
+        if self.params.to_shield:
+            return self.shield.shield(obs, u_des), None
+        self.custom_plotter.filter_push_action((u_des, u_des))
+        return u_des, None
+
     def optimize_agent(self, samples, optim_dict=None):
         rl_backup_loss = None
         desired_policy_loss = None
