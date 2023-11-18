@@ -11,7 +11,7 @@ class RLBUSTrainer(BaseTrainer):
 
     def _train(self, itr):
         # Pretrain rl backup by sampling desired safe states
-        if itr == 0 and self.config.rlbus_params.rl_backup_pretrain_is_on:
+        if itr == 0 and self.config.rlbus_params.rl_backup_pretrain_is_on and self.config.rlbus_params.to_shield:
             batch_size = self.config.rlbus_params.rl_backup_pretrain_sample_size
             logger.log('Safe set sampling started...')
             samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['des_safe'],
@@ -29,6 +29,8 @@ class RLBUSTrainer(BaseTrainer):
         to_train = []
         samples = {}
 
+        if not self.config.rlbus_params.to_shield:
+            self.sampler.collect_data(itr)
 
         # train desired policy on its train frequency
         self.agent.train_mode(device=self.config.training_device)
@@ -42,8 +44,9 @@ class RLBUSTrainer(BaseTrainer):
                     device=self.config.training_device,
                     ow_batch_size=self.config.rlbus_params.desired_policy_train_batch_size)
 
-
-        if itr % self.config.rlbus_params.rl_backup_update_freq == 0 and self.config.rlbus_params.rl_backup_train_is_on:
+        # train rl backup
+        if itr % self.config.rlbus_params.rl_backup_update_freq == 0 and self.config.rlbus_params.rl_backup_train_is_on \
+                and self.config.rlbus_params.to_shield:
             to_train.append('rl_backup')
             batch_size = self.agent.shield.buffer_size() if \
                 (self.config.rlbus_params.rl_backup_train_batch_size == 'all') else\
