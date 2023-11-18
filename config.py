@@ -242,7 +242,9 @@ class Config:
         return sf_params
 
     def _get_bus_params(self):
-        bus_params = AttrDict()
+        bus_params = AttrDict(
+            to_shield=False,
+        )
         return bus_params
 
     def _get_rlbus_params(self):
@@ -253,6 +255,7 @@ class Config:
             rl_backup_train_is_on=True,
             rl_backup_update_freq=1,
             rl_backup_train_batch_size=128,
+            to_shield=False,
             # desired policy
             use_mf_desired_policy=True,
             desired_policy_agent='ddpg',
