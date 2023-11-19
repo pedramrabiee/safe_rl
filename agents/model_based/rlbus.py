@@ -1,8 +1,9 @@
-from agents.base_agent import BaseAgent
 from agents.model_based.bus import BUS
-
 from utils.misc import *
 from logger import logger
+from utils.scale import action2newbounds, action2oldbounds
+
+
 # RL Backup Shield Agent
 class RLBUS(BUS):
     def initialize(self, params, init_dict=None):
@@ -25,16 +26,26 @@ class RLBUS(BUS):
 
     def step(self, obs, explore=False, init_phase=False):
         # TODO: CHECK SCALING, CHECK NUMPY
-        # obs = self.obs_proc.proc(obs, proc_key='shield').squeeze()
-        # obs.squeeze()
+        # The 'shield' method expects unnormalized actions (i.e., old action bounds), while the 'step' method is
+        # designed to return normalized actions (i.e., new action bounds).
         if self.params.use_mf_desired_policy:
-            u_des, _ = self.desired_policy.act(obs)
+            ac_des, _ = self.desired_policy.act(obs)
+            # it is assumed that model free policy outputs the actions in [-1.0, 1.0]
+            # (or in the new action bounds (wrapped). Thus, we have to scale it
+            ac_des = action2oldbounds(ac_des)
         else:
-            u_des = self.desired_policy.act(obs)
+            # it is assumed that the designed desired policy outputs in the old action bounds (unwrapped)
+            ac_des = self.desired_policy.act(obs)
+
         if self.params.to_shield:
-            return self.shield.shield(obs, u_des), None
-        self.custom_plotter.filter_push_action((u_des, u_des))
-        return u_des, None
+            ac_shield = self.shield.shield(obs, ac_des)
+            # scale back the shielded action to new
+            ac_shield = action2newbounds(ac_shield)
+            return ac_shield, None
+
+        self.custom_plotter.filter_push_action((ac_des, ac_des))
+
+        return action2newbounds(ac_des), None
 
     def optimize_agent(self, samples, optim_dict=None):
         rl_backup_loss = None
