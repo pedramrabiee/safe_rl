@@ -14,6 +14,7 @@ class BaseAgent:
         self.custom_plotter = custom_plotter
         self.models_dict = None
         self.optimizers_dict = None
+        self.add_tabular = True
 
     def initialize(self, params, init_dict=None):
         raise NotImplementedError
