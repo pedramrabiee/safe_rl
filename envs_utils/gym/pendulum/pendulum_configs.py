@@ -70,13 +70,12 @@ env_config = AttrDict(
     # mid_safe_set_width=0.2,
     # outer_safe_set_width=0.2,
     # Pendulum dynamics parameters
+
     g=10.0,
-    # m=3/225,
     m=1.0,
-    # l=15.0,
     l=1.0,
-    # max_torque=5.0,
-    max_torque=5.0,
+    max_torque=5.5,  #WARNING: After changing these paramter you need to take care of region of attraction params
+
     # max_speed=8.0,
     max_speed=np.inf,
     use_wrapper=True,
