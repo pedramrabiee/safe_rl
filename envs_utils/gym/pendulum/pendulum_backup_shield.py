@@ -53,10 +53,20 @@ class PendulumBackupControl:
         self.gain = torch.tensor(gain)
         self.center = torch.tensor(center)
         self.ac_lim = ac_lim
+        self.u_eq = self.get_u_equilibrium()
 
     def __call__(self, obs):
-        ac = self.ac_lim * torch.tanh(torch.dot(self.gain, (obs - self.center)) / self.ac_lim)
-        return ac.unsqueeze(dim=0)
+        if obs.ndim == 1:
+            ac = self.ac_lim * torch.tanh((self.u_eq + torch.dot(self.gain, obs)) / self.ac_lim)
+            return ac.unsqueeze(dim=0)
+        else:
+            ac = self.ac_lim * torch.tanh((self.u_eq + torch.mv(obs, self.gain)) / self.ac_lim)
+            return ac.unsqueeze(dim=1)
+
+    def get_u_equilibrium(self):
+        return self.ac_lim * torch.atanh(
+            (-env_config.m * env_config.g * env_config.l * torch.sin(self.center[0]) / 2) / self.ac_lim) - self.gain[
+            0] * self.center[0]
 
 
 _backup_sets_dict = dict(c=[0.17, 0.07, 0.07],
@@ -69,6 +79,7 @@ _backup_sets_dict = dict(c=[0.17, 0.07, 0.07],
 )
 
 _num_backup_sets_to_consider = 1
+
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
     for i, backup_set in enumerate(backup_sets):
@@ -76,8 +87,6 @@ def get_backup_sets(env, obs_proc):
                                                  p=_backup_sets_dict['p'][i],
                                                  center=_backup_sets_dict['center'][i]))
     return backup_sets
-
-
 
 
 def get_safe_set(env, obs_proc):
