@@ -27,7 +27,8 @@ class BackupShield(BaseSheild):
             'The number of backup sets does not match the number of backup policies'
         self._num_backup = len(self.backup_policies)
         self._backup_t_seq = params.backup_t_seq
-        self._ac_bounds = _from_ac_lim_to_bounds_array(self._ac_lim)
+        self._ac_bounds = init_dict['ac_bounds']
+        self._old_bounds = _from_ac_lim_to_bounds_array(self._ac_bounds['old'])
         self._obs_dim_backup_policy = self.obs_proc.obs_dim(proc_key='backup_policy')
 
     @torch.enable_grad()
@@ -56,7 +57,7 @@ class BackupShield(BaseSheild):
                                                        Lfh=Lfh, Lgh=Lgh,
                                                        alpha_func=lambda eta: self.params.alpha * eta,
                                                        u_des=ac,
-                                                       u_bound=self._ac_bounds)
+                                                       u_bound=self._old_bounds)
 
         beta = (1 if gamma >= 1 else gamma) if gamma > 0 else 0
         u = (1 - beta) * u_b_select + beta * u
@@ -78,7 +79,7 @@ class BackupShield(BaseSheild):
 
     def _get_feasibility_factor(self, Lfh, Lgh, h):
         # TODO: you have to make sure _ac_lim is the format that make_box_constraints_from_bounds needs
-        A_u, b_u = make_box_constraints_from_bounds(self._ac_bounds)
+        A_u, b_u = make_box_constraints_from_bounds(self._old_bounds)
         u, optval = solve_lp(-Lgh, A_u, b_u)
         Lghu_max = -optval
         return Lfh[0] + Lghu_max + self.params.alpha * (h - self.params.eps_buffer)
@@ -171,6 +172,5 @@ def _get_module_name(env_info):
 
 
 def _from_ac_lim_to_bounds_array(ac_lim):
-    # TODO: Fix this for multi-dimension action space. Start from agent factory where you populate ac_lim
-    bounds = [[ac_lim['low'], ac_lim['high']]]
-    return bounds
+    # TODO: Check this for multi-dimension action space. Start from agent factory where you populate ac_lim
+    return np.vstack([ac_lim['low'], ac_lim['high']]).T
