@@ -53,6 +53,7 @@ def make_env(env_id,
             # Handle cases where the class is not found in the module
             raise NotImplementedError
 
+    # ac_lim is by default (-1, 1). Thus, env.action_space.low returns -1 and env.action_space.high returns 1
     env = ActionScalerWrapper(env, ac_lim=ac_lim)
 
     if video_dict is not None:

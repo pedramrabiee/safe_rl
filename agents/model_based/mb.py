@@ -10,7 +10,7 @@ from logger import logger
 class MBAgent(BaseAgent):
     def initialize(self, params, init_dict=None):
         self.params = params
-        self.bounds = init_dict['bounds']
+        self.ac_bounds = init_dict['bounds']
 
         # get the observation dim from observation process class
         self._obs_dim = self.obs_proc.obs_dim(proc_key='mb')
@@ -25,7 +25,7 @@ class MBAgent(BaseAgent):
                                              obs_proc=self.obs_proc)
             self.dynamics.initialize(params=self.params.dynamics_params,
                                      init_dict=AttrDict(dynamics_cls=self.params.dynamics_cls,
-                                                        env_bounds=self.bounds))
+                                                        env_bounds=self.ac_bounds))
         else:
             self.dynamics = self.params.dynamics_cls(obs_dim=self._obs_dim,
                                                      ac_dim=self._ac_dim,
@@ -33,7 +33,7 @@ class MBAgent(BaseAgent):
                                                      timestep=self._timestep,
                                                      obs_proc=self.obs_proc)
             self.dynamics.initialize(params=self.params.dynamics_params,
-                                     init_dict=AttrDict(env_bounds=self.bounds))
+                                     init_dict=AttrDict(env_bounds=self.ac_bounds))
 
         # instantiate and initialize planner
         self.reward_gen = init_dict['reward_gen']
@@ -72,7 +72,7 @@ class MBAgent(BaseAgent):
     def init_controller(self, idx):
         self.controller = self.params.controller_cls[idx](dynamics=self.dynamics,
                                                           reward_gen=self.reward_gen,
-                                                          bounds=self.bounds,
+                                                          bounds=self.ac_bounds,
                                                           ac_dim=self._ac_dim,
                                                           obs_proc=self.obs_proc)
 
