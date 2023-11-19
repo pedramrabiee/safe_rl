@@ -243,7 +243,7 @@ class Config:
 
     def _get_bus_params(self):
         bus_params = AttrDict(
-            to_shield=False,
+            to_shield=True,
         )
         return bus_params
 
@@ -255,7 +255,7 @@ class Config:
             rl_backup_train_is_on=True,
             rl_backup_update_freq=1,
             rl_backup_train_batch_size=128,
-            to_shield=False,
+            to_shield=True,
             # desired policy
             use_mf_desired_policy=True,
             desired_policy_agent='ddpg',
@@ -301,6 +301,12 @@ class Config:
             rl_backup_backup_set_softmax_gain=100,
             backup_timestep=0.1,
             rl_backup_agent='ddpg',
+            rl_backup_train=True,
+            saturate_rl_backup_reward=True,
+            saturate_rl_backup_at=0.0,
+            discount_rl_backup_reward=True,
+            discount_ratio_rl_backup_reward=0.98,
+
         )
         num_backup_steps = int(rlbus_params.horizon / rlbus_params.backup_timestep) + 1
         backup_t_seq = linspace(0,
