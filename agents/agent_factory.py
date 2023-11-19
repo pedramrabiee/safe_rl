@@ -43,7 +43,7 @@ class AgentFactory:
                         custom_plotter=self._config.setup['custom_plotter']
                         )
 
-        agent.initialize(params=params, init_dict=dict(bounds=agent_info['bounds'],
+        agent.initialize(params=params, init_dict=dict(ac_bounds=agent_info['ac_bounds'],
                                                        reward_gen=self._config.setup['reward_gen']))
         return agent
 
@@ -162,7 +162,9 @@ class AgentFactory:
                              **get_backup_shield_info_from_env(
                                  env=self._env,
                                  env_info=self._config.setup.train_env,
-                                 obs_proc=self._config.setup.obs_proc)))
+                                 obs_proc=self._config.setup.obs_proc),
+                             ac_bounds=agent_info['ac_bounds']
+                         ))
         return agent
 
 
@@ -191,7 +193,8 @@ class AgentFactory:
                                  env=self._env,
                                  env_info=self._config.setup.train_env,
                                  obs_proc=self._config.setup.obs_proc),
-                             rl_backup=self(params.rl_backup_agent)
+                             rl_backup=self(params.rl_backup_agent),
+                             ac_bounds=agent_info['ac_bounds']
                          ))
         return agent
 
@@ -215,7 +218,8 @@ class AgentFactory:
         params = self._config.get_agent_params('bus')
         desired_policy = get_desired_policy(self._config.setup.train_env)()
         agent.initialize(params, init_dict=AttrDict(shield=self('backup_shield'),
-                                                    desired_policy=desired_policy))
+                                                    desired_policy=desired_policy,
+                                                    ac_bounds=agent_info['ac_bounds']))
 
         return agent
 
@@ -245,8 +249,8 @@ class AgentFactory:
             desired_policy = get_desired_policy(self._config.setup.train_env)()
 
         agent.initialize(params, init_dict=AttrDict(shield=self('rl_backup_shield'),
-                                                    desired_policy=desired_policy))
-
+                                                    desired_policy=desired_policy,
+                                                    ac_bounds=agent_info['ac_bounds']))
         return agent
 
 
@@ -274,5 +278,5 @@ class AgentFactory:
             ac_lim_high=ac_lim_high,
             ac_lim_low=ac_lim_low,
             timestep=timestep,
-            bounds=self._env.action_bounds,
+            ac_bounds=self._env.action_bounds,
         )
