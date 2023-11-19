@@ -161,6 +161,7 @@ def scaler(x, lim_from, lim_to):
         x = x.reshape(1, -1)
     x_dim = x.shape[1:]     # assumes the first dimension is the batch dim
 
+
     def boundconverter(a):
         if isinstance(a, float):
             a = np.repeat(a, np.prod(x_dim))
@@ -176,6 +177,30 @@ def scaler(x, lim_from, lim_to):
     high_to = boundconverter(high_to)
     out = low_to + (high_to - low_to) * (x - low_from) / (high_from - low_from)
     return out.reshape(x_init_shape)
+
+def scaler_torch(x, lim_from, lim_to):
+    x_init_shape = x.shape
+    if x.ndim == 1:
+        x = x.view(1, -1)
+    x_dim = x.shape[1:]
+
+    def boundconverter(a):
+        if isinstance(a, float):
+            a = torch.tensor(a).repeat(torch.prod(torch.tensor(x_dim)))
+        if isinstance(a, torch.Tensor):
+            a = a.view(1, *x_dim)
+        return a
+
+    low_from, high_from = lim_from
+    low_to, high_to = lim_to
+
+    low_from = boundconverter(low_from)
+    high_from = boundconverter(high_from)
+    low_to = boundconverter(low_to)
+    high_to = boundconverter(high_to)
+
+    out = low_to + (high_to - low_to) * (x - low_from) / (high_from - low_from)
+    return out.view(x_init_shape)
 
 
 def discount_cumsum(x, discount, return_first=False):
