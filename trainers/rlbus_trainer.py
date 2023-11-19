@@ -50,6 +50,8 @@ class RLBUSTrainer(BaseTrainer):
                 self.sampler.sample(
                     device=self.config.training_device,
                     ow_batch_size=self.config.rlbus_params.desired_policy_train_batch_size)
+            logger.dump_tabular(cat_key='des_policy_iteration', wandb_log=True)
+
 
         # train rl backup
         if itr % self.config.rlbus_params.rl_backup_update_freq == 0 and self.config.rlbus_params.rl_backup_train_is_on \
@@ -61,6 +63,8 @@ class RLBUSTrainer(BaseTrainer):
 
             random_indices = self.agent.shield.get_random_indices(batch_size)
             samples['rl_backup'] = self.agent.shield.get_samples(random_indices, device=self.config.training_device)
+
+            logger.dump_tabular(cat_key='rl_backup_iteration', wandb_log=True)
 
         optim_dict['to_train'] = to_train
 
