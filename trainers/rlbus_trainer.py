@@ -22,6 +22,10 @@ class RLBUSTrainer(BaseTrainer):
         # Collect samples
         self.sampler.collect_data(itr)
 
+        # Add shield's rl backup data to its buffer
+        self.agent.shield.compute_ac_push_to_buffer()
+
+
         # Train
         optim_dict = self._prep_optimizer_dict()
         optim_dict['itr'] = itr
@@ -31,6 +35,9 @@ class RLBUSTrainer(BaseTrainer):
 
         if not self.config.rlbus_params.to_shield:
             self.sampler.collect_data(itr)
+
+            # Add shield's rl backup data to its buffer
+            self.agent.shield.compute_ac_push_to_buffer()
 
         # train desired policy on its train frequency
         self.agent.train_mode(device=self.config.training_device)
