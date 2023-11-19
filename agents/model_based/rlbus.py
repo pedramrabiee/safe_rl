@@ -56,11 +56,23 @@ class RLBUS(BUS):
         if 'desired_policy' in to_train:
             logger.log('Training Desired Policy...')
             desired_policy_loss = self.desired_policy.optimize_agent(samples['desired_policy'], optim_dict)
+            optim_info_desired = {}
+            for k, v in desired_policy_loss.items():
+                 optim_info_desired[f'{k}/DesiredPolicy'] = v
+            logger.add_tabular(optim_info_desired, cat_key='des_policy_iteration')
+            logger.dump_tabular(cat_key='des_policy_iteration', wandb_log=True)
 
         # train rl-backup on its train frequency
         if 'rl_backup' in to_train:
             logger.log('Training RL Backup Policy...')
             rl_backup_loss = self.shield.optimize_agent(samples['rl_backup'], optim_dict)
+
+            optim_info_rl_backup = {}
+            for k, v in rl_backup_loss.items():
+                optim_info_rl_backup[f'{k}/RLBackup'] = v
+            logger.add_tabular(optim_info_rl_backup, cat_key='rl_backup_iteration')
+            logger.dump_tabular(cat_key='rl_backup_iteration', wandb_log=True)
+
 
         return {"Desired_Policy_Loss": desired_policy_loss,
                 "RL_Backup_Loss": rl_backup_loss}
