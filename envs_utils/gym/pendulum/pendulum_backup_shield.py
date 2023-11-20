@@ -69,23 +69,30 @@ class PendulumBackupControl:
             0] * self.center[0]
 
 
-_backup_sets_dict = dict(c=[0.17, 0.07, 0.07],
+_backup_sets_dict = dict(c=[0.2, 0.2, 0.2],
                          p=[
-                             [[2.7879, 0.1667], [0.1667, 0.0253]],
-                             [[0.6601, 0.1601], [0.1601, 0.2625]],
-                             [[0.6601, 0.1601], [0.1601, 0.2625]]
+                             # u_max = 6.5
+                             [[0.6250, 0.1250], [0.1250, 0.1250]],
+                             [[0.585353535353535, 0.0853535353535354], [0.0853535353535354, 0.114494439342924]],
+                             [[0.585353535353535, 0.0853535353535354], [0.0853535353535354, 0.114494439342924]],
+                             # u_max = 8
+                             # [[0.584656084656085, 0.084656084656085], [0.084656084656085, 0.113322695333277]],
+                             # [[0.584656084656085, 0.084656084656085], [0.084656084656085, 0.113322695333277]],
                              ],
                          center=[0.0, pi/2, -pi/2]
 )
 
 _num_backup_sets_to_consider = 1
-
+# _backup_set_order = [1, 2, 3]
+_backup_set_order = [2]
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
-    for i, backup_set in enumerate(backup_sets):
-        backup_set.initialize(init_dict=AttrDict(c=_backup_sets_dict['c'][i],
-                                                 p=_backup_sets_dict['p'][i],
-                                                 center=_backup_sets_dict['center'][i]))
+    for i in range(len(backup_sets)):
+        backup_set_id = _backup_set_order[i] - 1
+        backup_sets[i].initialize(init_dict=AttrDict(c=_backup_sets_dict['c'][backup_set_id],
+                                                     p=_backup_sets_dict['p'][backup_set_id],
+                                                     center=_backup_sets_dict['center'][backup_set_id]))
+
     return backup_sets
 
 
@@ -98,7 +105,7 @@ def get_safe_set(env, obs_proc):
 # TODO: fix ac_lim
 _backup_policies_dict = dict(
     gain=[
-        [-5.5, -5.5],
+        [-3.0, -3.0],
         [-3.0, -3.0],
         [-3.0, -3.0],
     ],
@@ -111,16 +118,20 @@ _backup_policies_dict = dict(
 )
 
 def get_backup_policies():
-    return [PendulumBackupControl(
-        gain=_backup_policies_dict['gain'][i],
-        center=_backup_policies_dict['center'][i],
-        ac_lim=_backup_policies_dict['ac_lim']) for i in range(_num_backup_sets_to_consider)]
+    bkp_plcs = []
+    for i in range(_num_backup_sets_to_consider):
+        backup_policy_id = _backup_set_order[i] - 1
+        bkp_plcs.append(
+            PendulumBackupControl(
+                gain=_backup_policies_dict['gain'][backup_policy_id],
+                center=_backup_policies_dict['center'][backup_policy_id],
+                ac_lim=_backup_policies_dict['ac_lim'])
+        )
+    return bkp_plcs
 
 class PendulumDesiredPolicy:
     def act(self, obs):
         return np.array([0.0])
-
-
 
 class PendulumObsProcBackupShield(PendulumObsProc):
     def __init__(self, env):

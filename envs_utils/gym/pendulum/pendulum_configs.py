@@ -9,7 +9,7 @@ config = {
         'use_custom_env': True,
         'max_episode_time': 10.0,
         'max_episode_time_eval': 10.0,
-        'plot_custom_figs': False,
+        'plot_custom_figs': True,
         'save_custom_figs_data': False,
         'episode_steps_per_itr': 1,
         'n_training_episode': 39,
@@ -70,12 +70,11 @@ env_config = AttrDict(
     # mid_safe_set_width=0.2,
     # outer_safe_set_width=0.2,
     # Pendulum dynamics parameters
-
+    # WARNING: After changing the following parameters, you have to recompute region of attraction
     g=10.0,
-    m=1.0,
-    l=1.0,
-    max_torque=5.5,  #WARNING: After changing these paramter you need to take care of region of attraction params
-
+    m=3/225,
+    l=15.0,
+    max_torque=6.5,
     # max_speed=8.0,
     max_speed=np.inf,
     use_wrapper=True,
@@ -86,6 +85,6 @@ env_config = AttrDict(
 )
 
 
-safe_set_dict = AttrDict(bounds=[pi-0.5, 2],
+safe_set_dict = AttrDict(bounds=[pi - 0.5, 2],
                          center=[0.0, 0.0],
-                         p_norm=100)
+                         p_norm=10)
