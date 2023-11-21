@@ -15,11 +15,31 @@ class PendulumBackupSet(SafeSetFromBarrierFunction):
         self.c = init_dict.c
         self.center = torch.tensor(init_dict.center)
 
-    def safe_barrier(self, obs):
-        # TODO: make obs and center matrix to handle batch
-        result = torch.matmul(torch.matmul(obs - self.center, self.p), obs.T)
-        return 1 - result / self.c if result.dim() == 0 else 1 - result.diag() / self.c
+    # def safe_barrier(self, obs):
+    #     # TODO: make obs and center matrix to handle batch
+    #     if not torch.is_tensor(obs):
+    #         obs = torch.from_numpy(obs)
+    #     result = torch.matmul(torch.matmul(obs - self.center, self.p), (obs - self.center).t())
+    #     return 1 - result / self.c if result.dim() == 0 else 1 - result.diag() / self.c
 
+    def safe_barrier(self, obs):
+        if not torch.is_tensor(obs):
+            obs = torch.from_numpy(obs)
+
+        diff = obs - self.center
+
+        if obs.dim() == 1:
+            # Unsqueeze to add batch dimension
+            result = torch.dot(diff, torch.mv(self.p, diff))
+            result = result.squeeze()
+
+        elif obs.dim() == 2:
+            einsum_str = 'bi,ij,bj->b'
+            result = torch.einsum(einsum_str, diff, self.p, diff)
+        else:
+            raise ValueError('obs must be 1D or 2D tensor')
+
+        return 1 - result / self.c
 
 class PendulumSafeSet(SafeSetFromBarrierFunction):
     def initialize(self, init_dict=None):
@@ -69,7 +89,7 @@ class PendulumBackupControl:
             0] * self.center[0]
 
 
-_backup_sets_dict = dict(c=[0.2, 0.2, 0.2],
+_backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
                          p=[
                              # u_max = 6.5
                              [[0.6250, 0.1250], [0.1250, 0.1250]],
@@ -79,12 +99,17 @@ _backup_sets_dict = dict(c=[0.2, 0.2, 0.2],
                              # [[0.584656084656085, 0.084656084656085], [0.084656084656085, 0.113322695333277]],
                              # [[0.584656084656085, 0.084656084656085], [0.084656084656085, 0.113322695333277]],
                              ],
-                         center=[0.0, pi/2, -pi/2]
+                         center=[
+                             [0.0, 0.0],
+                             [pi/2, 0.0],
+                             [-pi/2, 0.0]
+                         ]
 )
 
-_num_backup_sets_to_consider = 1
+_num_backup_sets_to_consider = 3
 # _backup_set_order = [1, 2, 3]
-_backup_set_order = [2]
+# _backup_set_order = [1, 2, 3]
+_backup_set_order = [1, 2, 3]
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
     for i in range(len(backup_sets)):
@@ -111,8 +136,8 @@ _backup_policies_dict = dict(
     ],
     center=[
         [0.0, 0.0],
-        [-pi/2, 0.0],
         [pi/2, 0.0],
+        [-pi/2, 0.0],
     ],
     ac_lim=env_config.max_torque
 )

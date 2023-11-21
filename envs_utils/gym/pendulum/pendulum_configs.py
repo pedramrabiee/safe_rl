@@ -85,6 +85,6 @@ env_config = AttrDict(
 )
 
 
-safe_set_dict = AttrDict(bounds=[pi - 0.5, 2],
+safe_set_dict = AttrDict(bounds=[pi-0.5, 2],
                          center=[0.0, 0.0],
-                         p_norm=10)
+                         p_norm=100)
