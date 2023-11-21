@@ -1,6 +1,7 @@
 from trainers.base_trainer import BaseTrainer
 from attrdict import AttrDict
 from logger import logger
+from functools import partial
 
 
 class RLBUSTrainer(BaseTrainer):
@@ -10,6 +11,15 @@ class RLBUSTrainer(BaseTrainer):
         self.sampler.safe_set_eval.late_initialize(init_dict=AttrDict(backup_agent=self.agent.shield))
 
     def _train(self, itr):
+        self.custom_plotter.dump(itr=itr,
+                                 dump_dict=dict(
+                                     backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
+                                     safe_set_func=self.agent.shield.get_safe_set_for_contour(),
+                                     viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
+                                                                     id=id)
+                                                             for id in range(self.agent.shield.backup_set_size)]
+                                 ))
+
         # Pretrain rl backup by sampling desired safe states
         if itr == 0 and self.config.rlbus_params.rl_backup_pretrain_is_on and self.config.rlbus_params.to_shield:
             batch_size = self.config.rlbus_params.rl_backup_pretrain_sample_size
