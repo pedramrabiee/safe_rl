@@ -17,7 +17,7 @@ import json
 mpl.rcParams['agg.path.chunksize'] = 10000
 mpl.rcParams['text.usetex'] = True
 
-_sns_colormap = 'husl'  # Define the seaborn colormap. Other options, husl, rocket, Paired, tab10
+_sns_colormap = 'cubehelix'  # Define the seaborn colormap. Other options, husl, rocket, Paired, tab10
 _colormap = 'jet'       # Define the matplotlib colormap
 _config = None
 
@@ -461,47 +461,119 @@ def dump_plot(filename, plt_key, step_key=None):
         plt.show()
 
 
-def dump_plot_with_key(plt_key, filename, plt_info=None,
+# def dump_plot(filename, plt_key, step_key=None):
+#     """
+#     Save a plot as an image file and display it. Optionally, log it to WandB.
+#
+#     Parameters:
+#     - filename (str): The filename for the saved image.
+#     - plt_key (str): A key associated with the plot.
+#     - step_key (str, optional): A key for tracking the step.
+#
+#     Global variables used:
+#     - plotdir: The directory where plot images are saved.
+#     - _config: A global configuration object containing settings.
+#     - plt: The Matplotlib library for generating plots.
+#     - _steps: A dictionary containing step information.
+#     - wandb.Image: A WandB object for logging images.
+#
+#     This function generates a plot, saves it as a .png image in a folder named after 'plt_key' inside
+#     the 'plotdir', and displays the plot. It can also log the plot to WandB with optional step information
+#     if WandB logging is enabled. This function is typically used to visualize and log plots generated
+#     during training or evaluation.
+#
+#     Example:
+#     dump_plot('plot_image', 'training_plot', 'iteration')
+#     """
+#     global plotdir, _config
+#
+#     if not _config.debugging_mode and _config.plot_custom_figs:
+#         # Create a folder inside the plots folder for each plt_key
+#         path = osp.join(plotdir, plt_key)
+#         os.makedirs(path, exist_ok=True)
+#         path = osp.join(path, filename + '.png')
+#         plt.savefig(path, dpi=300)
+#         plt.show()
+#         step_info = {}
+#         if step_key is not None:
+#             step_info[step_key] = _steps[step_key]
+#         dump_wandb({**{plt_key: wandb.Image(path)}, **step_info})
+#     else:
+#         plt.show()
+
+
+# def dump_plot_with_key(plt_key, filename, plt_info=None,
+#                        plt_kwargs=None, subplot=True,
+#                        first_col_as_x=False, custom_col_config_list=None,
+#                        columns=None, step_key=None, keep_plt_key_in_queue_after_plot=False):
+#     """
+#     Generate a plot from the data in the plot queue and save it as an image file.
+#
+#     Parameters:
+#     - plt_key (str): A key associated with the plot.
+#     - filename (str): The filename for the saved image.
+#     - plt_info (dict, optional): Additional plot information.
+#     - plt_kwargs (dict, optional): Keyword arguments for customizing the plot.
+#     - subplot (bool, optional): Whether to use subplots for multiple columns of data.
+#     - first_col_as_x (bool, optional): Whether the first column is used as the x-axis data.
+#     - custom_col_config_list (list, optional): A list of custom column configurations.
+#     - columns (list, optional): Column names for the data.
+#     - step_key (str, optional): A key for tracking the step.
+#     - keep_plt_key_in_queue_after_plot (bool, optional): Whether to keep the plot key in the queue after plotting.
+#
+#     Global variables used:
+#     - _plot_queue: A dictionary containing data for generating plots.
+#     - _config: A global configuration object containing settings.
+#     - _plot: A function for generating plots.
+#     - plotdir: The directory where plot images are saved.
+#     - _save_csv: A function for saving data to a CSV file.
+#
+#     This function is used to generate a plot from the data in the plot queue, customize the plot using
+#     optional arguments, save it as an image file, and optionally save the data to a CSV file.
+#     It can also control the behavior of subplots, x-axis configuration, column configurations, and more.
+#     After plotting, it can remove the plot key from the queue if 'keep_plt_key_in_queue_after_plot' is set to False.
+#
+#     Example:
+#     dump_plot_with_key('training_plot', 'plot_image', plt_info={'xlabel': 'Timestep'})
+#     """
+#     global _plot_queue, _config
+#
+#     if not _config.plot_custom_figs and not _config.save_custom_figs_data:
+#         return
+#
+#     assert plt_key in _plot_queue.keys(), "Plot key is not in plot queue"
+#     data = np.vstack(_plot_queue[plt_key])
+#     if _config.plot_custom_figs:
+#         _ = _plot(data=data,
+#                   plt_info=plt_info,
+#                   plt_kwargs=plt_kwargs,
+#                   subplot=subplot,
+#                   first_col_as_x=first_col_as_x,
+#                   custom_col_config_list=custom_col_config_list
+#                   )
+#         dump_plot(filename, plt_key=plt_key, step_key=step_key)
+#     if _config.save_custom_figs_data and not _config.debugging_mode:
+#         path = osp.join(plotdir, plt_key)
+#         _save_csv(data=data, path=path, filename=filename, columns=columns)
+#
+#     # reset _plot_queue corresponding to plt_key
+#     # _plot_queue[plt_key] = []
+#     if not keep_plt_key_in_queue_after_plot:
+#         del _plot_queue[plt_key]
+
+
+def dump_plot_with_key(data,
+                       plt_key, filename, plt_info=None,
+                       custom_col_config_list=None,
                        plt_kwargs=None, subplot=True,
-                       first_col_as_x=False, custom_col_config_list=None,
-                       columns=None, step_key=None, keep_plt_key_in_queue_after_plot=False):
-    """
-    Generate a plot from the data in the plot queue and save it as an image file.
+                       first_col_as_x=False,
+                       columns=None, step_key=None):
 
-    Parameters:
-    - plt_key (str): A key associated with the plot.
-    - filename (str): The filename for the saved image.
-    - plt_info (dict, optional): Additional plot information.
-    - plt_kwargs (dict, optional): Keyword arguments for customizing the plot.
-    - subplot (bool, optional): Whether to use subplots for multiple columns of data.
-    - first_col_as_x (bool, optional): Whether the first column is used as the x-axis data.
-    - custom_col_config_list (list, optional): A list of custom column configurations.
-    - columns (list, optional): Column names for the data.
-    - step_key (str, optional): A key for tracking the step.
-    - keep_plt_key_in_queue_after_plot (bool, optional): Whether to keep the plot key in the queue after plotting.
-
-    Global variables used:
-    - _plot_queue: A dictionary containing data for generating plots.
-    - _config: A global configuration object containing settings.
-    - _plot: A function for generating plots.
-    - plotdir: The directory where plot images are saved.
-    - _save_csv: A function for saving data to a CSV file.
-
-    This function is used to generate a plot from the data in the plot queue, customize the plot using
-    optional arguments, save it as an image file, and optionally save the data to a CSV file.
-    It can also control the behavior of subplots, x-axis configuration, column configurations, and more.
-    After plotting, it can remove the plot key from the queue if 'keep_plt_key_in_queue_after_plot' is set to False.
-
-    Example:
-    dump_plot_with_key('training_plot', 'plot_image', plt_info={'xlabel': 'Timestep'})
-    """
-    global _plot_queue, _config
+    global _config
 
     if not _config.plot_custom_figs and not _config.save_custom_figs_data:
         return
 
-    assert plt_key in _plot_queue.keys(), "Plot key is not in plot queue"
-    data = np.vstack(_plot_queue[plt_key])
     if _config.plot_custom_figs:
         _ = _plot(data=data,
                   plt_info=plt_info,
@@ -514,11 +586,6 @@ def dump_plot_with_key(plt_key, filename, plt_info=None,
     if _config.save_custom_figs_data and not _config.debugging_mode:
         path = osp.join(plotdir, plt_key)
         _save_csv(data=data, path=path, filename=filename, columns=columns)
-
-    # reset _plot_queue corresponding to plt_key
-    # _plot_queue[plt_key] = []
-    if not keep_plt_key_in_queue_after_plot:
-        del _plot_queue[plt_key]
 
 
 def _plot(data, plt_info, plt_kwargs=None, subplot=True, first_col_as_x=False, custom_col_config_list=None):
@@ -582,17 +649,21 @@ def _plot(data, plt_info, plt_kwargs=None, subplot=True, first_col_as_x=False, c
                 plt.legend(plt_info["legend"], frameon=False)
 
     else:   # If you have multiple columns of data, use subplot
-        colors = _get_color_cycle(data_y.shape[1])      # you need colors to the number of columns you have in data_y
+
+
         if subplot:      # you want to add the merged subplot usage only for the subplot case
             f, axs = plt.subplots(ncols, 1) # TODO: you may need to accept other configurations for the subplot
+
             for col in range(ncols):
                 if plt_kwargs is not None:
+                    colors, linestyles = _get_color_and_linestyle_cycle(data_y.shape[1])
                     for in_col in custom_col_config_list[col]:
-                        axs[col].plot(data_x, data_y[:, in_col], c=next(colors), **plt_kwargs)
+                        axs[col].plot(data_x, data_y[:, in_col], c=next(colors), linestyle=next(linestyles), **plt_kwargs)
                     # plt.plot(data_x, data_y[:, col], c=next(colors), **plt_kwargs)
                 else:
+                    colors, linestyles = _get_color_and_linestyle_cycle(data_y.shape[1])
                     for in_col in custom_col_config_list[col]:
-                        axs[col].plot(data_x, data_y[:, in_col], c=next(colors))
+                        axs[col].plot(data_x, data_y[:, in_col], c=next(colors), linestyle=next(linestyles))
                         # plt.plot(data_x, data_y[:, col], c=next(colors))
                 if "ylabel" in plt_info.keys():
                     axs[col].set_ylabel(plt_info["ylabel"][col])
@@ -603,9 +674,11 @@ def _plot(data, plt_info, plt_kwargs=None, subplot=True, first_col_as_x=False, c
         else:
             for col in range(ncols):
                 if plt_kwargs is not None:
-                    plt.plot(data_x, data_y[:, col], c=next(colors), **plt_kwargs)
+                    colors, linestyles = _get_color_and_linestyle_cycle(data_y.shape[1])
+                    plt.plot(data_x, data_y[:, col], c=next(colors), linestyle=next(linestyles), **plt_kwargs)
                 else:
-                    plt.plot(data_x, data_y[:, col], c=next(colors))
+                    colors, linestyles = _get_color_and_linestyle_cycle(data_y.shape[1])
+                    plt.plot(data_x, data_y[:, col], c=next(colors), linestyle=next(linestyles))
             if "legend" in plt_info.keys():
                 plt.legend(plt_info["legend"],
                            frameon=False)
@@ -619,6 +692,13 @@ def _plot(data, plt_info, plt_kwargs=None, subplot=True, first_col_as_x=False, c
         plt.xlabel("Timestep")
 
     return plt
+
+
+def _get_color_and_linestyle_cycle(num):
+    colors = _get_color_cycle(num)  # you need colors to the number of columns you have in data_y
+    linestyles = iter(['-', '--', '-.', ':'] * 2)
+    return colors, linestyles
+
 
 def dump_csv(cat_key):
     """

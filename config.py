@@ -276,7 +276,7 @@ class Config:
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
-            horizon=5,
+            horizon=1.5,
             backup_timestep=0.1
         )
         num_backup_steps = int(bus_params.horizon/bus_params.backup_timestep) + 1
@@ -295,7 +295,7 @@ class Config:
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
-            horizon=5,
+            horizon=1.5,
             melt_law_gain=4,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,

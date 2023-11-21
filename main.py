@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # See envs_utils.get_env_info for a list of acceptable environment nicknames
     setup = make_setup(env_nickname='pendulum',
-                       agent='bus')
+                       agent='rlbus')
 
 
     root_dir = os.path.dirname(os.path.realpath(__file__))
