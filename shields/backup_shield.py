@@ -31,6 +31,10 @@ class BackupShield(BaseSheild):
         self._old_bounds = _from_ac_lim_to_bounds_array(self._ac_bounds['old'])
         self._obs_dim_backup_policy = self.obs_proc.obs_dim(proc_key='backup_policy')
 
+    @property
+    def backup_set_size(self):
+        return len(self.backup_sets)
+
     @torch.enable_grad()
     def shield(self, obs, ac, filter_dict=None):
         obs = self.obs_proc.proc(obs, proc_key='shield').squeeze()
@@ -50,18 +54,25 @@ class BackupShield(BaseSheild):
 
         gamma = min((h - self.params.eps_buffer) / self.params.h_scale, feas_fact / self.params.feas_scale)
         if gamma <= 0:
-            u = u_b_select
+            u_star = u_b_select
         else:
             # TODO: make sure ac_lim is in correct standard
-            u, _ = min_intervention_qp_box_constrained(h=h - self.params.eps_buffer,
+            u_star, _ = min_intervention_qp_box_constrained(h=h - self.params.eps_buffer,
                                                        Lfh=Lfh, Lgh=Lgh,
                                                        alpha_func=lambda eta: self.params.alpha * eta,
                                                        u_des=ac,
                                                        u_bound=self._old_bounds)
 
         beta = (1 if gamma >= 1 else gamma) if gamma > 0 else 0
-        u = (1 - beta) * u_b_select + beta * u
-        self.custom_plotter.filter_push_action((ac, u))
+        u = (1 - beta) * u_b_select + beta * u_star
+
+        # Push data to plotter
+        self.custom_plotter.push(dict(u_backup=u_b_select,
+                                      u_star=u_star,
+                                      u_des=ac,
+                                      h_values=h_values,
+                                      h=h,
+                                      h_min_values=h_min_values))
         return u
 
     def get_h(self, obs):
@@ -96,13 +107,13 @@ class BackupShield(BaseSheild):
         return (numerator / denominator).unsqueeze(dim=0)
 
 
-
     def _get_trajs(self, obs):
         trajs = odeint(
             lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
                                     for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies)], dim=0),
             obs.repeat(self._num_backup), self._backup_t_seq).split(self._obs_dim_backup_policy, dim=1)
         return trajs
+
 
     def _get_h_grad_h(self, obs, trajs):
         h, h_values, h_min_values = self._get_h(trajs)
@@ -120,7 +131,32 @@ class BackupShield(BaseSheild):
         h = softmax(h_values, self.params.softmax_gain)
         return h, h_values, h_min_values
 
+    # The following methods are used for plotting contours
+    def get_single_traj_for_contour(self, obs, id):
+        obs = obs.flatten()
+        trajs = odeint(
+            lambda t, y: self.dynamics.dynamics_flat_return(
+                y.view(-1, self._obs_dim_backup_policy),
+                self.backup_policies[id](y.view(-1, self._obs_dim_backup_policy))), obs, self._backup_t_seq)
+        return trajs
 
+    def get_single_h_for_contour(self, obs, id):
+        trajs = self.get_single_traj_for_contour(obs, id)
+        h_s = self.safe_set.des_safe_barrier(torch.vstack(torch.split(trajs, self._obs_dim_backup_policy, dim=1)))
+        h_s = torch.vstack(h_s.split(trajs.size(0))).t()
+        h_b = self.backup_sets[id].safe_barrier(trajs[-1, :].view(-1, self._obs_dim_backup_policy)).view(1, -1)
+        h = softmin(torch.vstack((h_s, h_b)), self.params.softmin_gain)
+        return h
+
+    def _get_softmax_from_h(self, h_list):
+        h_list = torch.stack(h_list)
+        return softmax(h_list, self.params.softmax_gain)
+
+    def get_backup_sets_for_contour(self):
+        return [backup_set.safe_barrier for backup_set in self.backup_sets]
+
+    def get_safe_set_for_contour(self):
+        return self.safe_set.des_safe_barrier
 def get_backup_shield_info_from_env(env, env_info, obs_proc):
     return dict(dynamics_cls=get_torch_dyn(env_info),
                 **get_backup_prerequisites(env=env, env_info=env_info, obs_proc=obs_proc))
