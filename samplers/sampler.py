@@ -3,6 +3,7 @@ from tqdm import tqdm
 from utils.misc import add_noise
 from logger import logger
 from gym.spaces import Dict
+from utils.scale import action2oldbounds
 
 class Sampler:
     """Class to sample data from environment for RL training"""
@@ -132,7 +133,7 @@ class Sampler:
             # TODO: # You need to call sampler_push_action somewhere (either here or inside the agent) before calling sampler_push_obs
 
             # Log observation
-            self.custom_plotter.push(dict(obs=obs, ac=ac))
+            self.custom_plotter.push(dict(obs=obs, ac=action2oldbounds(ac)))
 
             # TODO: Fix this after you fixed safety class
             # Check safety violation
