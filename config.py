@@ -211,6 +211,12 @@ class Config:
         )
         return ddpg_params
 
+    def _get_maddpg_params(self):
+        ddpg_params = self._get_ddpg_params()
+        madddpg_specific_params = AttrDict()
+        self.maddpg_params = AttrDict(**ddpg_params, **madddpg_specific_params)
+        return self.maddpg_params
+
     # Safety Filter
     def _get_sf_params(self):
         sf_params = AttrDict(
