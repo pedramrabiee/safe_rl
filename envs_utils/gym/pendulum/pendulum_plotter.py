@@ -10,9 +10,10 @@ class PendulumPlotter(CustomPlotter):
     def __init__(self, obs_proc):
         super().__init__(obs_proc)
         self._plot_schedule_by_episode = {'1': ['state_action_plot']}
-        self._plot_schedule_by_itr = {
-            '0': ['h_contours'],
-            '100': ['h_contours']}
+        self._plot_schedule_by_itr = None
+        # self._plot_schedule_by_itr = {
+        #     '0': ['h_contours'],
+        #     '100': ['h_contours']}
 
 
     def _prep_obs(self, obs):
@@ -28,13 +29,33 @@ class PendulumPlotter(CustomPlotter):
     #     logger.push_plot(np.concatenate((ac.reshape(1, -1), ac_filtered.reshape(1, -1)), axis=1), plt_key="sampler_plots")
 
     def dump_state_action_plot(self, dump_dict):
-        data = self._make_data_array(['obs', 'ac', 'u_des', 'u_backup'])
+        if 'u_backup' in self._data:
+            data = self._make_data_array(['obs', 'ac', 'u_des', 'u_backup'])
+            logger.dump_plot_with_key(
+                data=data,
+                custom_col_config_list=[[0], [1], [2, 3, 4]],
+                plt_key="states_action_plots",
+                filename='states_action_episode_%d' % dump_dict['episode'],
+                columns=['theta', 'theta_dot', 'ac', 'u_des', 'u_backup'],
+                plt_info=dict(
+                    xlabel=r'Timestep',
+                    ylabel=[r'$\theta$',
+                            r'$\dot \theta$',
+                            r'$u$'],
+                    legend=[None,
+                            None,
+                            [r'$u$', r'$u_{\rm d}$', r'$u_{\rm b}$']
+                            ]
+                ))
+            self._empty_data_by_key_list(['obs', 'ac', 'u_des', 'u_backup'])
+            return
+        data = self._make_data_array(['obs', 'ac', 'u_des'])
         logger.dump_plot_with_key(
             data=data,
-            custom_col_config_list=[[0], [1], [2, 3, 4]],
+            custom_col_config_list=[[0], [1], [2, 3]],
             plt_key="states_action_plots",
             filename='states_action_episode_%d' % dump_dict['episode'],
-            columns=['theta', 'theta_dot', 'ac', 'u_des', 'u_backup'],
+            columns=['theta', 'theta_dot', 'ac', 'u_des'],
             plt_info=dict(
                 xlabel=r'Timestep',
                 ylabel=[r'$\theta$',
@@ -42,11 +63,10 @@ class PendulumPlotter(CustomPlotter):
                         r'$u$'],
                 legend=[None,
                         None,
-                        [r'$u$', r'$u_{\rm d}$', r'$u_{\rm b}$']
+                        [r'$u$', r'$u_{\rm d}$']
                         ]
             ))
-        self._empty_data_by_key_list(['obs', 'ac', 'u_des', 'u_backup'])
-
+        self._empty_data_by_key_list(['obs', 'ac', 'u_des'])
 
     def dump_h_contours(self, dump_dict):
         backup_set_funcs = dump_dict['backup_set_funcs']

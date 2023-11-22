@@ -33,7 +33,8 @@ class RLBUSTrainer(BaseTrainer):
         self.sampler.collect_data(itr)
 
         # Add shield's rl backup data to its buffer
-        self.agent.shield.compute_ac_push_to_buffer()
+        if self.config.rlbus_params.to_shield:
+            self.agent.shield.compute_ac_push_to_buffer()
 
 
         # Train
@@ -42,12 +43,6 @@ class RLBUSTrainer(BaseTrainer):
 
         to_train = []
         samples = {}
-
-        if not self.config.rlbus_params.to_shield:
-            self.sampler.collect_data(itr)
-
-            # Add shield's rl backup data to its buffer
-            self.agent.shield.compute_ac_push_to_buffer()
 
         # train desired policy on its train frequency
         self.agent.train_mode(device=self.config.training_device)

@@ -25,7 +25,6 @@ class RLBUS(BUS):
             self.agents.append(self.desired_policy)
 
     def step(self, obs, explore=False, init_phase=False):
-        # TODO: CHECK SCALING, CHECK NUMPY
         # The 'shield' method expects unnormalized actions (i.e., old action bounds), while the 'step' method is
         # designed to return normalized actions (i.e., new action bounds).
         if self.params.use_mf_desired_policy:
@@ -43,7 +42,7 @@ class RLBUS(BUS):
             ac_shield = action2newbounds(ac_shield)
             return ac_shield, None
 
-        self.custom_plotter.filter_push_action((ac_des, ac_des))
+        self.custom_plotter.push(dict(u_des=ac_des))
 
         return action2newbounds(ac_des), None
 
