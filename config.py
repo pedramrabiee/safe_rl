@@ -250,7 +250,7 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             # rl backup policy
-            rl_backup_pretrain_is_on=True,
+            rl_backup_pretrain_is_on=False,
             rl_backup_pretrain_sample_size=500,
             rl_backup_train_is_on=True,
             rl_backup_update_freq=1,
@@ -291,12 +291,12 @@ class Config:
         rlbus_params = AttrDict(
             eps_buffer=0.0,
             softmin_gain=100,
-            softmax_gain=300,
+            softmax_gain=100,
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
             horizon=1.5,
-            melt_law_gain=4,
+            melt_law_gain=1000,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
             backup_timestep=0.1,
@@ -304,7 +304,7 @@ class Config:
             rl_backup_train=True,
             saturate_rl_backup_reward=True,
             saturate_rl_backup_at=0.0,
-            discount_rl_backup_reward=True,
+            discount_rl_backup_reward=False,
             discount_ratio_rl_backup_reward=0.98,
 
         )

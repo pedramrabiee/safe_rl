@@ -106,7 +106,7 @@ _backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
                          ]
 )
 
-_num_backup_sets_to_consider = 3
+_num_backup_sets_to_consider = 1
 # _backup_set_order = [1, 2, 3]
 # _backup_set_order = [1, 2, 3]
 _backup_set_order = [1, 2, 3]

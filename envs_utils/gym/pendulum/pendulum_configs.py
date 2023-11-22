@@ -7,7 +7,7 @@ config = {
     'init': {
         'debugging_mode': False,
         'use_custom_env': True,
-        'max_episode_time': 10.0,
+        'max_episode_time': 5.0,
         'max_episode_time_eval': 10.0,
         'plot_custom_figs': True,
         'save_custom_figs_data': False,
@@ -64,7 +64,7 @@ config = {
 env_config = AttrDict(
     do_obs_proc=True,
     safe_reset=True,
-    timestep=0.1,
+    timestep=0.05,
     # Safe set width
     # half_wedge_angle=1.5,
     # mid_safe_set_width=0.2,
