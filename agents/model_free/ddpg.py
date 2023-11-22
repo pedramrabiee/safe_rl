@@ -127,7 +127,7 @@ class DDPGAgent(BaseAgent):
                       source=self.critic,
                       tau=self.params.tau)
 
-    def _compute_critic_loss(self, sample):
+    def _compute_critic_loss(self, sample, critic_loss_dict=None):
         q = self.critic(torch.cat((sample.obs, sample.ac), dim=-1))
 
         # Bellman backup for Q fucntion
@@ -145,7 +145,7 @@ class DDPGAgent(BaseAgent):
         loss_critic = F.mse_loss(q, backup)
         return loss_critic
 
-    def _compute_policy_loss(self, sample):
+    def _compute_policy_loss(self, sample, policy_loss_dict=None):
         if self._discrete_action:
             q_pi = self.critic(torch.cat((sample.obs, F.gumbel_softmax(self.policy(sample.obs), hard=True)), dim=-1))
         else:

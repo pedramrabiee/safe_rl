@@ -44,7 +44,8 @@ class MADDPGAgent(DDPGAgent):
         samples = self._concat_agent_data(samples)
         # run one gradient descent step for Q
         self.critic_optimizer.zero_grad()
-        loss_critic = self._compute_critic_loss(samples=samples, policies_target=policies_target)
+        loss_critic = self._compute_critic_loss(samples=samples,
+                                                critic_loss_dict=dict(policies_target=policies_target))
         loss_critic.backward()
         # clip grad
         if self.params.use_clip_grad_norm:
@@ -56,7 +57,9 @@ class MADDPGAgent(DDPGAgent):
 
         # run one gradient descent for policy
         self.policy_optimizer.zero_grad()
-        loss_policy = self._compute_policy_loss(samples=samples, policies=policies)
+        loss_policy = self._compute_policy_loss(samples=samples,
+                                                policy_loss_dict=dict(policies=policies))
+
         loss_policy.backward()
 
         # clip grad
@@ -74,7 +77,8 @@ class MADDPGAgent(DDPGAgent):
         # return dict(PolicyLoss=loss_policy.cpu().data.numpy(),
         #             CriticLoss=loss_critic.cpu().data.numpy())
 
-    def _compute_critic_loss(self, samples, policies_target):
+    def _compute_critic_loss(self, samples, critic_loss_dict=None):
+        policies_target = critic_loss_dict['policies_target']
         q = self.critic(torch.cat((*samples.obs, *samples.ac), dim=-1))
         # compute target actions for all agents based on target policies and next observations
         with torch.no_grad():
@@ -89,7 +93,8 @@ class MADDPGAgent(DDPGAgent):
         loss_critic = F.mse_loss(q, backup)
         return loss_critic
 
-    def _compute_policy_loss(self, samples, policies):
+    def _compute_policy_loss(self, samples, policy_loss_dict=None):
+        policies = policy_loss_dict['policies']
         # acs = [pi(obs) for pi, obs in zip(policies, samples.obs)]
         acs = samples.ac.copy()
         if self._discrete_action:
