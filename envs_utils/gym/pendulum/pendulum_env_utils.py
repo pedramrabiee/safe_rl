@@ -34,6 +34,7 @@ def pendulum_customize(env):
 class RK45PendulumWrapper(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
+        self.state = None
 
     def step(self, u):
         th, thdot = self.state  # th := theta
@@ -49,6 +50,12 @@ class RK45PendulumWrapper(gym.Wrapper):
         # if self.render_mode == "human":
         #     self.render()
         return self._get_obs(), -costs, False, {}
+
+    def reset(self):
+        high = np.array([np.pi, 1])
+        self.state = self.np_random.uniform(low=-high, high=high)
+        self.last_u = None
+        return self._get_obs()
 
     def _get_obs(self):
         theta, thetadot = self.state
