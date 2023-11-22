@@ -29,10 +29,10 @@ class CustomPlotter:
                 self._data[k] = v
 
     def dump(self, itr=None, episode=None, dump_key=None, dump_dict=None):
-        if itr is not None:
+        if itr is not None and self._plot_schedule_by_itr is not None:
             self._dump_by_itr_or_episode(itr=itr, dump_dict=dump_dict)
 
-        if episode is not None:
+        if episode is not None and self._plot_schedule_by_episode is not None:
             self._dump_by_itr_or_episode(episode=episode, dump_dict=dump_dict)
 
         if dump_key is not None:
