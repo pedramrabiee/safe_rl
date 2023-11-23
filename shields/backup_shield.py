@@ -148,15 +148,24 @@ class BackupShield(BaseSheild):
         h = softmin(torch.vstack((h_s, h_b)), self.params.softmin_gain)
         return h
 
+    def get_h_for_contour(self, obs):
+        h_list = [self.get_single_h_for_contour(obs, id) for id in range(self._num_backup)]
+        return self._get_softmax_from_h(h_list)
+
     def _get_softmax_from_h(self, h_list):
         h_list = torch.stack(h_list)
         return softmax(h_list, self.params.softmax_gain)
+
+
+    # function getter for contour plotting
 
     def get_backup_sets_for_contour(self):
         return [backup_set.safe_barrier for backup_set in self.backup_sets]
 
     def get_safe_set_for_contour(self):
         return self.safe_set.des_safe_barrier
+
+
 def get_backup_shield_info_from_env(env, env_info, obs_proc):
     return dict(dynamics_cls=get_torch_dyn(env_info),
                 **get_backup_prerequisites(env=env, env_info=env_info, obs_proc=obs_proc))

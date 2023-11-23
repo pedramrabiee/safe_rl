@@ -12,7 +12,7 @@ config = {
         'plot_custom_figs': True,
         'save_custom_figs_data': False,
         'episode_steps_per_itr': 1,
-        'n_training_episode': 39,
+        'n_training_episode': 100,
         'do_evaluation': False,
         'n_episodes_evaluation': 5,
         'num_evaluation_sessions': 4,
@@ -64,7 +64,7 @@ config = {
 env_config = AttrDict(
     do_obs_proc=True,
     safe_reset=True,
-    timestep=0.05,
+    timestep=0.1,
     # Safe set width
     # half_wedge_angle=1.5,
     # mid_safe_set_width=0.2,
@@ -74,7 +74,7 @@ env_config = AttrDict(
     g=10.0,
     m=3/225,
     l=15.0,
-    max_torque=6.5,
+    max_torque=1.5,
     # max_speed=8.0,
     max_speed=np.inf,
     use_wrapper=True,
@@ -87,4 +87,4 @@ env_config = AttrDict(
 
 safe_set_dict = AttrDict(bounds=[pi-0.5, 2],
                          center=[0.0, 0.0],
-                         p_norm=100)
+                         p_norm=50)

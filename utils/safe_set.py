@@ -155,6 +155,9 @@ class SafeSetFromCriteria(SafeSet):
         for k in criteria_keys:
             assert k in self.criteria, f'criterion {k} is not in criteria'
 
+
+        # TODO: This is inefficient. Make _get_obs to accept batch size.
+        # batch
         while True:
             obs = self._get_obs()
             for i, k in enumerate(criteria_keys):
