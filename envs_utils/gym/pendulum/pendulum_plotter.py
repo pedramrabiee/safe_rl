@@ -11,9 +11,9 @@ class PendulumPlotter(CustomPlotter):
         super().__init__(obs_proc)
         self._plot_schedule_by_episode = {'1': ['state_action_plot']}
         self._plot_schedule_by_itr = None
-        # self._plot_schedule_by_itr = {
-        #     '0': ['h_contours'],
-        #     '100': ['h_contours']}
+        self._plot_schedule_by_itr = {
+            '0': ['h_contours'],
+            '500': ['h_contours']}
 
 
     def _prep_obs(self, obs):

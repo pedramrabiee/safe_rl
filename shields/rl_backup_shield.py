@@ -11,6 +11,10 @@ from utils.misc import torchify
 from utils.safe_set import SafeSetFromBarrierFunction
 from copy import copy
 from utils.scale import action2newbounds, action2oldbounds
+from tqdm import tqdm
+from torch.utils.data import TensorDataset, DataLoader
+
+
 
 class RLBackupShield(BackupShield):
     def initialize(self, params, init_dict=None):
@@ -102,31 +106,49 @@ class RLBackupShield(BackupShield):
         if not self.params.rl_backup_train:
             return
 
-        # Pretrain by imitation learning
-        # TODO: Check pretraining. Make sure samples are converted to torch tensor on time
-        self.rl_backup.policy_optimizer.zero_grad()
-        acs_predicted, _ = self.rl_backup.step(samples)
-        # acs_predicted = torchify(acs_predicted, dtype=torch.float64, requires_grad=True)
 
         samples_processed = self.obs_proc.proc(samples, proc_key='backup_set')
         samples_processed = torchify(samples_processed, dtype=torch.float64)
+
         backup_barrier_vals = torch.vstack([backup_set.safe_barrier(samples_processed)
                                             for backup_set in self.backup_sets[:-1]])
         max_barrier_indices = torch.argmax(backup_barrier_vals, dim=0)
 
         # TODO: Make acs_backup correct
-        acs_backup = torch.vstack([self.backup_policies[idx.item()](samples_processed[i])
-                                   for i, idx in enumerate(max_barrier_indices)])       # acs_backup will be tensor
+        acs_backup = torch.vstack([self.backup_policies[idx.item()](samples[i])
+                                   for i, idx in enumerate(max_barrier_indices)])  # acs_backup will be tensor
+
         acs_backup_scaled = action2newbounds(acs_backup)
-        loss_rl_backup = F.mse_loss(acs_predicted, acs_backup_scaled)
-        loss_rl_backup.backward()
-        self.rl_backup.policy_optimizer.step()
 
-        optim_info = {"Loss/Policy": loss_rl_backup.cpu().data.numpy()}
+        train_dataloader = DataLoader(TensorDataset(samples, acs_backup_scaled), batch_size=self.params.pretrain_batch_size, shuffle=True)
 
-        if self.add_tabular:
-            logger.add_tabular(optim_info, cat_key='iteration')
-        return optim_info
+        batch_to_sample_ratio = self.params.rl_backup_pretrain_batch_size / samples.shape[0]
+        max_epoch = int(self.params.rl_backup_pretrain_epoch / batch_to_sample_ratio)
+        pbar = tqdm(total=max_epoch, desc='Filter Pretraining Progress')
+
+        for _ in range(max_epoch):
+            batch_samples, batch_labels = next(iter(train_dataloader))
+
+            # Pretrain by imitation learning
+            # TODO: Check pretraining. Make sure samples are converted to torch tensor on time
+            self.rl_backup.policy_optimizer.zero_grad()
+            loss_rl_backup = self._compute_pretrain_loss((batch_samples[0], batch_labels))
+            loss_rl_backup.backward()
+            self.rl_backup.policy_optimizer.step()
+
+            optim_info = {"Loss/RLBackup": loss_rl_backup.cpu().data.numpy()}
+            logger.add_tabular(optim_info, cat_key='rl_backup_pretrain_epoch')
+
+            logger.dump_tabular(cat_key='rl_backup_pretrain_epoch', log=False, wandb_log=True, csv_log=False)
+            pbar.update(1)
+
+        pbar.close()
+
+    def _compute_pretrain_loss(self, samples, labels):
+        acs_predicted, _ = self.rl_backup.step(samples)
+        loss_rl_backup = F.mse_loss(acs_predicted, labels)
+        return loss_rl_backup
+
 
     def _get_softmax_softmin_backup_h_grad_h(self, obs):
         obs.requires_grad_()
@@ -171,13 +193,14 @@ class RLBackupShield(BackupShield):
 
         # make reward
         # TODO: modify reward
-        rews = np.full(traj_len, rl_h_values.item())
+        rews = np.full(traj_len, -np.abs(rl_h_values.item()))
 
-        if self.params.saturate_rl_backup_reward:
-            rews = np.clip(rews, a_min=-np.inf, a_max=self.params.saturate_rl_backup_at)
-        if self.params.discount_rl_backup_reward:
-            discount_arr = np.power(self.params.discount_ratio_rl_backup_reward, np.arange(1, len(rews) + 1))
-            rews = rews * discount_arr
+
+        # if self.params.saturate_rl_backup_reward:
+        #     rews = np.clip(rews, a_min=-np.inf, a_max=self.params.saturate_rl_backup_at)
+        # if self.params.discount_rl_backup_reward:
+        #     discount_arr = np.power(self.params.discount_ratio_rl_backup_reward, np.arange(1, len(rews) + 1))
+        #     rews = rews * discount_arr
         # make done
         done = np.zeros(traj_len)
         done[-1] = 1

@@ -11,14 +11,14 @@ class RLBUSTrainer(BaseTrainer):
         self.sampler.safe_set_eval.late_initialize(init_dict=AttrDict(backup_agent=self.agent.shield))
 
     def _train(self, itr):
-        self.custom_plotter.dump(itr=itr,
-                                 dump_dict=dict(
-                                     backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
-                                     safe_set_func=self.agent.shield.get_safe_set_for_contour(),
-                                     viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
-                                                                     id=id)
-                                                             for id in range(self.agent.shield.backup_set_size)]
-                                 ))
+        # self.custom_plotter.dump(itr=itr,
+        #                          dump_dict=dict(
+        #                              backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
+        #                              safe_set_func=self.agent.shield.get_safe_set_for_contour(),
+        #                              viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
+        #                                                              id=id)
+        #                                                      for id in range(self.agent.shield.backup_set_size)]
+        #                          ))
 
         # Pretrain rl backup by sampling desired safe states
         if itr == 0 and self.config.rlbus_params.rl_backup_pretrain_is_on and self.config.rlbus_params.to_shield:
@@ -28,6 +28,15 @@ class RLBUSTrainer(BaseTrainer):
                                                                     batch_size=[batch_size])
 
             self.agent.shield.pre_train(self.obs_proc.proc(samples[0], proc_key='rl_backup'))
+
+            self.custom_plotter.dump(itr=itr,
+                                     dump_dict=dict(
+                                         backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
+                                         safe_set_func=self.agent.shield.get_safe_set_for_contour(),
+                                         viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
+                                                                         id=id)
+                                                                 for id in range(self.agent.shield.backup_set_size)]
+                                     ))
 
         # Collect samples
         self.sampler.collect_data(itr)

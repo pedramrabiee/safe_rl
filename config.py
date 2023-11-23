@@ -35,7 +35,7 @@ class Config:
         # TRAINER
         # To change random seed number refer to seed_ in utils.seed
         self.episode_steps_per_itr = 1      # number of timesteps to collect data between model updates
-        self.n_training_episode = 19
+        self.n_training_episode = 50
         self.buffer_size = 1e6
 
         # TRAINING
@@ -250,12 +250,12 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             # rl backup policy
-            rl_backup_pretrain_is_on=False,
+            rl_backup_pretrain_is_on=True,
             rl_backup_pretrain_sample_size=500,
             rl_backup_train_is_on=True,
             rl_backup_update_freq=1,
             rl_backup_train_batch_size=128,
-            to_shield=False,
+            to_shield=True,
             # desired policy
             use_mf_desired_policy=True,
             desired_policy_agent='ddpg',
@@ -295,7 +295,7 @@ class Config:
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
-            horizon=1.5,
+            horizon=2.5,
             melt_law_gain=1000,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
@@ -306,7 +306,8 @@ class Config:
             saturate_rl_backup_at=0.0,
             discount_rl_backup_reward=False,
             discount_ratio_rl_backup_reward=0.98,
-
+            rl_backup_pretrain_epoch=50,
+            rl_backup_pretrain_batch_size=64,
         )
         num_backup_steps = int(rlbus_params.horizon / rlbus_params.backup_timestep) + 1
         backup_t_seq = linspace(0,
