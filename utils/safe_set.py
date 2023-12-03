@@ -143,14 +143,14 @@ class SafeSetFromCriteria(SafeSet):
             list: A list of NumPy arrays containing sampled observations for each criterion.
         """
         num_criteria = len(criteria_keys)
-        samples = [[] for _ in range(num_criteria)]
+        samples = [None for _ in range(num_criteria)]
 
         # repeat batch size for all criteria_keys if only one batch_size is given
         if isinstance(batch_size, list):
             assert len(batch_size) == len(criteria_keys), 'batch_size length does not match the criteria_keys length'
         else:
             batch_size = [batch_size for _ in range(num_criteria)]
-
+        samp_gen_batch_size = max(batch_size)
         completed = [False for _ in range(num_criteria)]
         for k in criteria_keys:
             assert k in self.criteria, f'criterion {k} is not in criteria'
@@ -158,21 +158,25 @@ class SafeSetFromCriteria(SafeSet):
 
         # TODO: This is inefficient. Make _get_obs to accept batch size.
         # batch
+
         while True:
-            obs = self._get_obs()
+            obs = self._get_obs(samp_gen_batch_size * 2)
             for i, k in enumerate(criteria_keys):
-                if len(samples[i]) == batch_size[i]:
-                    completed[i] = True
+                if samples[i] is not None:
+                    if samples[i].shape[0] >= batch_size[i]:
+                        completed[i] = True
                 if completed[i]:
                     continue
-                if self.criteria[k](self.obs_proc.proc(obs, proc_key='safe_set')):
-                    samples[i].append(obs)
-                    break
+                mask = self.criteria[k](self.obs_proc.proc(obs, proc_key='safe_set'))
+                # Add observation which satisfy the criteria to samples[i]
+                samples[i] = obs[mask] if samples[i] is None else np.vstack((samples[i], obs[mask]))
+                # remove the used obs from mask to have unique samples for each criteria
+                obs = obs[~mask]
 
             if all(completed):
                 break
 
-        return [np.vstack(sample) for sample in samples]
+        return [sample[:bs] for sample, bs in zip(samples, batch_size)]
 
     def filter_sample_by_criteria(self, samples, criteria_keys):
         """
@@ -200,7 +204,7 @@ class SafeSetFromCriteria(SafeSet):
                 break
         return obs
 
-    def _get_obs(self):
+    def _get_obs(self, batch_size):
         raise NotImplementedError
 
 
@@ -220,16 +224,18 @@ class SafeSetFromBarrierFunction(SafeSetFromCriteria):
     def is_des_safe(self, obs):
         ans = self.des_safe_barrier(obs) >= 0
         if torch.is_tensor(ans):
-            ans = ans.item()
+            ans = ans.detach().numpy()
+        if obs.ndim == 0:
+            return ans.item()
         return ans
 
     def is_safe(self, obs):
-        if self.is_des_safe(obs):
-            ans = self.safe_barrier(obs) >= 0
-            if torch.is_tensor(ans):
-                ans = ans.item()
-            return ans
-        return False
+        ans = self.safe_barrier(obs) >= 0
+        if torch.is_tensor(ans):
+            ans = ans.detach().numpy()
+        if obs.ndim == 0:
+            return ans.item()
+        return ans
 
 
 def get_safe_set(env_info, env, obs_proc, agent, seed):
