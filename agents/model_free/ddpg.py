@@ -14,6 +14,10 @@ class DDPGAgent(BaseAgent):
     def initialize(self, params, init_dict=None):
         # get the observation dim from observation process class
         self._obs_dim = self.obs_proc.obs_dim(proc_key='mf')
+        if init_dict is not None:
+            if 'obs_dim' in init_dict:
+                self._obs_dim = init_dict['obs_dim']
+
 
         # instantiate policy and critic
         self.policy = MLPNetwork(in_dim=self._obs_dim, out_dim=self._ac_dim,
@@ -50,6 +54,7 @@ class DDPGAgent(BaseAgent):
                                     critic_optimizer=self.critic_optimizer)
 
         self.params = params
+        self.init_dict = init_dict
 
         # initialize last episode noise is reset and rescaled as -1
         self._reset_noise_ep = -1
