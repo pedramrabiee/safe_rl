@@ -81,7 +81,7 @@ env_config = AttrDict(
     wrapper_name='RK45PendulumWrapper',
     # max_speed_for_safe_set_training=20.0,
     # max_T_for_safe_set=100,
-    sample_velocity_gaussian=True       # velocity distribution will be truncated normal distribution
+    sample_velocity_gaussian=False       # velocity distribution will be truncated normal distribution
 )
 
 

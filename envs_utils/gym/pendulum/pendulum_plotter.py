@@ -12,8 +12,9 @@ class PendulumPlotter(CustomPlotter):
         self._plot_schedule_by_episode = {'1': ['state_action_plot']}
         self._plot_schedule_by_itr = None
         self._plot_schedule_by_itr = {
-            '0': ['h_contours'],
-            '500': ['h_contours']}
+            # '0': ['h_contours'],
+            '50': ['h_contours']
+        }
 
 
     def _prep_obs(self, obs):
@@ -79,7 +80,7 @@ class PendulumPlotter(CustomPlotter):
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
             funcs_are_torch=True,
-            mesh_density=50,
+            mesh_density=30,
             bounds=(-pi-0.1, pi+0.1)
             # legends=[r'$S_s$',
             #            *[fr'$S_b_{str(i+1)}$' for i in range(len(backup_set_funcs))],

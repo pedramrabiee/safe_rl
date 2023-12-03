@@ -11,32 +11,36 @@ class RLBUSTrainer(BaseTrainer):
         self.sampler.safe_set_eval.late_initialize(init_dict=AttrDict(backup_agent=self.agent.shield))
 
     def _train(self, itr):
-        # self.custom_plotter.dump(itr=itr,
-        #                          dump_dict=dict(
-        #                              backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
-        #                              safe_set_func=self.agent.shield.get_safe_set_for_contour(),
-        #                              viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
-        #                                                              id=id)
-        #                                                      for id in range(self.agent.shield.backup_set_size)]
-        #                          ))
+        self.custom_plotter.dump(itr=itr,
+                                 dump_dict=dict(
+                                     backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
+                                     safe_set_func=self.agent.shield.get_safe_set_for_contour(),
+                                     viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
+                                                                     id=idx)
+                                                             for idx in range(self.agent.shield.backup_set_size)]
+                                 ))
 
         # Pretrain rl backup by sampling desired safe states
         if itr == 0 and self.config.rlbus_params.rl_backup_pretrain_is_on and self.config.rlbus_params.to_shield:
+            self.agent.shield.include_rl_backup_in_h = False
             batch_size = self.config.rlbus_params.rl_backup_pretrain_sample_size
             logger.log('Safe set sampling started...')
-            samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['des_safe'],
+            samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['safe'],
                                                                     batch_size=[batch_size])
 
             self.agent.shield.pre_train(self.obs_proc.proc(samples[0], proc_key='rl_backup'))
 
-            self.custom_plotter.dump(itr=itr,
+            self.agent.shield.include_rl_backup_in_h = True
+
+            self.custom_plotter.dump(dump_key="h_contours",
                                      dump_dict=dict(
                                          backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
                                          safe_set_func=self.agent.shield.get_safe_set_for_contour(),
-                                         viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
-                                                                         id=id)
-                                                                 for id in range(self.agent.shield.backup_set_size)]
+                                         viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
+                                                                         id=idx)
+                                                                 for idx in range(self.agent.shield.backup_set_size)]
                                      ))
+
 
         # Collect samples
         self.sampler.collect_data(itr)
@@ -75,8 +79,9 @@ class RLBUSTrainer(BaseTrainer):
                 (self.config.rlbus_params.rl_backup_train_batch_size == 'all') else\
                 self.config.rlbus_params.rl_backup_train_batch_size
 
-            random_indices = self.agent.shield.get_random_indices(batch_size)
-            samples['rl_backup'] = self.agent.shield.get_samples(random_indices, device=self.config.training_device)
+            # random_indices = self.agent.shield.get_random_indices(batch_size)
+            # samples['rl_backup'] = self.agent.shield.get_samples(random_indices, device=self.config.training_device)
+            samples['rl_backup'] = self.agent.shield.get_customized_samples(batch_size=batch_size, device=self.config.training_device)
 
             logger.dump_tabular(cat_key='rl_backup_iteration', wandb_log=True)
 
