@@ -15,6 +15,7 @@ class BaseAgent:
         self.models_dict = None
         self.optimizers_dict = None
         self.add_tabular = True
+        self._obs_dim = None
 
     def initialize(self, params, init_dict=None):
         raise NotImplementedError
@@ -157,3 +158,7 @@ class BaseAgent:
     @property
     def num_buffer(self):
         return len(self._buffer) if isinstance(self._buffer, list) else 1
+
+    @property
+    def obs_dim(self):
+        return self._obs_dim
