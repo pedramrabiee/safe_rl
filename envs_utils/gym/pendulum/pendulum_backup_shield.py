@@ -56,16 +56,20 @@ class PendulumSafeSet(SafeSetFromBarrierFunction):
         return 1 - torch.norm((torch.atleast_1d(obs) - self.center) / self.bounds, p=self.p_norm, dim=1)
 
     def safe_barrier(self, obs):
-        h, _, _ = self.backup_agent.get_h(obs)
+        if obs.ndim == 1:
+            h, _, _ = self.backup_agent.get_h(obs)
+        else:
+            h = self.backup_agent.get_h_from_batch_of_obs(obs)
         return h
 
-    def _get_obs(self):
+    def _get_obs(self, batch_size):
         # max_speed = self.env.observation_space.high[2]
         max_speed = safe_set_dict.bounds[1]
-        theta = rng.uniform(low=-safe_set_dict.bounds[0], high=safe_set_dict.bounds[0])
-        thetadot = truncnorm.rvs(-1, 1, scale=max_speed) if env_config.sample_velocity_gaussian \
-            else rng.uniform(low=-max_speed, high=max_speed)
-        return np.array([np.cos(theta), np.sin(theta), thetadot])
+        theta = rng.uniform(low=-safe_set_dict.bounds[0], high=safe_set_dict.bounds[0], size=batch_size)
+        thetadot = truncnorm.rvs(-1, 1, scale=max_speed, size=batch_size) if env_config.sample_velocity_gaussian \
+            else rng.uniform(low=-max_speed, high=max_speed, size=batch_size)
+        return np.array([np.cos(theta), np.sin(theta), thetadot]) if batch_size == 1 \
+            else np.vstack([np.cos(theta), np.sin(theta), thetadot]).T
 
 
 class PendulumBackupControl:
@@ -89,7 +93,7 @@ class PendulumBackupControl:
             0] * self.center[0]
 
 
-_backup_sets_dict = dict(c=[0.2, 0.02, 0.02],
+_backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
                          p=[
                              # u_max = 1.5
                              [[0.650, 0.150], [0.150, 0.240]],
@@ -165,7 +169,6 @@ class PendulumObsProcBackupShield(PendulumObsProc):
         super().__init__(env)
 
         self.env = env
-        self._proc_keys_indices = dict()    # Implement in subclasses
 
         self._proc_keys_indices = dict(
             backup_set='_trig_to_theta',
@@ -173,3 +176,5 @@ class PendulumObsProcBackupShield(PendulumObsProc):
             backup_policy='_trig_to_theta',
             shield='_trig_to_theta',
         )
+
+
