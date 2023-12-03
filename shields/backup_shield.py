@@ -109,9 +109,12 @@ class BackupShield(BaseSheild):
 
     def _get_trajs(self, obs):
         trajs = odeint(
-            lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
-                                    for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies)], dim=0),
-            obs.repeat(self._num_backup), self._backup_t_seq).split(self._obs_dim_backup_policy, dim=1)
+            func=lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
+                                         for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies)],
+                                        dim=0),
+            y0=obs.repeat(self._num_backup),
+            t=self._backup_t_seq
+        ).split(self._obs_dim_backup_policy, dim=1)
         return trajs
 
 
@@ -132,7 +135,7 @@ class BackupShield(BaseSheild):
         return h, h_values, h_min_values
 
     # The following methods are used for plotting contours
-    def get_single_traj_for_contour(self, obs, id):
+    def get_trajs_per_id_from_batch_of_obs(self, obs, id):
         obs = obs.flatten()
         trajs = odeint(
             lambda t, y: self.dynamics.dynamics_flat_return(
@@ -140,16 +143,18 @@ class BackupShield(BaseSheild):
                 self.backup_policies[id](y.view(-1, self._obs_dim_backup_policy))), obs, self._backup_t_seq)
         return trajs
 
-    def get_single_h_for_contour(self, obs, id):
-        trajs = self.get_single_traj_for_contour(obs, id)
+    def get_h_per_id_from_batch_of_obs(self, obs, id):
+        trajs = self.get_trajs_per_id_from_batch_of_obs(obs, id)
         h_s = self.safe_set.des_safe_barrier(torch.vstack(torch.split(trajs, self._obs_dim_backup_policy, dim=1)))
         h_s = torch.vstack(h_s.split(trajs.size(0))).t()
         h_b = self.backup_sets[id].safe_barrier(trajs[-1, :].view(-1, self._obs_dim_backup_policy)).view(1, -1)
         h = softmin(torch.vstack((h_s, h_b)), self.params.softmin_gain)
         return h
 
-    def get_h_for_contour(self, obs):
-        h_list = [self.get_single_h_for_contour(obs, id) for id in range(self._num_backup)]
+    def get_h_from_batch_of_obs(self, obs):
+        if not torch.is_tensor(obs):
+            obs = torch.from_numpy(obs)
+        h_list = [self.get_h_per_id_from_batch_of_obs(obs, id) for id in range(self._num_backup)]
         return self._get_softmax_from_h(h_list)
 
     def _get_softmax_from_h(self, h_list):
