@@ -36,9 +36,13 @@ class CustomPlotter:
             self._dump_by_itr_or_episode(episode=episode, dump_dict=dump_dict)
 
         if dump_key is not None:
+            if not isinstance(dump_key, list):
+                dump_key = [dump_key]
             for k in dump_key:
-                assert hasattr(self, k)
-                self._dump_by_key(k)
+                assert hasattr(self, f'dump_{k}')
+                self._dump_by_key(k, dump_dict)
+
+
 
     def _dump_by_itr_or_episode(self, itr=None, episode=None, dump_dict=None):
         plt_sch = None
