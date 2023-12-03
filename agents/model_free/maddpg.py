@@ -10,6 +10,7 @@ from utils.misc import *
 class MADDPGAgent(DDPGAgent):
     # This class is copied from pymarl https://github.com/pedramrabiee/pymarl
     # It has been not tested yet
+    # TODO: resolve the issue with agent id's
     def initialize(self, params, init_dict=None):
 
         # instantiate policy and critic

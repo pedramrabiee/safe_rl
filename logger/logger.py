@@ -104,7 +104,7 @@ def _initialize_tabular():
     # Define CSV file names to be used for different types of tabular data
     csv_file_names = ['episode', 'evaluation_episode',
                       'iteration', 'epoch', 'cbf_epoch',
-                      'dynamics_epoch', 'des_policy_iteration', 'rl_backup_iteration']
+                      'dynamics_epoch', 'des_policy_iteration', 'rl_backup_iteration', 'rl_backup_pretrain_epoch']
 
     # Create a subdirectory within the log directory to store tabular data
     tabular_dir = osp.join(logdir, 'tabular')

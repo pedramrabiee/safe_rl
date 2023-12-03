@@ -12,7 +12,7 @@ class BUSTrainer(BaseTrainer):
                                  dump_dict=dict(
                                      backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
                                      safe_set_func=self.agent.shield.get_safe_set_for_contour(),
-                                     viability_kernel_funcs=[partial(self.agent.shield.get_single_h_for_contour,
+                                     viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
                                                                      id=id)
                                                              for id in range(self.agent.shield.backup_set_size)]
                                  ))

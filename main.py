@@ -54,9 +54,8 @@ if __name__ == "__main__":
             trainer.train()
     except Exception as e:
         # email failure if not in debugging mode
-        logger.notify_failure(e)
+        # logger.notify_failure(e)
         raise e
-    else:
         # email success if not in debugging mode
-        logger.notify_completion()
+        # logger.notify_completion()
 
