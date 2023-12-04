@@ -73,7 +73,9 @@ class RLBUSTrainer(BaseTrainer):
 
         # train rl backup
         if itr % self.config.rlbus_params.rl_backup_update_freq == 0 and self.config.rlbus_params.rl_backup_train_is_on \
-                and self.config.rlbus_params.to_shield:
+                and self.config.rlbus_params.to_shield and\
+                self.sampler.episode_completed >= self.config.rlbus_params.episode_to_start_training_rl_backup:
+
             to_train.append('rl_backup')
             batch_size = self.agent.shield.buffer_size() if \
                 (self.config.rlbus_params.rl_backup_train_batch_size == 'all') else\

@@ -15,6 +15,7 @@ from tqdm import tqdm
 from torch.utils.data import TensorDataset, DataLoader
 from utils.seed import rng
 from attrdict import AttrDict
+import matplotlib.pyplot as plt
 
 
 
@@ -52,6 +53,7 @@ class RLBackupShield(BackupShield):
 
         self.include_rl_backup_in_h = True
         self._backup_horizon = self._backup_t_seq[-1]
+        self._plotter_counter = 0
 
 
     def rl_backup_melt_into_backup_policies(self, obs, **kwargs):
@@ -268,6 +270,14 @@ class RLBackupShield(BackupShield):
             new_t_seq = np.vstack((t_seq[1:], next_t))
             next_rl_obs = np.concatenate((next_rl_obs, new_t_seq), axis=1)
 
+
+        # TODO: remove the following
+
+        if self._plotter_counter % 10 == 0:
+            self.plot_traj(rl_obs)
+
+        self._plotter_counter += 1
+
         # push data to buffer queue
         self._push_to_queue(rl_obs, next_rl_obs, rews.reshape(-1, 1), done.reshape(-1, 1))
 
@@ -311,6 +321,9 @@ class RLBackupShield(BackupShield):
                                                                             traj_time=rl_obs_tensor[:, -1].reshape(-1,1)))
             acs = acs.detach().numpy()
 
+            # Only add actions that are inside safe set to buffer
+            mask = self.safe_set.is_des_safe(rl_obs_tensor)
+
             rl_obs = np.concatenate(
                 (self.obs_proc.proc(rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
                  1 - rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
@@ -322,14 +335,19 @@ class RLBackupShield(BackupShield):
         else:
             acs = action2newbounds(self.rl_backup_melt_into_backup_policies(rl_obs_tensor))
             acs = acs.detach().numpy()
+
+            # Only add actions that are inside safe set to buffer
+            mask = self.safe_set.is_des_safe(rl_obs_tensor)
+
             # Convert rl_obs to
             rl_obs = self.obs_proc.proc(rl_obs, proc_key='backup_policy', reverse=True)
             next_rl_obs = self.obs_proc.proc(next_rl_obs, proc_key='backup_policy', reverse=True)
 
+
         traj_len = self._rew_buf.shape[0]
 
-        self.push_to_buffer((rl_obs, acs, self._rew_buf,
-                             next_rl_obs, self._done_buf, np.array([None] * traj_len)))
+        self.push_to_buffer((rl_obs[mask], acs[mask], self._rew_buf[mask],
+                             next_rl_obs[mask], self._done_buf[mask], np.array([None] * traj_len)[mask]))
 
         # Reset buffer queue
         self._reset_buffer_queue()
@@ -346,6 +364,7 @@ class RLBackupShield(BackupShield):
         samples = dict()
         # First get the entire buffer so that you can remove
         buffer = self.get_buffer(to_tensor=True, device=device)
+
         buffer.done = buffer.done.view(-1, 1)
         del buffer.info
 
@@ -379,7 +398,31 @@ class RLBackupShield(BackupShield):
 
         return AttrDict(samples)
 
+    # DEBUGGING METHODS
 
+    def plot_traj(self, obs):
+        # Convert the torch tensor to a numpy array
+
+        # Extract the first and second columns
+        column1 = obs[:, 0]
+        column2 = obs[:, 1]
+
+        # Plot the first column vs the second column
+        plt.plot(column1, column2)
+
+        # Mark the initial point with 'o' or 'x'
+        plt.scatter(column1[0], column2[0], color='red', marker='o')
+
+        # Set axis limits
+        plt.xlim(-3, 3)
+        plt.ylim(-3, 3)
+
+        # Add labels and title
+        plt.xlabel(r'$\theta$')
+        plt.ylabel(r'$\dot \theta$')
+
+        # Show the plot
+        plt.show()
 
 
 # class BackupDynamicsModule(nn.Module):

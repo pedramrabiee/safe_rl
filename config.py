@@ -259,6 +259,7 @@ class Config:
             rl_backup_pretrain_is_on=True,
             rl_backup_pretrain_sample_size=int(1e4),
             rl_backup_train_is_on=True,
+            episode_to_start_training_rl_backup=5,
             rl_backup_update_freq=5,
             rl_backup_train_batch_size=128,
             to_shield=True,
