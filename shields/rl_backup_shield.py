@@ -372,53 +372,6 @@ class RLBackupShield(BackupShield):
             self._rew_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._rew_buf, rews)]
             self._done_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._done_buf, done)]
 
-    # def compute_ac_push_to_buffer(self):
-    #     if not self.params.rl_backup_train:
-    #         return
-    #     # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
-    #     # Scale to new bounds
-    #     rl_obs = self._obs_buf
-    #     next_rl_obs = self._next_obs_buf
-    #
-    #     rl_obs_tensor = torch.as_tensor(rl_obs)
-    #     if self.params.add_remained_time_to_obs:
-    #
-    #         acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs=rl_obs_tensor[:, :-1],
-    #                                                                         traj_time=rl_obs_tensor[:, -1].reshape(-1,1)))
-    #         acs = acs.detach().numpy()
-    #
-    #         # Only add actions that are inside safe set to buffer
-    #         mask = self.safe_set.is_des_safe(rl_obs_tensor)
-    #
-    #         rl_obs = np.concatenate(
-    #             (self.obs_proc.proc(rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
-    #              1 - rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
-    #             axis=1)
-    #         next_rl_obs = np.concatenate(
-    #             (self.obs_proc.proc(next_rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
-    #              1 - next_rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
-    #             axis=1)
-    #     else:
-    #         acs = action2newbounds(self.rl_backup_melt_into_backup_policies(rl_obs_tensor))
-    #         acs = acs.detach().numpy()
-    #
-    #         # Only add actions that are inside safe set to buffer
-    #         mask = self.safe_set.is_des_safe(rl_obs_tensor)
-    #
-    #         # Convert rl_obs to
-    #         rl_obs = self.obs_proc.proc(rl_obs, proc_key='backup_policy', reverse=True)
-    #         next_rl_obs = self.obs_proc.proc(next_rl_obs, proc_key='backup_policy', reverse=True)
-    #
-    #
-    #     traj_len = self._rew_buf.shape[0]
-    #
-    #     self.push_to_buffer((rl_obs[mask], acs[mask], self._rew_buf[mask],
-    #                          next_rl_obs[mask], self._done_buf[mask], np.array([None] * traj_len)[mask]))
-    #
-    #     # Reset buffer queue
-    #     self._reset_buffer_queue()
-
-
     def compute_ac_push_to_buffer(self):
         if not self.params.rl_backup_train:
             return
