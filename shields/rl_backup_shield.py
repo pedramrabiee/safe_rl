@@ -193,7 +193,8 @@ class RLBackupShield(BackupShield):
         h, h_grad, h_values, h_min_values, h_argmax = self._get_h_grad_h(obs, trajs)
 
         # Add rl-backup trajectory data to buffer
-        self._process_rl_backup_traj_push_to_queue(rl_traj=trajs[-1], rl_h_values=h_values[-1])
+
+        self._process_backup_traj_push_to_queue(trajs=trajs, h_values=h_values)
 
         # TODO: Convert obs back to numpy array if required
         obs.requires_grad_(requires_grad=False)
@@ -231,56 +232,121 @@ class RLBackupShield(BackupShield):
             # Forward propagate for one time step to get the next observation for the last observation in the trajectory
             return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)), y0=last_obs, t=self._backup_t_seq[:2])[-1].detach().numpy()
 
+    def _fwd_prop_for_one_timestep_per_id(self, last_obs, id):
+        if id != self._num_backup - 1:
+            return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[id](y)), y0=last_obs,
+                          t=self._backup_t_seq[:2])[-1].detach().numpy()
+        else:
+            if self.params.add_remained_time_to_obs:
+                # Forward propagate for one time step to get the next observation for the last observation in the trajectory
+                return odeint(func=lambda t, y:
+                self.dynamics.dynamics(y, self.backup_policies[id](y, traj_time=self._backup_t_seq[-1] + t)),
+                              y0=last_obs,
+                              t=self._backup_t_seq[:2])[-1].detach().numpy()
+            else:
+                return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[id](y)), y0=last_obs,
+                              t=self._backup_t_seq[:2])[-1].detach().numpy()
 
-    def _process_rl_backup_traj_push_to_queue(self, rl_traj, rl_h_values):
+
+
+    # def _process_rl_backup_traj_push_to_queue(self, rl_traj, rl_h_values):
+    #     if not self.params.rl_backup_train:
+    #         return
+    #
+    #     traj_len = self._backup_t_seq.size()[0]
+    #
+    #     # Obtain rl obs from trajectory and detach
+    #     rl_obs = rl_traj.detach()
+    #
+    #     # compute next observation from the last observation of rl obs and make next rl obs
+    #     next_rl_ob = self._fwd_prop_for_one_timestep(rl_obs[-1])
+    #     next_rl_obs = np.vstack((rl_obs[1:], next_rl_ob))
+    #
+    #     rl_obs = rl_obs.numpy()
+    #
+    #     # make reward
+    #     # TODO: modify reward
+    #     # rews = np.full(traj_len, -np.abs(rl_h_values.item()))
+    #     rews = np.full(traj_len, rl_h_values.item())
+    #
+    #
+    #     # if self.params.saturate_rl_backup_reward:
+    #     #     rews = np.clip(rews, a_min=-np.inf, a_max=self.params.saturate_rl_backup_at)
+    #     # if self.params.discount_rl_backup_reward:
+    #     #     discount_arr = np.power(self.params.discount_ratio_rl_backup_reward, np.arange(1, len(rews) + 1))
+    #     #     rews = rews * discount_arr
+    #     # make done
+    #     done = np.zeros(traj_len)
+    #     done[-1] = 1
+    #
+    #     if self.params.add_remained_time_to_obs:
+    #         # t_seq = 1 - self._backup_t_seq.unsqueeze(dim=1).numpy() / self._backup_t_seq[-1]
+    #         t_seq = self._backup_t_seq.unsqueeze(dim=1).numpy()
+    #         rl_obs = np.concatenate((rl_obs, t_seq), axis=1)
+    #         next_t = 2 * self._backup_t_seq[-1] - self._backup_t_seq[-2]
+    #         new_t_seq = np.vstack((t_seq[1:], next_t))
+    #         next_rl_obs = np.concatenate((next_rl_obs, new_t_seq), axis=1)
+    #
+    #
+    #     # TODO: remove the following
+    #
+    #     if self._plotter_counter % 10 == 0:
+    #         self.plot_traj(rl_obs)
+    #
+    #     self._plotter_counter += 1
+    #
+    #     # push data to buffer queue
+    #     self._push_to_queue(rl_obs, next_rl_obs, rews.reshape(-1, 1), done.reshape(-1, 1))
+
+    def _process_backup_traj_push_to_queue(self, trajs, h_values):
         if not self.params.rl_backup_train:
             return
 
         traj_len = self._backup_t_seq.size()[0]
 
-        # Obtain rl obs from trajectory and detach
-        rl_obs = rl_traj.detach()
+        obs_list = []
+        next_obs_list = []
+        rew_list = []
+        done_list = []
+
+        for id, (traj, h_value) in enumerate(zip(trajs, h_values)):
+
+            # Obtain obs from trajectory and detach
+            obs = traj.detach()
 
         # compute next observation from the last observation of rl obs and make next rl obs
-        next_rl_ob = self._fwd_prop_for_one_timestep(rl_obs[-1])
-        next_rl_obs = np.vstack((rl_obs[1:], next_rl_ob))
+            next_ob = self._fwd_prop_for_one_timestep_per_id(last_obs=obs[-1], id=id)
+            next_obs = np.vstack((obs[1:], next_ob))
 
-        rl_obs = rl_obs.numpy()
+            obs = obs.numpy()
 
-        # make reward
-        # TODO: modify reward
-        # rews = np.full(traj_len, -np.abs(rl_h_values.item()))
-        rews = np.full(traj_len, rl_h_values.item())
+            # make reward
+            rews = np.full(traj_len, h_value.item())
 
+            done = np.zeros(traj_len)
+            done[-1] = 1
 
-        # if self.params.saturate_rl_backup_reward:
-        #     rews = np.clip(rews, a_min=-np.inf, a_max=self.params.saturate_rl_backup_at)
-        # if self.params.discount_rl_backup_reward:
-        #     discount_arr = np.power(self.params.discount_ratio_rl_backup_reward, np.arange(1, len(rews) + 1))
-        #     rews = rews * discount_arr
-        # make done
-        done = np.zeros(traj_len)
-        done[-1] = 1
+            if id == self._num_backup - 1 and self.params.add_remained_time_to_obs:
+                # t_seq = 1 - self._backup_t_seq.unsqueeze(dim=1).numpy() / self._backup_t_seq[-1]
+                t_seq = self._backup_t_seq.unsqueeze(dim=1).numpy()
+                obs = np.concatenate((obs, t_seq), axis=1)
+                next_t = 2 * self._backup_t_seq[-1] - self._backup_t_seq[-2]
+                new_t_seq = np.vstack((t_seq[1:], next_t))
+                next_obs = np.concatenate((next_obs, new_t_seq), axis=1)
 
-        if self.params.add_remained_time_to_obs:
-            # t_seq = 1 - self._backup_t_seq.unsqueeze(dim=1).numpy() / self._backup_t_seq[-1]
-            t_seq = self._backup_t_seq.unsqueeze(dim=1).numpy()
-            rl_obs = np.concatenate((rl_obs, t_seq), axis=1)
-            next_t = 2 * self._backup_t_seq[-1] - self._backup_t_seq[-2]
-            new_t_seq = np.vstack((t_seq[1:], next_t))
-            next_rl_obs = np.concatenate((next_rl_obs, new_t_seq), axis=1)
+            obs_list.append(obs)
+            next_obs_list.append(next_obs)
+            rew_list.append(rews.reshape(-1, 1))
+            done_list.append(done.reshape(-1, 1))
+            # TODO: remove the following
 
+            # if self._plotter_counter % 10 == 0:
+            #     self.plot_traj(rl_obs)
 
-        # TODO: remove the following
-
-        if self._plotter_counter % 10 == 0:
-            self.plot_traj(rl_obs)
-
-        self._plotter_counter += 1
+            # self._plotter_counter += 1
 
         # push data to buffer queue
-        self._push_to_queue(rl_obs, next_rl_obs, rews.reshape(-1, 1), done.reshape(-1, 1))
-
+        self._push_to_queue(obs_list, next_obs_list, rew_list, done_list)
     def _reset_buffer_queue(self):
         self._obs_buf = None
         self._next_obs_buf = None
@@ -291,7 +357,7 @@ class RLBackupShield(BackupShield):
         if not self.params.rl_backup_train:
             return
 
-        if obs.ndim == 1:
+        if obs[0].ndim == 1:
             obs.unsqueeze(dim=0)
             next_obs.unsqueeze(dim=0)
 
@@ -301,53 +367,108 @@ class RLBackupShield(BackupShield):
             self._rew_buf = rews
             self._done_buf = done
         else:
-            self._obs_buf = np.concatenate((self._obs_buf, obs), axis=0)
-            self._next_obs_buf = np.concatenate((self._next_obs_buf, next_obs), axis=0)
-            self._rew_buf = np.concatenate((self._rew_buf, rews), axis=0)
-            self._done_buf = np.concatenate((self._done_buf, done), axis=0)
+            self._obs_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._obs_buf, obs)]
+            self._next_obs_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._next_obs_buf, next_obs)]
+            self._rew_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._rew_buf, rews)]
+            self._done_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._done_buf, done)]
+
+    # def compute_ac_push_to_buffer(self):
+    #     if not self.params.rl_backup_train:
+    #         return
+    #     # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
+    #     # Scale to new bounds
+    #     rl_obs = self._obs_buf
+    #     next_rl_obs = self._next_obs_buf
+    #
+    #     rl_obs_tensor = torch.as_tensor(rl_obs)
+    #     if self.params.add_remained_time_to_obs:
+    #
+    #         acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs=rl_obs_tensor[:, :-1],
+    #                                                                         traj_time=rl_obs_tensor[:, -1].reshape(-1,1)))
+    #         acs = acs.detach().numpy()
+    #
+    #         # Only add actions that are inside safe set to buffer
+    #         mask = self.safe_set.is_des_safe(rl_obs_tensor)
+    #
+    #         rl_obs = np.concatenate(
+    #             (self.obs_proc.proc(rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
+    #              1 - rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
+    #             axis=1)
+    #         next_rl_obs = np.concatenate(
+    #             (self.obs_proc.proc(next_rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
+    #              1 - next_rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
+    #             axis=1)
+    #     else:
+    #         acs = action2newbounds(self.rl_backup_melt_into_backup_policies(rl_obs_tensor))
+    #         acs = acs.detach().numpy()
+    #
+    #         # Only add actions that are inside safe set to buffer
+    #         mask = self.safe_set.is_des_safe(rl_obs_tensor)
+    #
+    #         # Convert rl_obs to
+    #         rl_obs = self.obs_proc.proc(rl_obs, proc_key='backup_policy', reverse=True)
+    #         next_rl_obs = self.obs_proc.proc(next_rl_obs, proc_key='backup_policy', reverse=True)
+    #
+    #
+    #     traj_len = self._rew_buf.shape[0]
+    #
+    #     self.push_to_buffer((rl_obs[mask], acs[mask], self._rew_buf[mask],
+    #                          next_rl_obs[mask], self._done_buf[mask], np.array([None] * traj_len)[mask]))
+    #
+    #     # Reset buffer queue
+    #     self._reset_buffer_queue()
+
 
     def compute_ac_push_to_buffer(self):
         if not self.params.rl_backup_train:
             return
         # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
         # Scale to new bounds
-        rl_obs = self._obs_buf
-        next_rl_obs = self._next_obs_buf
+        for id, (obs, next_obs, rews, done) in enumerate(zip(self._obs_buf, self._next_obs_buf, self._rew_buf, self._done_buf)):
 
-        rl_obs_tensor = torch.as_tensor(rl_obs)
-        if self.params.add_remained_time_to_obs:
+            obs_tensor = torch.as_tensor(obs)
+            if id != self._num_backup - 1:
+                # it is assumed that backup policies other than the rl backup policy output actions in new action bounds
+                acs = self.backup_policies[id](obs_tensor).detach().numpy()
+                traj_len = rews.shape[0]
+                obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
+                next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
+                self.push_to_buffer((obs, acs, rews, next_obs, done, np.array([None] * traj_len)))
 
-            acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs=rl_obs_tensor[:, :-1],
-                                                                            traj_time=rl_obs_tensor[:, -1].reshape(-1,1)))
-            acs = acs.detach().numpy()
+            else:
 
-            # Only add actions that are inside safe set to buffer
-            mask = self.safe_set.is_des_safe(rl_obs_tensor)
+                if self.params.add_remained_time_to_obs:
+                    acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs=obs_tensor[:, :-1],
+                                                                                    traj_time=obs_tensor[:, -1].reshape(-1, 1)))
+                    acs = acs.detach().numpy()
 
-            rl_obs = np.concatenate(
-                (self.obs_proc.proc(rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
-                 1 - rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
-                axis=1)
-            next_rl_obs = np.concatenate(
-                (self.obs_proc.proc(next_rl_obs[:, :-1], proc_key='backup_policy', reverse=True),
-                 1 - next_rl_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
-                axis=1)
-        else:
-            acs = action2newbounds(self.rl_backup_melt_into_backup_policies(rl_obs_tensor))
-            acs = acs.detach().numpy()
+                    # Only add actions that are inside safe set to buffer
+                    mask = self.safe_set.is_des_safe(obs_tensor)
 
-            # Only add actions that are inside safe set to buffer
-            mask = self.safe_set.is_des_safe(rl_obs_tensor)
+                    obs = np.concatenate(
+                        (self.obs_proc.proc(obs[:, :-1], proc_key='backup_policy', reverse=True),
+                         1 - obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
+                        axis=1)
+                    next_obs = np.concatenate(
+                        (self.obs_proc.proc(next_obs[:, :-1], proc_key='backup_policy', reverse=True),
+                         1 - next_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
+                        axis=1)
+                else:
+                    acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs_tensor))
+                    acs = acs.detach().numpy()
 
-            # Convert rl_obs to
-            rl_obs = self.obs_proc.proc(rl_obs, proc_key='backup_policy', reverse=True)
-            next_rl_obs = self.obs_proc.proc(next_rl_obs, proc_key='backup_policy', reverse=True)
+                    # Only add actions that are inside safe set to buffer
+                    mask = self.safe_set.is_des_safe(obs_tensor)
+
+                    # Convert rl_obs to
+                    obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
+                    next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
 
 
-        traj_len = self._rew_buf.shape[0]
+                traj_len = rews.shape[0]
 
-        self.push_to_buffer((rl_obs[mask], acs[mask], self._rew_buf[mask],
-                             next_rl_obs[mask], self._done_buf[mask], np.array([None] * traj_len)[mask]))
+                self.push_to_buffer((obs[mask], acs[mask], rews[mask],
+                                     next_obs[mask], done[mask], np.array([None] * traj_len)[mask]))
 
         # Reset buffer queue
         self._reset_buffer_queue()
