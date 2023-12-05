@@ -256,7 +256,7 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             # rl backup policy
-            rl_backup_pretrain_is_on=True,
+            rl_backup_pretrain_is_on=False,
             rl_backup_pretrain_sample_size=int(1e4),
             rl_backup_train_is_on=True,
             episode_to_start_training_rl_backup=5,
@@ -295,6 +295,7 @@ class Config:
 
 
     def _get_rl_backup_shield_params(self):
+        import math
         rlbus_params = AttrDict(
             eps_buffer=0.0,
             softmin_gain=100,
@@ -316,7 +317,7 @@ class Config:
             rl_backup_pretrain_epoch=50,
             rl_backup_pretrain_batch_size=64,
             add_remained_time_to_obs=False,
-            sampling_h_cutoff=0,
+            sampling_h_cutoff=-math.inf,
         )
         num_backup_steps = int(rlbus_params.horizon / rlbus_params.backup_timestep) + 1
         backup_t_seq = linspace(0,
