@@ -89,7 +89,6 @@ class RLBUS(BUS):
         for agent in self.agents:
             agent.after_optimize()
 
-
     def on_episode_reset(self, episode):
         for agent in self.agents:
             agent.on_episode_reset(episode)
