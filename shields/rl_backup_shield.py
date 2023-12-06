@@ -54,6 +54,7 @@ class RLBackupShield(BackupShield):
         self.include_rl_backup_in_h = True
         self._backup_horizon = self._backup_t_seq[-1]
         self._plotter_counter = 0
+        self._rl_backup_explore = False
 
 
     def rl_backup_melt_into_backup_policies(self, obs, **kwargs):
@@ -91,9 +92,10 @@ class RLBackupShield(BackupShield):
                 else:
                     new_obs = torch.hstack((new_obs, remained_time.unsqueeze(1) if remained_time.ndim == 1
                     else remained_time))
-            rl_backup_ac, _ = self.rl_backup.step(new_obs)
+            rl_backup_ac, _ = self.rl_backup.step(obs=new_obs, explore=self._rl_backup_explore)
         else:
-            rl_backup_ac, _ = self.rl_backup.step(self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True))
+            rl_backup_ac, _ = self.rl_backup.step(obs=self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True),
+                                                  explore=self._rl_backup_explore)
 
         # it is assumed that rl backup outputs actions in new bounds, scale it back to old bounds
         rl_backup_ac = action2oldbounds(rl_backup_ac)
@@ -221,16 +223,16 @@ class RLBackupShield(BackupShield):
             trajs = super()._get_trajs(obs)
         return trajs
 
-    def _fwd_prop_for_one_timestep(self, last_obs):
-        if self.params.add_remained_time_to_obs:
-            # Forward propagate for one time step to get the next observation for the last observation in the trajectory
-            return odeint(func=lambda t, y:
-            self.dynamics.dynamics(y, self.backup_policies[-1](y, traj_time=self._backup_t_seq[-1]+t)),
-                          y0=last_obs,
-                          t=self._backup_t_seq[:2])[-1].detach().numpy()
-        else:
-            # Forward propagate for one time step to get the next observation for the last observation in the trajectory
-            return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)), y0=last_obs, t=self._backup_t_seq[:2])[-1].detach().numpy()
+    # def _fwd_prop_for_one_timestep(self, last_obs):
+    #     if self.params.add_remained_time_to_obs:
+    #         # Forward propagate for one time step to get the next observation for the last observation in the trajectory
+    #         return odeint(func=lambda t, y:
+    #         self.dynamics.dynamics(y, self.backup_policies[-1](y, traj_time=self._backup_t_seq[-1]+t)),
+    #                       y0=last_obs,
+    #                       t=self._backup_t_seq[:2])[-1].detach().numpy()
+    #     else:
+    #         # Forward propagate for one time step to get the next observation for the last observation in the trajectory
+    #         return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)), y0=last_obs, t=self._backup_t_seq[:2])[-1].detach().numpy()
 
     def _fwd_prop_for_one_timestep_per_id(self, last_obs, id):
         if id != self._num_backup - 1:
@@ -246,57 +248,6 @@ class RLBackupShield(BackupShield):
             else:
                 return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[id](y)), y0=last_obs,
                               t=self._backup_t_seq[:2])[-1].detach().numpy()
-
-
-
-    # def _process_rl_backup_traj_push_to_queue(self, rl_traj, rl_h_values):
-    #     if not self.params.rl_backup_train:
-    #         return
-    #
-    #     traj_len = self._backup_t_seq.size()[0]
-    #
-    #     # Obtain rl obs from trajectory and detach
-    #     rl_obs = rl_traj.detach()
-    #
-    #     # compute next observation from the last observation of rl obs and make next rl obs
-    #     next_rl_ob = self._fwd_prop_for_one_timestep(rl_obs[-1])
-    #     next_rl_obs = np.vstack((rl_obs[1:], next_rl_ob))
-    #
-    #     rl_obs = rl_obs.numpy()
-    #
-    #     # make reward
-    #     # TODO: modify reward
-    #     # rews = np.full(traj_len, -np.abs(rl_h_values.item()))
-    #     rews = np.full(traj_len, rl_h_values.item())
-    #
-    #
-    #     # if self.params.saturate_rl_backup_reward:
-    #     #     rews = np.clip(rews, a_min=-np.inf, a_max=self.params.saturate_rl_backup_at)
-    #     # if self.params.discount_rl_backup_reward:
-    #     #     discount_arr = np.power(self.params.discount_ratio_rl_backup_reward, np.arange(1, len(rews) + 1))
-    #     #     rews = rews * discount_arr
-    #     # make done
-    #     done = np.zeros(traj_len)
-    #     done[-1] = 1
-    #
-    #     if self.params.add_remained_time_to_obs:
-    #         # t_seq = 1 - self._backup_t_seq.unsqueeze(dim=1).numpy() / self._backup_t_seq[-1]
-    #         t_seq = self._backup_t_seq.unsqueeze(dim=1).numpy()
-    #         rl_obs = np.concatenate((rl_obs, t_seq), axis=1)
-    #         next_t = 2 * self._backup_t_seq[-1] - self._backup_t_seq[-2]
-    #         new_t_seq = np.vstack((t_seq[1:], next_t))
-    #         next_rl_obs = np.concatenate((next_rl_obs, new_t_seq), axis=1)
-    #
-    #
-    #     # TODO: remove the following
-    #
-    #     if self._plotter_counter % 10 == 0:
-    #         self.plot_traj(rl_obs)
-    #
-    #     self._plotter_counter += 1
-    #
-    #     # push data to buffer queue
-    #     self._push_to_queue(rl_obs, next_rl_obs, rews.reshape(-1, 1), done.reshape(-1, 1))
 
     def _process_backup_traj_push_to_queue(self, trajs, h_values):
         if not self.params.rl_backup_train:
@@ -383,6 +334,8 @@ class RLBackupShield(BackupShield):
             if id != self._num_backup - 1:
                 # it is assumed that backup policies other than the rl backup policy output actions in new action bounds
                 acs = self.backup_policies[id](obs_tensor).detach().numpy()
+                acs = action2newbounds(acs)
+
                 traj_len = rews.shape[0]
                 obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
                 next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
@@ -456,21 +409,26 @@ class RLBackupShield(BackupShield):
                 break
             #
             # TODO: Do observation process
-            mask = self.get_h_per_id_from_batch_of_obs(obs=self.obs_proc.proc(obs, proc_key='safe_set'), id=self._num_backup - 1) >= self.params.sampling_h_cutoff
-            masked_inds = inds[mask]
+            # mask = self.get_h_per_id_from_batch_of_obs(obs=self.obs_proc.proc(obs, proc_key='safe_set'), id=self._num_backup - 1) >= self.params.sampling_h_cutoff
+            # mask = np.array([True] * inds.shape[0])
+            # masked_inds = inds[mask]
             # Add observation which satisfy the criteria to samples[i]
 
             for k in buffer:
-                samples[k] = torch.vstack((samples[k], buffer[k][masked_inds])) if k in samples \
-                    else buffer[k][masked_inds]
+                # samples[k] = torch.vstack((samples[k], buffer[k][masked_inds])) if k in samples \
+                #     else buffer[k][masked_inds]
+                samples[k] = torch.vstack((samples[k], buffer[k][inds])) if k in samples \
+                    else buffer[k][inds]
 
                 # Remove the ones that are added to samples for unique sampling
                 buffer[k] = np.delete(buffer[k], inds, axis=0)
         for k in samples:
             samples[k] = samples[k][:batch_size]
 
-
         return AttrDict(samples)
+
+    def set_rl_backup_explore(self, status):
+        self._rl_backup_explore = status
 
     # DEBUGGING METHODS
 
