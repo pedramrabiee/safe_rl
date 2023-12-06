@@ -68,6 +68,48 @@ class AgentFactory:
         agent.initialize(params)
         return agent
 
+    def instantiate_td3_agent(self):
+        from agents.model_free.td3 import TD3Agent
+        from buffers.replay_buffer import ReplayBuffer
+
+        agent_info = self._agent_info_from_env()
+
+        agent = TD3Agent(agent_type='TD3',
+                         ac_dim=agent_info['ac_dim'],
+                         ac_lim=dict(low=agent_info['ac_lim_low'],
+                                     high=agent_info['ac_lim_high']),
+                         timestep=agent_info['timestep'],
+                         replay_buffer=ReplayBuffer(self._config.buffer_size),
+                         discrete_action=agent_info['discrete_action'],
+                         obs_proc=self._config.setup['obs_proc'],
+                         custom_plotter=self._config.setup['custom_plotter']
+                         )
+
+        params = self._config.get_agent_params('td3')
+        agent.initialize(params)
+        return agent
+
+    def instantiate_sac_agent(self):
+        from agents.model_free.sac import SACAgent
+        from buffers.replay_buffer import ReplayBuffer
+
+        agent_info = self._agent_info_from_env()
+
+        agent = SACAgent(agent_type='SAC',
+                         ac_dim=agent_info['ac_dim'],
+                         ac_lim=dict(low=agent_info['ac_lim_low'],
+                                     high=agent_info['ac_lim_high']),
+                         timestep=agent_info['timestep'],
+                         replay_buffer=ReplayBuffer(self._config.buffer_size),
+                         discrete_action=agent_info['discrete_action'],
+                         obs_proc=self._config.setup['obs_proc'],
+                         custom_plotter=self._config.setup['custom_plotter']
+                         )
+
+        params = self._config.get_agent_params('sac')
+        agent.initialize(params)
+        return agent
+
     def instantiate_maddpg_agent(self):
         from agents.model_free.maddpg import MADDPGAgent
         from buffers.replay_buffer import ReplayBuffer

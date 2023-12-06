@@ -179,9 +179,9 @@ class Config:
             init_noise_scale=0.3,
             final_noise_scale=0.0,
             # policy network
-            pi_net_kwargs=dict(hidden_dim=16,
+            pi_net_kwargs=dict(hidden_dim=128,
                                num_layers=2,
-                               unit_activation=nn.ELU,
+                               unit_activation=nn.ReLU,
                                out_activation=nn.Tanh,
                                batch_norm=False,
                                layer_norm=False,
@@ -194,7 +194,7 @@ class Config:
             use_clip_grad_norm=True,
             clip_max_norm=0.5,
             # q network
-            q_net_kwargs=dict(hidden_dim=16,
+            q_net_kwargs=dict(hidden_dim=128,
                               num_layers=2,
                               unit_activation=nn.ReLU,
                               out_activation=nn.Identity,
@@ -207,15 +207,42 @@ class Config:
                                 weight_decay=0),
             multi_in_critic=True,
             multi_in_critic_kwargs=dict(in2_cat_layer=1),
-            net_updates_per_iter=5,     # currently only used in ddpg_trainer
+            net_updates_per_iter=5,
         )
         return ddpg_params
+
+    def _get_td3_params(self):
+        ddpg_params = self._get_ddpg_params()
+        td3_specific_params = AttrDict(
+            policy_delay=2,
+            noise_clip_at=0.5,
+            target_noise=0.2,
+        )
+        td3_params = AttrDict(**ddpg_params, **td3_specific_params)
+        return td3_params
+
+    def _get_sac_params(self):
+        ddpg_params = self._get_ddpg_params()
+        sac_specific_params = AttrDict(
+            alpha=0.2
+        )
+        sac_params = AttrDict(**ddpg_params, **sac_specific_params)
+        sac_params.pi_net_kwargs = dict(hidden_dim=128,
+                                        num_layers=2,
+                                        unit_activation=nn.ReLU,
+                                        out_activation=nn.Identity,
+                                        batch_norm=False,
+                                        layer_norm=False,
+                                        batch_norm_first_layer=False,
+                                        out_layer_initialize_small=True)
+
+        return sac_params
 
     def _get_maddpg_params(self):
         ddpg_params = self._get_ddpg_params()
         madddpg_specific_params = AttrDict()
-        self.maddpg_params = AttrDict(**ddpg_params, **madddpg_specific_params)
-        return self.maddpg_params
+        maddpg_params = AttrDict(**ddpg_params, **madddpg_specific_params)
+        return maddpg_params
 
     # Safety Filter
     def _get_sf_params(self):
@@ -255,14 +282,16 @@ class Config:
 
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
+            net_updates_per_iter=5,
             # rl backup policy
             rl_backup_pretrain_is_on=False,
             rl_backup_pretrain_sample_size=int(1e4),
             rl_backup_train_is_on=True,
-            episode_to_start_training_rl_backup=5,
-            rl_backup_update_freq=5,
+            episode_to_start_training_rl_backup=0,
+            rl_backup_update_freq=1,
             rl_backup_train_batch_size=128,
             to_shield=True,
+            rl_backup_explore_episode_delay=5,
             # desired policy
             use_mf_desired_policy=False,
             desired_policy_agent='ddpg',
@@ -308,7 +337,7 @@ class Config:
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
             backup_timestep=0.1,
-            rl_backup_agent='ddpg',
+            rl_backup_agent='sac',
             rl_backup_train=True,
             saturate_rl_backup_reward=True,
             saturate_rl_backup_at=0.0,

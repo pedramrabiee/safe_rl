@@ -1,3 +1,4 @@
+import torch
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from agents.base_agent import BaseAgent
@@ -34,6 +35,10 @@ class DDPGAgent(BaseAgent):
         self.policy_target = hard_copy(self.policy)
         self.critic_target = hard_copy(self.critic)
 
+        # freeze target networks
+        freeze_net(self.policy_target)
+        freeze_net(self.critic_target)
+
         # instantiate optimizers
         self.policy_optimizer = params.pi_optim_cls(self.policy.parameters(), **params.pi_optim_kwargs)
         self.critic_optimizer = params.q_optim_cls(self.critic.parameters(), **params.q_optim_kwargs)
@@ -63,10 +68,13 @@ class DDPGAgent(BaseAgent):
         # process observation to match the models' input requirement
         obs = self.obs_proc.proc(obs, proc_key='mf')
         obs = torch.as_tensor(obs, dtype=torch.float64)
+        obs = obs.unsqueeze(dim=0) if obs.ndim == 1 else obs
+
         if init_phase:
+            # return self.init_phase_step(obs, explore).squeeze(dim=0), None
             return self.init_phase_step(obs, explore), None
 
-        action = self.policy(obs)
+        action = self.policy(obs).squeeze(dim=0)
         if self._discrete_action:   # discrete action
             if explore:
                 action = F.gumbel_softmax(action, hard=True)
@@ -121,16 +129,18 @@ class DDPGAgent(BaseAgent):
         # add log to logger
         logger.add_tabular(optim_info, cat_key='iteration')
 
+        # update target networks
+        with torch.no_grad():
+            polyak_update(target=self.policy_target,
+                          source=self.policy,
+                          tau=self.params.tau)
+            polyak_update(target=self.critic_target,
+                          source=self.critic,
+                          tau=self.params.tau)
+
         return optim_info
 
-    def after_optimize(self):
-        # update target networks
-        polyak_update(target=self.policy_target,
-                      source=self.policy,
-                      tau=self.params.tau)
-        polyak_update(target=self.critic_target,
-                      source=self.critic,
-                      tau=self.params.tau)
+
 
     def _compute_critic_loss(self, sample, critic_loss_dict=None):
         q = self.critic(torch.cat((sample.obs, sample.ac), dim=-1))

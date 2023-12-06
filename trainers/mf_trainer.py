@@ -1,7 +1,7 @@
 from trainers.base_trainer import BaseTrainer
 from logger import logger
 
-class DDPGTrainer(BaseTrainer):
+class MFTrainer(BaseTrainer):
     def _train(self, itr):
         # collect data by running current policy
         self.sampler.collect_data(itr)
