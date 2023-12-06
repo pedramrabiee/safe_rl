@@ -7,6 +7,9 @@ from envs_utils.gym.pendulum.pendulum_configs import env_config, safe_set_dict
 from utils.seed import rng
 from scipy.stats import truncnorm
 from envs_utils.gym.pendulum.pendulum_obs_proc import PendulumObsProc
+from utils.custom_plotter import CustomPlotter
+from logger import logger
+from utils.plot_utils import plot_zero_level_sets
 
 
 class PendulumBackupSet(SafeSetFromBarrierFunction):
@@ -39,7 +42,8 @@ class PendulumBackupSet(SafeSetFromBarrierFunction):
         else:
             raise ValueError('obs must be 1D or 2D tensor')
 
-        return 1 - result / self.c
+        res = 1 - result / self.c
+        return torch.where(res >= 0, res, res / 550)
 
 class PendulumSafeSet(SafeSetFromBarrierFunction):
     def initialize(self, init_dict=None):
@@ -95,6 +99,8 @@ class PendulumBackupControl:
 
 _backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
                          p=[
+                             [[0.625, 0.125], [0.125, 0.125]],
+
                              # u_max = 1.5
                              [[0.650, 0.150], [0.150, 0.240]],
                              [[0.650, 0.150], [0.150, 0.240]],
@@ -178,3 +184,89 @@ class PendulumObsProcBackupShield(PendulumObsProc):
         )
 
 
+class PendulumPlotter(CustomPlotter):
+
+    def __init__(self, obs_proc):
+        super().__init__(obs_proc)
+        self._plot_schedule_by_episode = {'1': ['state_action_plot']}
+        self._plot_schedule_by_itr = None
+        self._plot_schedule_by_itr = {
+            '0': ['h_contours'],
+            '50': ['h_contours']
+        }
+
+
+    def _prep_obs(self, obs):
+        if obs.shape[1] == 3:
+            theta = np.arctan2(obs[..., 1], obs[..., 0])
+            obs = np.hstack([theta, obs[..., 2]])
+        return np.atleast_2d(obs)
+        # logger.push_plot(np.concatenate((state.reshape(1, -1), ac.reshape(1, -1) * scale.ac_old_bounds[1]), axis=1), plt_key="sampler_plots")
+        # logger.push_plot(state.reshape(1, -1), plt_key="sampler_plots", row_append=True)
+
+    # def filter_push_action(self, ac):
+    #     ac, ac_filtered = ac
+    #     logger.push_plot(np.concatenate((ac.reshape(1, -1), ac_filtered.reshape(1, -1)), axis=1), plt_key="sampler_plots")
+
+    def dump_state_action_plot(self, dump_dict):
+        if 'u_backup' in self._data:
+            data = self._make_data_array(['obs', 'ac', 'u_des', 'u_backup'])
+            logger.dump_plot_with_key(
+                data=data,
+                custom_col_config_list=[[0], [1], [2, 3, 4]],
+                plt_key="states_action_plots",
+                filename='states_action_episode_%d' % dump_dict['episode'],
+                columns=['theta', 'theta_dot', 'ac', 'u_des', 'u_backup'],
+                plt_info=dict(
+                    xlabel=r'Timestep',
+                    ylabel=[r'$\theta$',
+                            r'$\dot \theta$',
+                            r'$u$'],
+                    legend=[None,
+                            None,
+                            [r'$u$', r'$u_{\rm d}$', r'$u_{\rm b}$']
+                            ]
+                ))
+            self._empty_data_by_key_list(['obs', 'ac', 'u_des', 'u_backup'])
+            return
+        data = self._make_data_array(['obs', 'ac', 'u_des'])
+        logger.dump_plot_with_key(
+            data=data,
+            custom_col_config_list=[[0], [1], [2, 3]],
+            plt_key="states_action_plots",
+            filename='states_action_episode_%d' % dump_dict['episode'],
+            columns=['theta', 'theta_dot', 'ac', 'u_des'],
+            plt_info=dict(
+                xlabel=r'Timestep',
+                ylabel=[r'$\theta$',
+                        r'$\dot \theta$',
+                        r'$u$'],
+                legend=[None,
+                        None,
+                        [r'$u$', r'$u_{\rm d}$']
+                        ]
+            ))
+        self._empty_data_by_key_list(['obs', 'ac', 'u_des'])
+
+    def dump_h_contours(self, dump_dict):
+        backup_set_funcs = dump_dict['backup_set_funcs']
+        safe_set_func = dump_dict['safe_set_func']
+        viability_kernel_funcs = dump_dict['viability_kernel_funcs']
+
+        S_b_label = r'\mathcal{S}_{\rm b'
+
+        plot_zero_level_sets(
+            functions=[safe_set_func, *backup_set_funcs,
+                       *viability_kernel_funcs],
+            funcs_are_torch=True,
+            mesh_density=30,
+            bounds=(-pi-0.1, pi+0.1)
+            # legends=[r'$S_s$',
+            #            *[fr'$S_b_{str(i+1)}$' for i in range(len(backup_set_funcs))],
+            #            *[fr'$h_{str(i+1)}$' for i in range(len(backup_set_funcs))]],
+            # legends=[r'\mathcal{S}_{\rm s}',
+            #          *[fr'{S_b_label}_{str(i+1)} }}' for i in range(len(backup_set_funcs))],
+            #          *[fr'h_{str(i+1)}' for i in range(len(viability_kernel_funcs))],
+            #          # r'\mathcal{S}'
+            #          ],
+            )

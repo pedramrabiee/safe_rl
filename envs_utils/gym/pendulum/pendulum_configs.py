@@ -75,6 +75,7 @@ env_config = AttrDict(
     m=3/225,
     l=15.0,
     max_torque=1.5,
+    # max_torque=8.0,
     # max_speed=8.0,
     max_speed=np.inf,
     use_wrapper=True,

@@ -102,27 +102,50 @@ class CustomPlotter:
 
 
 
-def get_custom_plotter_cls(train_env):
+def get_custom_plotter_cls(train_env, agent):
+    plotter_cls = None
+
     env_collection = train_env['env_collection']
     nickname = train_env['env_nickname']
 
     parts = nickname.split('_')
     class_name = ''.join(part.capitalize() for part in parts)
 
-    # Construct the module and class names
-    module_name = f'envs_utils.{env_collection}.{nickname}.{nickname}_plotter'
+    # Construct the module and class names: we are looking for plotter_dict in the following module
+    module_address = f'envs_utils.{env_collection}.{nickname}'
+    module_name = f'{module_address}.{nickname}_plotter'
+
     class_name = class_name + "Plotter"
 
     try:
-        custom_plotter_module = importlib.import_module(module_name)
-        custom_plotter_cls = getattr(custom_plotter_module, class_name)
-        return custom_plotter_cls
+        # import the environment's plotter module
+        plotter_module = importlib.import_module(module_name)
+
+        # get the default environemnt's plotter if it exists
+        if hasattr(plotter_module, class_name):
+            plotter_cls = getattr(plotter_module, class_name)
+
+        # get plotter_dict
+        plotter_dict = getattr(plotter_module, 'plotter_dict')
+        # overwrite plotter_cls if agent is in plotter_dict
+        if agent in plotter_dict:
+            # if the agent listed in plotter_dict, then look for the module and
+            # class name of the plotter
+            plotter_module_name = plotter_dict[agent]['module']
+            plotter_module_name = f'{module_address}.{plotter_module_name}'
+
+            class_name = plotter_dict[agent]['cls_name']
+
+            # import the plotter class corresponding to the agent
+            plotter_module = importlib.import_module(plotter_module_name)
+            plotter_cls = getattr(plotter_module, class_name)
+        return plotter_cls if plotter_cls is not None else CustomPlotter
     except ImportError:
         # Handle cases where the module or class is not found
-        return CustomPlotter
+        return plotter_cls if plotter_cls is not None else CustomPlotter
     except AttributeError:
         # Handle cases where the class is not found in the module
-        return CustomPlotter
+        return plotter_cls if plotter_cls is not None else CustomPlotter
 
 
 

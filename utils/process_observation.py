@@ -198,12 +198,12 @@ def get_obsproc_cls(train_env, agent):
             # import the observation processor class corresponding to the agent
             obs_proc_module = importlib.import_module(obs_proc_module_name)
             obs_proc_cls = getattr(obs_proc_module, class_name)
-        return obs_proc_cls
+        return obs_proc_cls if obs_proc_cls is not None else ObsProc
     except ImportError:
         print('Import Error: ObsProc is used as observation processor')
         # Handle cases where the module or class is not found
-        return obs_proc_cls if obs_proc_cls else ObsProc
+        return obs_proc_cls if obs_proc_cls is not None else ObsProc
     except AttributeError:
         print('Attribute Error: ObsProc is used as observation processor')
         # Handle cases where the class is not found in the module
-        return obs_proc_cls if obs_proc_cls else ObsProc
+        return obs_proc_cls if obs_proc_cls is not None else ObsProc

@@ -25,7 +25,7 @@ def make_setup(env_nickname, agent, load_config_path=None):
                     # if you wish to load the env_config file. otherwise, set it None
                     )
 
-    setup['custom_plotter_cls'] = get_custom_plotter_cls(setup['train_env'])
+    setup['custom_plotter_cls'] = get_custom_plotter_cls(setup['train_env'], agent=agent)
     setup['reward_gen'] = get_reward_gen(setup['train_env'])
     setup['obs_proc_cls'] = get_obsproc_cls(setup['train_env'], agent=agent)
 
