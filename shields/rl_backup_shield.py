@@ -336,6 +336,10 @@ class RLBackupShield(BackupShield):
                 acs = self.backup_policies[id](obs_tensor).detach().numpy()
                 acs = action2newbounds(acs)
 
+                epsilon = np.random.randn(*acs.shape) * 0.05
+                epsilon = np.clip(epsilon, -0.02, 0.02)
+                acs = np.clip(acs + epsilon, self._ac_lim['low'], self._ac_lim['high'])
+
                 traj_len = rews.shape[0]
                 obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
                 next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
