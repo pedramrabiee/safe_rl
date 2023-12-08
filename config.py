@@ -283,12 +283,12 @@ class Config:
             net_updates_per_iter=5,
             shield_agent='rl_backup_shield_explorer',
             # rl backup policy
-            rl_backup_pretrain_is_on=False,
+            rl_backup_pretrain_is_on=True,
             rl_backup_pretrain_sample_size=int(1e4),
             rl_backup_train_is_on=True,
             episode_to_start_training_rl_backup=0,
             rl_backup_update_freq=1,
-            rl_backup_train_batch_size=128,
+            rl_backup_train_batch_size=256,
             to_shield=True,
             rl_backup_explore_episode_delay=5,
             # desired policy

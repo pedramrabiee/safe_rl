@@ -50,11 +50,11 @@ class RLBUSTrainer(BaseTrainer):
 
         self.sampler.collect_data(itr)
         # Add shield's rl backup data to its buffer
-        self.agent.shield.set_rl_backup_explore(True)
+        # self.agent.shield.set_rl_backup_explore(True)
         if self.config.rlbus_params.to_shield:
             self.agent.shield.compute_ac_push_to_buffer(self.sampler.episode_completed)
         # Set rl backup exploration off
-        self.agent.shield.set_rl_backup_explore(False)
+        # self.agent.shield.set_rl_backup_explore(False)
 
 
         # TRAIN
