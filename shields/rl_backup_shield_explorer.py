@@ -18,6 +18,9 @@ class RLBackupShieldExplorer(RLBackupShield):
                                          rl_backup_horizon,
                                          int(rl_backup_horizon / self.params.backup_timestep) + 1)
 
+        self.backup_dilusion_rate = 0.97
+        self.dilusion_rate = 0.8
+
     def rl_backup_melt_from_des_policy(self, t, obs, **kwargs):
         t_switch = (1 - self.params.des_policy_melt_region_ratio) * self.params.des_policy_horizon
         u_des = lambda x: action2oldbounds(self.desired_policy.act(x)) if self.is_mf_desired_policy else self.desired_policy.act(x)
@@ -92,7 +95,7 @@ class RLBackupShieldExplorer(RLBackupShield):
         return trajs
 
     @torch.no_grad()
-    def compute_ac_push_to_buffer(self):
+    def compute_ac_push_to_buffer(self, episode):
         if not self.params.rl_backup_train:
             return
         # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
@@ -109,7 +112,10 @@ class RLBackupShieldExplorer(RLBackupShield):
                 traj_len = rews.shape[0]
                 obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
                 next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
-                self.push_to_buffer((obs, acs, rews, next_obs, done, np.array([None] * traj_len)))
+
+
+                mask = np.random.choice(obs.shape[0], int(obs.shape[0] * self.dilusion_rate * self.backup_dilusion_rate ** episode), replace=False)
+                self.push_to_buffer((obs[mask], acs[mask], rews[mask], next_obs[mask], done[mask], np.array([None] * traj_len)[mask]))
 
             else:
                     acs = action2newbounds(self.rl_backup_melt_from_des_policy(torch.as_tensor(traj_time), obs_tensor))
@@ -117,16 +123,31 @@ class RLBackupShieldExplorer(RLBackupShield):
 
                     # Only add actions that are inside safe set to buffer
                     mask = self.safe_set.is_des_safe(obs_tensor)
+                    obs = obs[mask]
+                    next_obs = next_obs[mask]
+                    rews = rews[mask]
+                    done = done[mask]
+
+                    mask = np.random.choice(obs.shape[0],
+                                            int(obs.shape[0] * self.dilusion_rate),
+                                            replace=False)
+                    obs = obs[mask]
+                    next_obs = next_obs[mask]
+                    rews = rews[mask]
+                    done = done[mask]
 
                     # Convert rl_obs to
                     obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
                     next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
 
-
                     traj_len = rews.shape[0]
 
-                    self.push_to_buffer((obs[mask], acs[mask], rews[mask],
-                                         next_obs[mask], done[mask], np.array([None] * traj_len)[mask]))
+                    # self.push_to_buffer((obs[mask], acs[mask], rews[mask],
+                    #                      next_obs[mask], done[mask], np.array([None] * traj_len)[mask]))
+
+                    self.push_to_buffer((obs, acs, rews,
+                                         next_obs, done, np.array([None] * traj_len)))
+
 
         # Reset buffer queue
         self._reset_buffer_queue()
@@ -179,7 +200,7 @@ class RLBackupShieldExplorer(RLBackupShield):
             #     self.plot_traj(rl_obs)
 
             # self._plotter_counter += 1
-            self._push_to_queue(obs_list, next_obs_list, rew_list, done_list, traj_time=traj_time_list)
+        self._push_to_queue(obs_list, next_obs_list, rew_list, done_list, traj_time=traj_time_list)
 
     def _fwd_prop_for_one_timestep_per_id(self, last_obs, id):
         if id != self._num_backup - 1:

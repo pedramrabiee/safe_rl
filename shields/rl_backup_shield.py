@@ -325,7 +325,7 @@ class RLBackupShield(BackupShield):
             self._done_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._done_buf, done)]
 
     @torch.no_grad()
-    def compute_ac_push_to_buffer(self):
+    def compute_ac_push_to_buffer(self, episode):
         if not self.params.rl_backup_train:
             return
         # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
