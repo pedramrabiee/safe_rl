@@ -18,8 +18,8 @@ class RLBackupShieldExplorer(RLBackupShield):
                                          rl_backup_horizon,
                                          int(rl_backup_horizon / self.params.backup_timestep) + 1)
 
-        self.backup_dilusion_rate = 0.97
-        self.dilusion_rate = 0.8
+        self.backup_dilusion_rate = 1.0
+        self.dilusion_rate = 1.0
 
     def rl_backup_melt_from_des_policy(self, t, obs, **kwargs):
         t_switch = (1 - self.params.des_policy_melt_region_ratio) * self.params.des_policy_horizon
@@ -108,6 +108,10 @@ class RLBackupShieldExplorer(RLBackupShield):
                 # it is assumed that backup policies other than the rl backup policy output actions in new action bounds
                 acs = self.backup_policies[id](obs_tensor).detach().numpy()
                 acs = action2newbounds(acs)
+
+                epsilon = np.random.randn(*acs.shape) * 0.05
+                epsilon = np.clip(epsilon, -0.02, 0.02)
+                acs = np.clip(acs + epsilon, self._ac_lim['low'], self._ac_lim['high'])
 
                 traj_len = rews.shape[0]
                 obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
