@@ -10,6 +10,7 @@ from envs_utils.gym.pendulum.pendulum_obs_proc import PendulumObsProc
 from utils.custom_plotter import CustomPlotter
 from logger import logger
 from utils.plot_utils import plot_zero_level_sets
+import matplotlib.pyplot as plt
 
 
 class PendulumBackupSet(SafeSetFromBarrierFunction):
@@ -261,15 +262,18 @@ class PendulumPlotter(CustomPlotter):
         backup_set_funcs = dump_dict['backup_set_funcs']
         safe_set_func = dump_dict['safe_set_func']
         viability_kernel_funcs = dump_dict['viability_kernel_funcs']
+        buffer_data = dump_dict['buffer_data']
 
         S_b_label = r'\mathcal{S}_{\rm b'
 
-        plot_zero_level_sets(
+        fig, ax = plot_zero_level_sets(
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
             funcs_are_torch=True,
-            mesh_density=30,
-            bounds=(-pi-0.1, pi+0.1)
+            mesh_density=100,
+            bounds=(-pi-0.1, pi+0.1),
+            break_in_batch=1000,
+            plt_show=False
             # legends=[r'$S_s$',
             #            *[fr'$S_b_{str(i+1)}$' for i in range(len(backup_set_funcs))],
             #            *[fr'$h_{str(i+1)}$' for i in range(len(backup_set_funcs))]],
@@ -279,3 +283,8 @@ class PendulumPlotter(CustomPlotter):
             #          # r'\mathcal{S}'
             #          ],
             )
+        if buffer_data is not None:
+            buffer_data = self.obs_proc.proc(buffer_data, proc_key='safe_set')
+            ax.scatter(buffer_data[:, 0], buffer_data[:, 1], marker='.', color='red', s=10)
+        plt.show()
+

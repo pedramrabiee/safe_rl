@@ -12,13 +12,15 @@ class RLBUSTrainer(BaseTrainer):
 
 
     def _train(self, itr):
+        buffer = self.agent.shield.get_buffer()
         self.custom_plotter.dump(itr=itr,
                                  dump_dict=dict(
                                      backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
                                      safe_set_func=self.agent.shield.get_safe_set_for_contour(),
                                      viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
                                                                      id=idx)
-                                                             for idx in range(self.agent.shield.backup_set_size)]
+                                                             for idx in range(self.agent.shield.backup_set_size)],
+                                     buffer_data=buffer.obs
                                  ))
 
         # PRETRAIN rl backup by sampling desired safe states
@@ -33,14 +35,17 @@ class RLBUSTrainer(BaseTrainer):
 
             self.agent.shield.include_rl_backup_in_h = True
 
+            buffer = self.agent.shield.get_buffer()
             self.custom_plotter.dump(dump_key="h_contours",
                                      dump_dict=dict(
                                          backup_set_funcs=self.agent.shield.get_backup_sets_for_contour(),
                                          safe_set_func=self.agent.shield.get_safe_set_for_contour(),
                                          viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
                                                                          id=idx)
-                                                                 for idx in range(self.agent.shield.backup_set_size)]
+                                                                 for idx in range(self.agent.shield.backup_set_size)],
+                                         buffer_data=buffer.obs
                                      ))
+
 
 
         # COLLECT SAMPLES

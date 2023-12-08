@@ -4,7 +4,7 @@ from matplotlib.cm import get_cmap
 import torch
 
 def plot_contour(ax, func, x_bounds=(-5, 5), y_bounds=(-5, 5), mesh_density=200,
-                 level_sets=[0], colors='r', funcs_are_torch=False):
+                 level_sets=[0], colors='r', funcs_are_torch=False, break_in_batch=0):
     if funcs_are_torch:
         # Create a grid of x and y values
         x = torch.linspace(x_bounds[0], x_bounds[1], mesh_density)
@@ -26,8 +26,15 @@ def plot_contour(ax, func, x_bounds=(-5, 5), y_bounds=(-5, 5), mesh_density=200,
         Y_flat = Y.flatten()
         input = np.vstack((X_flat, Y_flat)).T
     # Evaluate the function on the meshgrid
-
-    Z = func(input)
+    if break_in_batch == 0:
+        Z = func(input)
+    else:
+        if funcs_are_torch:
+            Z = [func(inp) for inp in input.split(break_in_batch)]
+            Z = torch.hstack(Z)
+        else:
+            Z = [func(inp) for inp in np.array_split(input, break_in_batch)]
+            Z = np.hstack(Z)
 
     if funcs_are_torch:
         X = X.detach().numpy()
@@ -42,7 +49,8 @@ def plot_contour(ax, func, x_bounds=(-5, 5), y_bounds=(-5, 5), mesh_density=200,
 
 def plot_zero_level_sets(functions, bounds=(-5, 5), mesh_density=200,
                          x_label=r'$x$', y_label=r'$y$', legends=None,
-                         cmap='tab10', font_size=12, funcs_are_torch=False):
+                         cmap='tab10', font_size=12, funcs_are_torch=False,
+                         break_in_batch=0, plt_show=True):
     # if legends is None:
         # legends = [f.__name__ for f in functions]
 
@@ -56,7 +64,8 @@ def plot_zero_level_sets(functions, bounds=(-5, 5), mesh_density=200,
     contours = [plot_contour(ax, func, x_bounds=bounds,
                              y_bounds=bounds, mesh_density=mesh_density,
                              level_sets=[0], colors=[color],
-                             funcs_are_torch=funcs_are_torch)
+                             funcs_are_torch=funcs_are_torch,
+                             break_in_batch=break_in_batch)
                 for func, color in zip(functions, colors)]
 
 
@@ -77,7 +86,10 @@ def plot_zero_level_sets(functions, bounds=(-5, 5), mesh_density=200,
         for contour, legend in zip(contours, legends):
             contour.collections[0].set_label(legend)
         ax.legend()
-    plt.show()
+    if plt_show:
+        plt.show()
+    else:
+        return fig, ax
 
 
 
