@@ -24,6 +24,12 @@ class RLBUS(BUS):
             self.optimizers_dict['desired_policy'] = self.desired_policy.optimizers_dict
             self.agents.append(self.desired_policy)
 
+    #     Pass desired policy to shield
+        self.shield.set_desired_policy(desired_policy=self.desired_policy,
+                                       is_mf_policy=self.params.use_mf_desired_policy)
+
+
+
     def step(self, obs, explore=False, init_phase=False):
         # The 'shield' method expects unnormalized actions (i.e., old action bounds), while the 'step' method is
         # designed to return normalized actions (i.e., new action bounds).
@@ -34,7 +40,7 @@ class RLBUS(BUS):
             ac_des = action2oldbounds(ac_des)
         else:
             # it is assumed that the designed desired policy outputs in the old action bounds (unwrapped)
-            ac_des = self.desired_policy.act(obs)
+            ac_des = self.desired_policy.act(obs).detach().numpy()
 
         if self.params.to_shield:
             ac_shield = self.shield.shield(obs, ac_des)

@@ -8,7 +8,7 @@ from utils.cbf_utils import min_intervention_qp_box_constrained
 import numpy as np
 from dynamics.torch_dynamics import get_torch_dyn
 import importlib
-from attrdict import AttrDict
+from torch import linspace
 
 class BackupShield(BaseSheild):
     """
@@ -26,7 +26,11 @@ class BackupShield(BaseSheild):
         assert len(self.backup_policies) == len(self.backup_sets),\
             'The number of backup sets does not match the number of backup policies'
         self._num_backup = len(self.backup_policies)
-        self._backup_t_seq = params.backup_t_seq
+
+        self._backup_t_seq = linspace(0,
+                                      self.params.horizon,
+                                      int(self.params.horizon / self.params.backup_timestep) + 1)
+
         self._ac_bounds = init_dict['ac_bounds']
         self._old_bounds = _from_ac_lim_to_bounds_array(self._ac_bounds['old'])
         self._obs_dim_backup_policy = self.obs_proc.obs_dim(proc_key='backup_policy')

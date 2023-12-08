@@ -213,9 +213,10 @@ class RLBackupShield(BackupShield):
                 t=self._backup_t_seq
             ).split(self._obs_dim_backup_policy, dim=1)
 
+            # TODO: Check and Test this case
             rl_backup_trajs = odeint(
                 func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y, traj_time=t)),
-                y0=obs.repeat(self._num_backup - 1),
+                y0=obs,
                 t=self._backup_t_seq)
 
             trajs = (*backup_trajs, rl_backup_trajs)
@@ -304,7 +305,7 @@ class RLBackupShield(BackupShield):
         self._rews_buf = None
         self._done_buf = None
 
-    def _push_to_queue(self, obs, next_obs, rews, done):
+    def _push_to_queue(self, obs, next_obs, rews, done, **kwargs):
         if not self.params.rl_backup_train:
             return
 
@@ -323,6 +324,7 @@ class RLBackupShield(BackupShield):
             self._rew_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._rew_buf, rews)]
             self._done_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._done_buf, done)]
 
+    @torch.no_grad()
     def compute_ac_push_to_buffer(self):
         if not self.params.rl_backup_train:
             return
@@ -336,9 +338,9 @@ class RLBackupShield(BackupShield):
                 acs = self.backup_policies[id](obs_tensor).detach().numpy()
                 acs = action2newbounds(acs)
 
-                epsilon = np.random.randn(*acs.shape) * 0.05
-                epsilon = np.clip(epsilon, -0.02, 0.02)
-                acs = np.clip(acs + epsilon, self._ac_lim['low'], self._ac_lim['high'])
+                # epsilon = np.random.randn(*acs.shape) * 0.05
+                # epsilon = np.clip(epsilon, -0.02, 0.02)
+                # acs = np.clip(acs + epsilon, self._ac_lim['low'], self._ac_lim['high'])
 
                 traj_len = rews.shape[0]
                 obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
@@ -433,6 +435,10 @@ class RLBackupShield(BackupShield):
 
     def set_rl_backup_explore(self, status):
         self._rl_backup_explore = status
+
+    def set_desired_policy(self, desired_policy, is_mf_policy):
+        self.desired_policy = desired_policy
+        self.is_mf_desired_policy = is_mf_policy
 
     # DEBUGGING METHODS
 

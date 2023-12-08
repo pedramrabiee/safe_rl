@@ -6,8 +6,6 @@ from controller.cem_controller import CEMController
 from attrdict import AttrDict
 from utils.misc import deep_update
 import importlib
-from torch import linspace
-
 class Config:
     def __init__(self, config_override_dict=None):
         self.config_override_dict = config_override_dict
@@ -283,6 +281,7 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             net_updates_per_iter=5,
+            shield_agent='rl_backup_shield_explorer',
             # rl backup policy
             rl_backup_pretrain_is_on=False,
             rl_backup_pretrain_sample_size=int(1e4),
@@ -315,11 +314,6 @@ class Config:
             horizon=1.5,
             backup_timestep=0.1
         )
-        num_backup_steps = int(bus_params.horizon/bus_params.backup_timestep) + 1
-        backup_t_seq = linspace(0,
-                                bus_params.horizon,
-                                num_backup_steps)
-        bus_params.backup_t_seq = backup_t_seq
         return bus_params
 
 
@@ -348,11 +342,16 @@ class Config:
             add_remained_time_to_obs=False,
             sampling_h_cutoff=-math.inf,
         )
-        num_backup_steps = int(rlbus_params.horizon / rlbus_params.backup_timestep) + 1
-        backup_t_seq = linspace(0,
-                                rlbus_params.horizon,
-                                num_backup_steps)
-        rlbus_params.backup_t_seq = backup_t_seq
+        return rlbus_params
+
+    def _get_rl_backup_shield_explorer_params(self):
+        rl_backup_shield_params = self._get_rl_backup_shield_params()
+        explorer_specific_params = AttrDict(
+            des_policy_horizon=0.5,
+            des_policy_melt_region_ratio=0.25,
+        )
+        rlbus_params = AttrDict(**rl_backup_shield_params, **explorer_specific_params)
+
         return rlbus_params
 
     # CBF Shield

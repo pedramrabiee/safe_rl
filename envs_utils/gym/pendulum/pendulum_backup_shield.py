@@ -168,7 +168,7 @@ def get_backup_policies():
 
 class PendulumDesiredPolicy:
     def act(self, obs):
-        return np.array([0.0])
+        return torch.tensor([0.0]) if obs.ndim == 1 else torch.zeros(obs.size(0), 1)
 
 class PendulumObsProcBackupShield(PendulumObsProc):
     def __init__(self, env):
