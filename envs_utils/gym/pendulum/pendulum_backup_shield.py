@@ -122,7 +122,7 @@ _backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
 _num_backup_sets_to_consider = 1
 # _backup_set_order = [1, 2, 3]
 # _backup_set_order = [1, 2, 3]
-_backup_set_order = [1]
+_backup_set_order = [2]
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
     for i in range(len(backup_sets)):
@@ -201,7 +201,7 @@ class PendulumPlotter(CustomPlotter):
         self._plot_schedule_by_episode = {'1': ['state_action_plot']}
         self._plot_schedule_by_itr = None
         self._plot_schedule_by_itr = {
-            '0': ['h_contours'],
+            # '0': ['h_contours'],
             '50': ['h_contours']
         }
 
@@ -285,6 +285,6 @@ class PendulumPlotter(CustomPlotter):
             )
         if buffer_data is not None:
             buffer_data = self.obs_proc.proc(buffer_data, proc_key='safe_set')
-            ax.scatter(buffer_data[:, 0], buffer_data[:, 1], marker='.', color='red', s=10)
+            ax.scatter(buffer_data[:, 0], buffer_data[:, 1], marker='.', color='red', s=0.02)
         plt.show()
 

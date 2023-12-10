@@ -281,7 +281,7 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             net_updates_per_iter=5,
-            shield_agent='rl_backup_shield_explorer',
+            shield_agent='rl_backup_shield',
             # rl backup policy
             rl_backup_pretrain_is_on=False,
             rl_backup_pretrain_sample_size=int(1e4),
@@ -290,10 +290,10 @@ class Config:
             rl_backup_update_freq=1,
             rl_backup_train_batch_size=256,
             to_shield=True,
-            rl_backup_explore_episode_delay=5,
+            # rl_backup_explore_episode_delay=5,
             # desired policy
-            use_mf_desired_policy=False,
-            desired_policy_agent='ddpg',
+            use_mf_desired_policy=True,
+            desired_policy_agent='sac',
             desired_policy_train_in_on=True,
             desired_policy_update_freq=1,
             desired_policy_train_batch_size=128,
@@ -326,7 +326,7 @@ class Config:
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
-            horizon=2.5,
+            horizon=1.5,
             melt_law_gain=1000,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
@@ -341,6 +341,8 @@ class Config:
             rl_backup_pretrain_batch_size=64,
             add_remained_time_to_obs=False,
             sampling_h_cutoff=-math.inf,
+            add_backup_trajs_to_buf=False,
+            add_unsafe_data_to_buf=True,
         )
         return rlbus_params
 

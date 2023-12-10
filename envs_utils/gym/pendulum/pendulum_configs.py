@@ -7,7 +7,7 @@ config = {
     'init': {
         'debugging_mode': False,
         'use_custom_env': True,
-        'max_episode_time': 2.0,
+        'max_episode_time': 5.0,
         'max_episode_time_eval': 10.0,
         'plot_custom_figs': True,
         'save_custom_figs_data': False,
