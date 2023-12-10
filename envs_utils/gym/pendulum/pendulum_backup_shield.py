@@ -44,7 +44,7 @@ class PendulumBackupSet(SafeSetFromBarrierFunction):
             raise ValueError('obs must be 1D or 2D tensor')
 
         res = 1 - result / self.c
-        return torch.where(res >= 0, res, res / 550)
+        return torch.where(res >= 0, res, res)
 
 class PendulumSafeSet(SafeSetFromBarrierFunction):
     def initialize(self, init_dict=None):
@@ -270,7 +270,7 @@ class PendulumPlotter(CustomPlotter):
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
             funcs_are_torch=True,
-            mesh_density=100,
+            mesh_density=30,
             bounds=(-pi-0.1, pi+0.1),
             break_in_batch=1000,
             plt_show=False

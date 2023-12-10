@@ -9,6 +9,7 @@ class RLBUSTrainer(BaseTrainer):
         self.agent.shield.safe_set.late_initialize(init_dict=AttrDict(backup_agent=self.agent.shield))
         self.sampler.safe_set.late_initialize(init_dict=AttrDict(backup_agent=self.agent.shield))
         self.sampler.safe_set_eval.late_initialize(init_dict=AttrDict(backup_agent=self.agent.shield))
+        self._episode_train_by_sampling = -1
 
 
     def _train(self, itr):
@@ -22,6 +23,20 @@ class RLBUSTrainer(BaseTrainer):
                                                              for idx in range(self.agent.shield.backup_set_size)],
                                      buffer_data=buffer.obs
                                  ))
+
+        if self.config.rlbus_params.train_by_sampling_from_state_space and\
+                self.sampler.episode_completed > self._episode_train_by_sampling and\
+                self.sampler.episode_completed > 10:
+            batch_size = self.config.rlbus_params.train_by_sampling_from_state_space_batch_size
+
+            samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['safe'],
+                                                                    batch_size=[batch_size])
+
+            self.agent.shield.add_batch_of_data_to_buffer_from_obs(obs=self.obs_proc.proc(samples[0],
+                                                                                          proc_key='shield'))
+
+            self._episode_train_by_sampling += 1
+
 
         # PRETRAIN rl backup by sampling desired safe states
         if itr == 0 and self.config.rlbus_params.rl_backup_pretrain_is_on and self.config.rlbus_params.to_shield:

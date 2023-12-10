@@ -177,7 +177,7 @@ class Config:
             init_noise_scale=0.3,
             final_noise_scale=0.0,
             # policy network
-            pi_net_kwargs=dict(hidden_dim=128,
+            pi_net_kwargs=dict(hidden_dim=256,
                                num_layers=2,
                                unit_activation=nn.ReLU,
                                out_activation=nn.Tanh,
@@ -192,7 +192,7 @@ class Config:
             use_clip_grad_norm=True,
             clip_max_norm=0.5,
             # q network
-            q_net_kwargs=dict(hidden_dim=128,
+            q_net_kwargs=dict(hidden_dim=512,
                               num_layers=2,
                               unit_activation=nn.ReLU,
                               out_activation=nn.Identity,
@@ -212,7 +212,7 @@ class Config:
     def _get_td3_params(self):
         ddpg_params = self._get_ddpg_params()
         td3_specific_params = AttrDict(
-            policy_delay=2,
+            policy_delay=10,
             noise_clip_at=0.5,
             target_noise=0.2,
         )
@@ -280,7 +280,7 @@ class Config:
 
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
-            net_updates_per_iter=5,
+            net_updates_per_iter=20,
             shield_agent='rl_backup_shield',
             # rl backup policy
             rl_backup_pretrain_is_on=False,
@@ -288,8 +288,10 @@ class Config:
             rl_backup_train_is_on=True,
             episode_to_start_training_rl_backup=0,
             rl_backup_update_freq=1,
-            rl_backup_train_batch_size=256,
+            rl_backup_train_batch_size=512,
             to_shield=True,
+            train_by_sampling_from_state_space=True,
+            train_by_sampling_from_state_space_batch_size=250,
             # rl_backup_explore_episode_delay=5,
             # desired policy
             use_mf_desired_policy=True,
@@ -326,8 +328,8 @@ class Config:
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
-            horizon=1.5,
-            melt_law_gain=1000,
+            horizon=2.5,
+            melt_law_gain=100,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
             backup_timestep=0.1,
@@ -341,8 +343,9 @@ class Config:
             rl_backup_pretrain_batch_size=64,
             add_remained_time_to_obs=False,
             sampling_h_cutoff=-math.inf,
-            add_backup_trajs_to_buf=False,
+            add_backup_trajs_to_buf=True,
             add_unsafe_data_to_buf=True,
+            ode_method_for_explor_mode='euler'
         )
         return rlbus_params
 
