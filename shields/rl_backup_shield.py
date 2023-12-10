@@ -18,7 +18,6 @@ from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
 
-
 class RLBackupShield(BackupShield):
     def initialize(self, params, init_dict=None):
         super().initialize(params, init_dict)
@@ -73,9 +72,6 @@ class RLBackupShield(BackupShield):
         backup_policies_vals = [policy(obs) for policy in self.backup_policies[:-1]]
         h = [backup_set.safe_barrier(obs) for backup_set in self.backup_sets[:-1]]
         beta = self.melt_law(h)
-        # FIXME: step method should be changed to act. However, the problem is that act method is
-        #  not determinisitc if explore=True. Then, later when you want to store the rl date to the buffer
-        #  and you are calling rl_backup_melt_into_backup_policies method, you will get different actions
         if self.params.add_remained_time_to_obs:
             if 'traj_time' in kwargs:
                 # normalize traj time by horizon
@@ -104,7 +100,10 @@ class RLBackupShield(BackupShield):
         stacked_weighted_bkps = torch.stack(weighted_bpks, dim=0)
         blended_bkps = torch.sum(stacked_weighted_bkps, dim=0)
         # TODO: This is not correct when multiple backups have nonzero beta values
-        return (1 - torch.sum(torch.hstack(beta), dim=-1).unsqueeze(dim=-1)) * rl_backup_ac + blended_bkps
+        ac = (1 - torch.sum(torch.hstack(beta), dim=-1).unsqueeze(dim=-1)) * rl_backup_ac + blended_bkps
+        if self._rl_backup_explore:
+            self._push_ac_to_queue(ac)
+        return ac
 
     def melt_law(self, h):
         """
@@ -221,19 +220,25 @@ class RLBackupShield(BackupShield):
 
             trajs = (*backup_trajs, rl_backup_trajs)
         else:
-            trajs = super()._get_trajs(obs)
-        return trajs
+            if self._rl_backup_explore:
+                backup_trajs = odeint(
+                    func=lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
+                                                 for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies[:-1])],
+                                                dim=0),
+                    y0=obs.repeat(self._num_backup - 1),
+                    t=self._backup_t_seq
+                ).split(self._obs_dim_backup_policy, dim=1)
 
-    # def _fwd_prop_for_one_timestep(self, last_obs):
-    #     if self.params.add_remained_time_to_obs:
-    #         # Forward propagate for one time step to get the next observation for the last observation in the trajectory
-    #         return odeint(func=lambda t, y:
-    #         self.dynamics.dynamics(y, self.backup_policies[-1](y, traj_time=self._backup_t_seq[-1]+t)),
-    #                       y0=last_obs,
-    #                       t=self._backup_t_seq[:2])[-1].detach().numpy()
-    #     else:
-    #         # Forward propagate for one time step to get the next observation for the last observation in the trajectory
-    #         return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)), y0=last_obs, t=self._backup_t_seq[:2])[-1].detach().numpy()
+                rl_backup_trajs = odeint(
+                    func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)),
+                    y0=obs,
+                    t=self._backup_t_seq,
+                    method='rk4',
+                )
+                trajs = (*backup_trajs, rl_backup_trajs)
+            else:
+                trajs = super()._get_trajs(obs)
+        return trajs
 
     def _fwd_prop_for_one_timestep_per_id(self, last_obs, id):
         if id != self._num_backup - 1:
@@ -248,7 +253,8 @@ class RLBackupShield(BackupShield):
                               t=self._backup_t_seq[:2])[-1].detach().numpy()
             else:
                 return odeint(func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[id](y)), y0=last_obs,
-                              t=self._backup_t_seq[:2])[-1].detach().numpy()
+                              t=self._backup_t_seq[:2],
+                              method='rk4' if self._rl_backup_explore else None)[-1].detach().numpy()
 
     def _process_backup_traj_push_to_queue(self, trajs, h_values):
         if not self.params.rl_backup_train:
@@ -273,7 +279,8 @@ class RLBackupShield(BackupShield):
             obs = obs.numpy()
 
             # make reward
-            rews = np.full(traj_len, h_value.item())
+            # rews = np.full(traj_len, h_value.item())
+            rews = self._get_reward(traj.detach(), id)
 
             done = np.zeros(traj_len)
             done[-1] = 1
@@ -292,18 +299,29 @@ class RLBackupShield(BackupShield):
             done_list.append(done.reshape(-1, 1))
             # TODO: remove the following
 
-            # if self._plotter_counter % 10 == 0:
-            #     self.plot_traj(rl_obs)
+        if self._plotter_counter % 20 == 0:
+            self.plot_traj(obs_list[-1])
 
-            # self._plotter_counter += 1
+        self._plotter_counter += 1
 
         # push data to buffer queue
         self._push_to_queue(obs_list, next_obs_list, rew_list, done_list)
+
+    def _get_reward(self, traj, id):
+        h_b = self.backup_sets[id].safe_barrier(traj)
+        h_s = self.safe_set.des_safe_barrier(traj)
+
+        return torch.where(h_s >= 0,
+                           h_b,
+                           h_b + 100 * h_s).numpy()
+
+
     def _reset_buffer_queue(self):
         self._obs_buf = None
         self._next_obs_buf = None
         self._rews_buf = None
         self._done_buf = None
+        self._rl_backup_acs_buf = None
 
     def _push_to_queue(self, obs, next_obs, rews, done, **kwargs):
         if not self.params.rl_backup_train:
@@ -324,6 +342,19 @@ class RLBackupShield(BackupShield):
             self._rew_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._rew_buf, rews)]
             self._done_buf = [np.concatenate((arr1, arr2), axis=0) for arr1, arr2 in zip(self._done_buf, done)]
 
+
+    def _push_ac_to_queue(self, ac):
+        if not self.params.rl_backup_train:
+            return
+
+        if ac[0].ndim == 1:
+            ac.unsqueeze(dim=0)
+
+        if self._rl_backup_acs_buf is None:
+            self._rl_backup_acs_buf = ac
+        else:
+            self._rl_backup_acs_buf = np.concatenate((self._rl_backup_acs_buf, ac.detach().numpy), axis=0)
+
     @torch.no_grad()
     def compute_ac_push_to_buffer(self, episode):
         if not self.params.rl_backup_train:
@@ -331,6 +362,9 @@ class RLBackupShield(BackupShield):
         # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
         # Scale to new bounds
         for id, (obs, next_obs, rews, done) in enumerate(zip(self._obs_buf, self._next_obs_buf, self._rew_buf, self._done_buf)):
+            if not self.params.add_backup_trajs_to_buf:
+                if id != self._num_backup - 1:
+                    continue
 
             obs_tensor = torch.as_tensor(obs)
             if id != self._num_backup - 1:
@@ -346,7 +380,6 @@ class RLBackupShield(BackupShield):
                 obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
                 next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
                 self.push_to_buffer((obs, acs, rews, next_obs, done, np.array([None] * traj_len)))
-
             else:
 
                 if self.params.add_remained_time_to_obs:
@@ -366,21 +399,25 @@ class RLBackupShield(BackupShield):
                          1 - next_obs[:, -1].reshape(-1, 1) / self._backup_t_seq[-1]),
                         axis=1)
                 else:
-                    acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs_tensor))
-                    acs = acs.detach().numpy()
-
-                    # Only add actions that are inside safe set to buffer
-                    mask = self.safe_set.is_des_safe(obs_tensor)
+                    # acs = action2newbounds(self.rl_backup_melt_into_backup_policies(obs_tensor))
+                    # acs = acs.detach().numpy()
+                    acs = self._rl_backup_acs_buf
 
                     # Convert rl_obs to
                     obs = self.obs_proc.proc(obs, proc_key='backup_policy', reverse=True)
                     next_obs = self.obs_proc.proc(next_obs, proc_key='backup_policy', reverse=True)
-
+                    # Only add actions that are inside safe set to buffer
 
                 traj_len = rews.shape[0]
 
-                self.push_to_buffer((obs[mask], acs[mask], rews[mask],
-                                     next_obs[mask], done[mask], np.array([None] * traj_len)[mask]))
+                if self.params.add_unsafe_data_to_buf:
+                    self.push_to_buffer((obs, acs, rews,
+                                         next_obs, done, np.array([None] * traj_len)))
+                else:
+                    mask = self.safe_set.is_des_safe(obs_tensor)
+                    self.push_to_buffer((obs[mask], acs[mask], rews[mask],
+                                         next_obs[mask], done[mask], np.array([None] * traj_len)[mask]))
+
 
         # Reset buffer queue
         self._reset_buffer_queue()
@@ -440,6 +477,8 @@ class RLBackupShield(BackupShield):
         self.desired_policy = desired_policy
         self.is_mf_desired_policy = is_mf_policy
 
+
+
     # DEBUGGING METHODS
 
     def plot_traj(self, obs):
@@ -467,6 +506,7 @@ class RLBackupShield(BackupShield):
         plt.show()
 
 
+
 # class BackupDynamicsModule(nn.Module):
 #     def init(self, dynamics, u_b, obs_proc):
 #         self.dynamics = dynamics
@@ -484,8 +524,3 @@ class RLBackupBackupSet(SafeSetFromBarrierFunction):
     def safe_barrier(self, obs):
         return softmax(torch.stack([backup_set.safe_barrier(obs) for backup_set in self.backup_sets]),
                        self.params.rl_backup_backup_set_softmax_gain)
-
-
-
-
-
