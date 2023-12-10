@@ -91,6 +91,14 @@ class RLBUS(BUS):
         self.shield.rl_backup.policy.eval()
         self.shield.rl_backup.policy = to_device(self.shield.rl_backup.policy, device)
 
+        # Set rl backup shield in explore mode
+        self.shield.set_rl_backup_explore(True)
+
+    def after_sample_exe(self):
+        # Set rl backup shield explore mode to off
+        self.shield.set_rl_backup_explore(False)
+
+
     def after_optimize(self):
         for agent in self.agents:
             agent.after_optimize()
