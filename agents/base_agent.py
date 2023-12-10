@@ -60,6 +60,9 @@ class BaseAgent:
         if hasattr(self, 'dynamics'):
             self.dynamics.eval_mode(device=device)
 
+    def after_sample_exe(self):
+        pass
+
     def eval_mode(self, device='cpu'):
         """Switch neural net model to evaluation mode"""
         if hasattr(self, 'models'):
