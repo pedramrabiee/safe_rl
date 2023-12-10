@@ -52,15 +52,11 @@ class RLBUSTrainer(BaseTrainer):
         # Set rl backup exploration on
         # if self.sampler.episode_completed >= self.config.rlbus_params.rl_backup_explore_episode_delay:
 
-
+        # FIXME: shield's backup rl is set to explore. However, during the safe reset, it shouldn't use the explore mode.
         self.sampler.collect_data(itr)
-        # Add shield's rl backup data to its buffer
-        # self.agent.shield.set_rl_backup_explore(True)
+
         if self.config.rlbus_params.to_shield:
             self.agent.shield.compute_ac_push_to_buffer(self.sampler.episode_completed)
-        # Set rl backup exploration off
-        # self.agent.shield.set_rl_backup_explore(False)
-
 
         # TRAIN
         optim_dict = self._prep_optimizer_dict()
@@ -71,6 +67,7 @@ class RLBUSTrainer(BaseTrainer):
 
         # train desired policy on its train frequency
         self.agent.train_mode(device=self.config.training_device)
+
         for _ in range(self.config.rlbus_params.net_updates_per_iter):
             if self.config.rlbus_params.use_mf_desired_policy and \
                     itr % self.config.rlbus_params.desired_policy_update_freq == 0 and\

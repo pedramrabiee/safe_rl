@@ -226,6 +226,9 @@ class Sampler:
 
                 # Save last observation to continue from there on the next data collection round
                 self._last_obs = obs
+
+                # Call after sample execution to run necessary step to be run when exiting sampling
+                self.agent.after_sample_exe()
                 break
 
     def evaluate(self):
