@@ -214,7 +214,7 @@ class PendulumPlotter(CustomPlotter):
         self._plot_schedule_by_itr = None
         self._plot_schedule_by_itr = {
             '0': ['h_contours'],
-            '50': ['h_contours']
+            '200': ['h_contours']
         }
 
 
@@ -275,9 +275,6 @@ class PendulumPlotter(CustomPlotter):
         safe_set_func = dump_dict['safe_set_func']
         viability_kernel_funcs = dump_dict['viability_kernel_funcs']
         buffer_data = dump_dict['buffer_data']
-
-        # S_b_label = r'\mathcal{S}_{\rm b'
-
         fig, ax = plot_zero_level_sets(
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
