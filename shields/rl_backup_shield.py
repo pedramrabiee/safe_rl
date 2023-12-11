@@ -17,6 +17,8 @@ from utils.seed import rng
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
+_ode_steps = dict(euler=1, rk4=4)
+
 
 class RLBackupShield(BackupShield):
     def initialize(self, params, init_dict=None):
@@ -57,6 +59,14 @@ class RLBackupShield(BackupShield):
 
 
     def rl_backup_melt_into_backup_policies(self, obs, **kwargs):
+        ac = self._rl_backup_melt_into_backup_policies(obs, **kwargs)
+
+        if self._rl_backup_explore:
+            self._push_ac_to_queue(ac)
+
+        return ac
+
+    def _rl_backup_melt_into_backup_policies(self, obs, **kwargs):
         """
            Perform RL backup by melting the contributions of backup policies based on a melt law.
 
@@ -101,8 +111,6 @@ class RLBackupShield(BackupShield):
         blended_bkps = torch.sum(stacked_weighted_bkps, dim=0)
         # TODO: This is not correct when multiple backups have nonzero beta values
         ac = (1 - torch.sum(torch.hstack(beta), dim=-1).unsqueeze(dim=-1)) * rl_backup_ac + blended_bkps
-        if self._rl_backup_explore:
-            self._push_ac_to_queue(ac)
         return ac
 
     def melt_law(self, h):
@@ -190,8 +198,6 @@ class RLBackupShield(BackupShield):
 
     def _get_softmax_softmin_backup_h_grad_h(self, obs):
         obs.requires_grad_()
-        # # Reset buffer queue mainly to clear _rl_backup_ac_queue
-        # self._reset_buffer_queue()
 
         # RESET ACTION QUEUE
         self._reset_temp_ac_queue()
@@ -277,9 +283,8 @@ class RLBackupShield(BackupShield):
 
             # Obtain obs from trajectory and detach
             obs = traj.detach()
-            next_ob = self._fwd_prop_for_one_timestep_per_id(last_obs=torch.as_tensor(obs[-1]), id=id)
+            next_ob = self._fwd_prop_for_one_timestep_per_id(last_obs=obs[-1], id=id)
             next_obs = np.vstack((obs[1:], next_ob))
-
 
             obs = obs.numpy()
 
@@ -362,7 +367,8 @@ class RLBackupShield(BackupShield):
 
         # RK45 make 5 calls per timestep to rl_backup_melt_into_backup_policies.
         # Only the first call needs to be stored in the buffer
-        cand_acs = acs[np.arange(acs.shape[0]) % 1 == 0]
+
+        cand_acs = acs[np.arange(acs.shape[0]) % _ode_steps[self.params.ode_method_for_explor_mode] == 0]
         if self._rl_backup_acs_buf['perm'] is None:
             self._rl_backup_acs_buf['perm'] = cand_acs
         else:
@@ -391,12 +397,11 @@ class RLBackupShield(BackupShield):
         # Get actions by getting query from the rl_backup_melt_into_backup_policies at rl_obs
         # Scale to new bounds
         for id, (obs, next_obs, rews, done) in enumerate(zip(self._obs_buf, self._next_obs_buf, self._rew_buf, self._done_buf)):
-            if not self.params.add_backup_trajs_to_buf:
-                if id != self._num_backup - 1:
-                    continue
 
             obs_tensor = torch.as_tensor(obs)
-            if id != self._num_backup - 1:
+            if id != self.rl_backup_id:
+                if not self.params.add_backup_trajs_to_buf:
+                    continue
                 # it is assumed that backup policies other than the rl backup policy output actions in new action bounds
                 acs = self.backup_policies[id](obs_tensor).detach().numpy()
                 acs = action2newbounds(acs)
@@ -555,7 +560,7 @@ class RLBackupShield(BackupShield):
 
         # RK45 make 5 calls per timestep to rl_backup_melt_into_backup_policies.
         # Only the first call needs to be stored in the buffer
-        cand_acs = acs[np.arange(acs.shape[0]) % 1 == 0]
+        cand_acs = acs[np.arange(acs.shape[0]) % _ode_steps[self.params.ode_method_for_explor_mode] == 0]
 
         stacked_cand_acs = torch.vstack(torch.split(cand_acs, self._ac_dim, dim=1)).numpy()
 
@@ -584,6 +589,18 @@ class RLBackupShield(BackupShield):
         # TURN OFF EXPLORATION
         self.set_rl_backup_explore(False)
 
+    def get_trajs_per_id_from_batch_of_obs(self, obs, id):
+        if id == self.rl_backup_id:
+            obs = obs.flatten()
+            trajs = odeint(
+                lambda t, y: self.dynamics.dynamics_flat_return(
+                    y.view(-1, self._obs_dim_backup_policy),
+                    self.backup_policies[id](y.view(-1, self._obs_dim_backup_policy))), obs, self._backup_t_seq,
+                method=self.params.ode_method_for_explor_mode if self.params.plot_rl_backup_contours_with_coarse_ode else None
+            )
+            return trajs
+        else:
+            return super().get_trajs_per_id_from_batch_of_obs(obs, id)
 
     # DEBUGGING METHODS
 

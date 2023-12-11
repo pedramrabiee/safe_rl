@@ -144,7 +144,8 @@ class BackupShield(BaseSheild):
         trajs = odeint(
             lambda t, y: self.dynamics.dynamics_flat_return(
                 y.view(-1, self._obs_dim_backup_policy),
-                self.backup_policies[id](y.view(-1, self._obs_dim_backup_policy))), obs, self._backup_t_seq)
+                self.backup_policies[id](y.view(-1, self._obs_dim_backup_policy))), obs, self._backup_t_seq,
+        )
         return trajs
 
     def get_h_per_id_from_batch_of_obs(self, obs, id):

@@ -281,7 +281,7 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             net_updates_per_iter=20,
-            shield_agent='rl_backup_shield',
+            shield_agent='rl_backup_shield_explorer',
             # rl backup policy
             rl_backup_pretrain_is_on=False,
             rl_backup_pretrain_sample_size=int(1e4),
@@ -329,7 +329,7 @@ class Config:
             feas_scale=0.05,
             alpha=1.0,
             horizon=2.5,
-            melt_law_gain=100,
+            melt_law_gain=10,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
             backup_timestep=0.1,
@@ -345,7 +345,8 @@ class Config:
             sampling_h_cutoff=-math.inf,
             add_backup_trajs_to_buf=True,
             add_unsafe_data_to_buf=True,
-            ode_method_for_explor_mode='euler'
+            ode_method_for_explor_mode='euler',
+            plot_rl_backup_contours_with_coarse_ode=True
         )
         return rlbus_params
 
@@ -354,6 +355,7 @@ class Config:
         explorer_specific_params = AttrDict(
             des_policy_horizon=0.5,
             des_policy_melt_region_ratio=0.25,
+            sample_t_switch=True,
         )
         rlbus_params = AttrDict(**rl_backup_shield_params, **explorer_specific_params)
 
