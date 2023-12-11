@@ -284,10 +284,10 @@ class PendulumPlotter(CustomPlotter):
             x_label=r'$\theta$', y_label=r'$\dot \theta$',
             funcs_are_torch=True,
             cmap='gist_rainbow',
-            mesh_density=150,
+            mesh_density=400,
             font_size=16,
             bounds=(-pi-0.1, pi+0.1),
-            break_in_batch=1500,
+            break_in_batch=2000,
             plt_show=False,
             legends=[
                 r'$\mathcal{S}_{\rm s}$',
