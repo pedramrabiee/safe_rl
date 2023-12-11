@@ -276,27 +276,38 @@ class PendulumPlotter(CustomPlotter):
         viability_kernel_funcs = dump_dict['viability_kernel_funcs']
         buffer_data = dump_dict['buffer_data']
 
-        S_b_label = r'\mathcal{S}_{\rm b'
+        # S_b_label = r'\mathcal{S}_{\rm b'
 
         fig, ax = plot_zero_level_sets(
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
+            x_label=r'$\theta$', y_label=r'$\dot \theta$',
             funcs_are_torch=True,
-            mesh_density=50,
+            cmap='gist_rainbow',
+            mesh_density=150,
+            font_size=16,
             bounds=(-pi-0.1, pi+0.1),
-            break_in_batch=1000,
-            plt_show=False
-            # legends=[r'$S_s$',
-            #            *[fr'$S_b_{str(i+1)}$' for i in range(len(backup_set_funcs))],
-            #            *[fr'$h_{str(i+1)}$' for i in range(len(backup_set_funcs))]],
-            # legends=[r'\mathcal{S}_{\rm s}',
-            #          *[fr'{S_b_label}_{str(i+1)} }}' for i in range(len(backup_set_funcs))],
-            #          *[fr'h_{str(i+1)}' for i in range(len(viability_kernel_funcs))],
-            #          # r'\mathcal{S}'
-            #          ],
+            break_in_batch=1500,
+            plt_show=False,
+            legends=[
+                r'$\mathcal{S}_{\rm s}$',
+                r'$\mathcal{S}_{{\rm b}_1}$',
+                r'$\mathcal{S}_{{\rm b}_2}$',
+                r'$\mathcal{S}_{{\rm b}_3}$',
+                r'$\mathcal{S}_{1}$',
+                r'$\mathcal{S}_{2}$',
+                r'$\mathcal{S}_{3}$',
+            ],
+            legend_dict=dict(loc='upper center', ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.15), fontsize=14),
+            linestyles=['solid', 'solid', 'solid', '-.', 'solid', 'solid', 'solid'],
+            x_lim=(-3, 3),
+            y_lim=(-2.2, 2.2)
             )
         if buffer_data is not None:
             buffer_data = self.obs_proc.proc(buffer_data, proc_key='safe_set')
             ax.scatter(buffer_data[:, 0], buffer_data[:, 1], marker='.', color='red', s=0.02)
-        plt.show()
+
+        logger.dump_plot('states_action_episode_%d' % dump_dict['episode'], 'h_contour', 'iteration')
+
+        # plt.show()
 

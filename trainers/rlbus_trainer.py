@@ -23,7 +23,8 @@ class RLBUSTrainer(BaseTrainer):
                                      viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
                                                                      id=idx)
                                                              for idx in range(self.agent.shield.backup_set_size)],
-                                     buffer_data=buffer.obs
+                                     buffer_data=buffer.obs,
+                                     episode=self.sampler.episode_completed
                                  ))
 
         if self.config.rlbus_params.train_by_sampling_from_state_space and\
@@ -63,7 +64,8 @@ class RLBUSTrainer(BaseTrainer):
                                          viability_kernel_funcs=[partial(self.agent.shield.get_h_per_id_from_batch_of_obs,
                                                                          id=idx)
                                                                  for idx in range(self.agent.shield.backup_set_size)],
-                                         buffer_data=buffer.obs
+                                         buffer_data=buffer.obs,
+                                         episode=self.sampler.episode_completed
                                      ))
 
 

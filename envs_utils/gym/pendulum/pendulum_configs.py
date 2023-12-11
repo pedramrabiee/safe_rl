@@ -10,7 +10,7 @@ config = {
         'max_episode_time': 3.0,
         'max_episode_time_eval': 10.0,
         'plot_custom_figs': True,
-        'save_custom_figs_data': False,
+        'save_custom_figs_data': True,
         'episode_steps_per_itr': 1,
         'n_training_episode': 100,
         'do_evaluation': False,

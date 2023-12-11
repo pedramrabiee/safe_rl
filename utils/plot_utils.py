@@ -1,10 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 import torch
+import matplotlib.pyplot as plt
 
 def plot_contour(ax, func, x_bounds=(-5, 5), y_bounds=(-5, 5), mesh_density=200,
-                 level_sets=[0], colors='r', funcs_are_torch=False, break_in_batch=0):
+                 level_sets=[0], colors='r', funcs_are_torch=False, break_in_batch=0,
+                 linestyle='dashed'):
+
     if funcs_are_torch:
         # Create a grid of x and y values
         x = torch.linspace(x_bounds[0], x_bounds[1], mesh_density)
@@ -44,13 +46,14 @@ def plot_contour(ax, func, x_bounds=(-5, 5), y_bounds=(-5, 5), mesh_density=200,
         Z = Z.reshape(mesh_density, mesh_density)
 
     # Plot the contour of the function for specified level sets
-    contour = ax.contour(X, Y, Z, levels=level_sets, colors=colors)
+    contour = ax.contour(X, Y, Z, levels=level_sets, colors=colors, linestyles=linestyle)
     return contour
 
 def plot_zero_level_sets(functions, bounds=(-5, 5), mesh_density=200,
                          x_label=r'$x$', y_label=r'$y$', legends=None,
-                         cmap='tab10', font_size=12, funcs_are_torch=False,
-                         break_in_batch=0, plt_show=True):
+                         cmap='tab20', font_size=12, funcs_are_torch=False,
+                         break_in_batch=0, plt_show=True, legend_dict=None,
+                         linestyles=None, x_lim=None, y_lim=None):
     # if legends is None:
         # legends = [f.__name__ for f in functions]
 
@@ -59,33 +62,46 @@ def plot_zero_level_sets(functions, bounds=(-5, 5), mesh_density=200,
 
     # Create a figure and axes
     fig, ax = plt.subplots()
+    if linestyles is None:
+        linestyles = ['dashed'] * len(functions)
 
     colors = [cmap(i) for i in np.linspace(0, 1, len(functions))]
     contours = [plot_contour(ax, func, x_bounds=bounds,
                              y_bounds=bounds, mesh_density=mesh_density,
                              level_sets=[0], colors=[color],
                              funcs_are_torch=funcs_are_torch,
-                             break_in_batch=break_in_batch)
-                for func, color in zip(functions, colors)]
+                             break_in_batch=break_in_batch,
+                             linestyle=linestyle)
+                for func, color, linestyle in zip(functions, colors, linestyles)]
+
 
 
     # Add labels and title
     ax.set_xlabel(x_label, fontsize=font_size)
     ax.set_ylabel(y_label, fontsize=font_size)
+    if x_lim is not None:
+        ax.set_xlim(*x_lim)
+
+    if y_lim is not None:
+        ax.set_ylim(*y_lim)
 
     # Set equal scaling for x and y axes
     ax.set_aspect('equal', adjustable='box')
 
     # Set font size for tick labels
     ax.tick_params(axis='both', which='both', labelsize=font_size)
-
-
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     # Place the legend
-    # ax.legend(legends, fontsize=font_size)
+
     if legends:
         for contour, legend in zip(contours, legends):
             contour.collections[0].set_label(legend)
-        ax.legend()
+        if legend_dict is None:
+            ax.legend()
+        else:
+            ax.legend(**legend_dict)
+
     if plt_show:
         plt.show()
     else:
