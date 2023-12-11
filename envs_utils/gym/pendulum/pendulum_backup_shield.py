@@ -282,7 +282,7 @@ class PendulumPlotter(CustomPlotter):
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
             funcs_are_torch=True,
-            mesh_density=30,
+            mesh_density=50,
             bounds=(-pi-0.1, pi+0.1),
             break_in_batch=1000,
             plt_show=False
