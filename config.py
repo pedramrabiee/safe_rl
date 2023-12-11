@@ -222,10 +222,10 @@ class Config:
     def _get_sac_params(self):
         ddpg_params = self._get_ddpg_params()
         sac_specific_params = AttrDict(
-            alpha=0.2
+            alpha=0.8
         )
         sac_params = AttrDict(**ddpg_params, **sac_specific_params)
-        sac_params.pi_net_kwargs = dict(hidden_dim=128,
+        sac_params.pi_net_kwargs = dict(hidden_dim=256,
                                         num_layers=2,
                                         unit_activation=nn.ReLU,
                                         out_activation=nn.Identity,
@@ -281,9 +281,9 @@ class Config:
     def _get_rlbus_params(self):
         rlbus_params = AttrDict(
             net_updates_per_iter=20,
-            shield_agent='rl_backup_shield_explorer',
+            shield_agent='rl_backup_shield',
             # rl backup policy
-            rl_backup_pretrain_is_on=False,
+            rl_backup_pretrain_is_on=True,
             rl_backup_pretrain_sample_size=int(1e4),
             rl_backup_train_is_on=True,
             episode_to_start_training_rl_backup=0,

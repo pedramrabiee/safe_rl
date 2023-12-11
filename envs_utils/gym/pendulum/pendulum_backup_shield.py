@@ -11,6 +11,7 @@ from utils.custom_plotter import CustomPlotter
 from logger import logger
 from utils.plot_utils import plot_zero_level_sets
 import matplotlib.pyplot as plt
+from utils.misc import e_and
 
 
 class PendulumBackupSet(SafeSetFromBarrierFunction):
@@ -47,6 +48,11 @@ class PendulumBackupSet(SafeSetFromBarrierFunction):
         return torch.where(res >= 0, res, res)
 
 class PendulumSafeSet(SafeSetFromBarrierFunction):
+    def __init__(self, env, obs_proc):
+        super().__init__(env, obs_proc)
+        keys = ['des_safe', 'safe', 'unsafe', 'near_boundary']
+        self.criteria = {k: getattr(self, 'is_' + k) for k in keys}
+
     def initialize(self, init_dict=None):
         self.bounds = torch.tensor(init_dict.bounds).unsqueeze(dim=0)
         self.center = torch.tensor(init_dict.center).unsqueeze(dim=0)
@@ -66,6 +72,11 @@ class PendulumSafeSet(SafeSetFromBarrierFunction):
         else:
             h = self.backup_agent.get_h_from_batch_of_obs(obs)
         return h
+
+    def is_near_boundary(self, obs):
+        h = self.safe_barrier(obs)
+        return (h >= -0.1) & (h <= 0.1)
+
 
     def _get_obs(self, batch_size):
         # max_speed = self.env.observation_space.high[2]
@@ -119,10 +130,11 @@ _backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
                          ]
 )
 
-_num_backup_sets_to_consider = 1
+_num_backup_sets_to_consider = 2
 # _backup_set_order = [1, 2, 3]
 # _backup_set_order = [1, 2, 3]
-_backup_set_order = [2]
+_backup_set_order = [1, 2]
+
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
     for i in range(len(backup_sets)):
@@ -201,7 +213,7 @@ class PendulumPlotter(CustomPlotter):
         self._plot_schedule_by_episode = {'1': ['state_action_plot']}
         self._plot_schedule_by_itr = None
         self._plot_schedule_by_itr = {
-            # '0': ['h_contours'],
+            '0': ['h_contours'],
             '50': ['h_contours']
         }
 

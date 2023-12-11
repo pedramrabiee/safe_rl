@@ -2,6 +2,8 @@ from trainers.base_trainer import BaseTrainer
 from attrdict import AttrDict
 from logger import logger
 from functools import partial
+import numpy as np
+
 
 
 class RLBUSTrainer(BaseTrainer):
@@ -26,13 +28,16 @@ class RLBUSTrainer(BaseTrainer):
 
         if self.config.rlbus_params.train_by_sampling_from_state_space and\
                 self.sampler.episode_completed > self._episode_train_by_sampling and\
-                self.sampler.episode_completed > 10:
+                self.sampler.episode_completed > -1:
             batch_size = self.config.rlbus_params.train_by_sampling_from_state_space_batch_size
 
-            samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['safe'],
-                                                                    batch_size=[batch_size])
+            # samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['safe'],
+            #                                                         batch_size=[batch_size])
 
-            self.agent.shield.add_batch_of_data_to_buffer_from_obs(obs=self.obs_proc.proc(samples[0],
+            samples = self.agent.shield.safe_set.sample_by_criteria(criteria_keys=['near_boundary', 'safe'],
+                                                                    batch_size=[batch_size, int(batch_size/4)])
+
+            self.agent.shield.add_batch_of_data_to_buffer_from_obs(obs=self.obs_proc.proc(np.vstack((samples[0], samples[1])),
                                                                                           proc_key='shield'))
 
             self._episode_train_by_sampling += 1

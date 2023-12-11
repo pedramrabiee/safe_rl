@@ -160,7 +160,7 @@ class SafeSetFromCriteria(SafeSet):
         # batch
 
         while True:
-            obs = self._get_obs(samp_gen_batch_size * 2)
+            obs = self._get_obs(samp_gen_batch_size * 20)
             for i, k in enumerate(criteria_keys):
                 if samples[i] is not None:
                     if samples[i].shape[0] >= batch_size[i]:
