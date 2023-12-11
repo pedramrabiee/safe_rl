@@ -328,7 +328,7 @@ class Config:
             h_scale=0.05,
             feas_scale=0.05,
             alpha=1.0,
-            horizon=2.5,
+            horizon=1.5,
             melt_law_gain=10,
             pretraining_melt_law_gain=0.05,
             rl_backup_backup_set_softmax_gain=100,
