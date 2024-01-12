@@ -41,7 +41,7 @@ class RK45PendulumWrapper(gym.Wrapper):
 
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
         self.last_u = u  # for rendering
-        costs = angle_normalize(th - 0.8) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)
+        costs = angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)
 
         # TODO: Check timestep
         ivp = solve_ivp(fun=lambda t, y: self._dynamics(t, y, u), t_span=[0, self.dt], y0=self.state, method='LSODA')

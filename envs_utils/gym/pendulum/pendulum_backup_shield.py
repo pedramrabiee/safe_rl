@@ -75,7 +75,7 @@ class PendulumSafeSet(SafeSetFromBarrierFunction):
 
     def is_near_boundary(self, obs):
         h = self.safe_barrier(obs)
-        return (h >= -0.1) & (h <= 0.1)
+        return (h >= -1.0) & (h <= 0.1)
 
 
     def _get_obs(self, batch_size):
@@ -109,13 +109,14 @@ class PendulumBackupControl:
             0] * self.center[0]
 
 
-_backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
+_backup_sets_dict = dict(c=[0.02, 0.02, 0.02, 0.02, 0.02],
                          p=[
-                             [[0.625, 0.125], [0.125, 0.125]],
-
+                             [[0.625, 0.125], [0.125, 0.125]],          # 0
                              # u_max = 1.5
-                             [[0.650, 0.150], [0.150, 0.240]],
-                             [[0.650, 0.150], [0.150, 0.240]],
+                             [[0.650, 0.150], [0.150, 0.240]],          # pi/2
+                             [[0.650, 0.150], [0.150, 0.240]],          # -pi/2
+                             [[0.640085025317832, 0.153730118149882], [0.153730118149882, 0.173027193492806]],         # pi/4
+                             [[0.640085025317832, 0.153730118149882], [0.153730118149882, 0.173027193492806]],         # -pi/4
                              # u_max = 6.5
                              # [[0.585353535353535, 0.0853535353535354], [0.0853535353535354, 0.114494439342924]],
                              # [[0.585353535353535, 0.0853535353535354], [0.0853535353535354, 0.114494439342924]],
@@ -125,15 +126,17 @@ _backup_sets_dict = dict(c=[0.02, 0.02, 0.02],
                              ],
                          center=[
                              [0.0, 0.0],
-                             [pi/2, 0.0],
-                             [-pi/2, 0.0]
+                             [pi / 2, 0.0],
+                             [-pi / 2, 0.0],
+                             [pi / 4, 0.0],
+                             [-pi / 4, 0.0],
                          ]
 )
 
 _num_backup_sets_to_consider = 2
 # _backup_set_order = [1, 2, 3]
 # _backup_set_order = [1, 2, 3]
-_backup_set_order = [1, 2]
+_backup_set_order = [4, 5]
 
 def get_backup_sets(env, obs_proc):
     backup_sets = [PendulumBackupSet(env, obs_proc) for _ in range(_num_backup_sets_to_consider)]
@@ -158,11 +161,16 @@ _backup_policies_dict = dict(
         [-3.0, -3.0],
         [-3.0, -3.0],
         [-3.0, -3.0],
+        [-3.0, -3.0],
+        [-3.0, -3.0],
     ],
     center=[
         [0.0, 0.0],
         [pi/2, 0.0],
         [-pi/2, 0.0],
+        [pi / 4, 0.0],
+        [-pi / 4, 0.0],
+
     ],
     ac_lim=env_config.max_torque
 )
@@ -214,7 +222,7 @@ class PendulumPlotter(CustomPlotter):
         self._plot_schedule_by_itr = None
         self._plot_schedule_by_itr = {
             '0': ['h_contours'],
-            '200': ['h_contours']
+            '100': ['h_contours']
         }
 
 
@@ -300,9 +308,9 @@ class PendulumPlotter(CustomPlotter):
             x_lim=(-3, 3),
             y_lim=(-2.2, 2.2)
             )
-        if buffer_data is not None:
-            buffer_data = self.obs_proc.proc(buffer_data, proc_key='safe_set')
-            ax.scatter(buffer_data[:, 0], buffer_data[:, 1], marker='.', color='red', s=0.02)
+        # if buffer_data is not None:
+        #     buffer_data = self.obs_proc.proc(buffer_data, proc_key='safe_set')
+        #     ax.scatter(buffer_data[:, 0], buffer_data[:, 1], marker='.', color='red', s=0.02)
 
         logger.dump_plot('states_action_episode_%d' % dump_dict['episode'], 'h_contour', 'iteration')
 
