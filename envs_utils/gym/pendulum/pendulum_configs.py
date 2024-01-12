@@ -12,7 +12,7 @@ config = {
         'plot_custom_figs': True,
         'save_custom_figs_data': True,
         'episode_steps_per_itr': 1,
-        'n_training_episode': 100,
+        'n_training_episode': 200,
         'do_evaluation': False,
         'n_episodes_evaluation': 5,
         'num_evaluation_sessions': 4,
