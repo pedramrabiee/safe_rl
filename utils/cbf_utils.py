@@ -1,6 +1,7 @@
 import numpy as np
 from utils.optim import solve_qp, make_box_constraints_from_bounds
-from utils.misc import scalar_to_vector
+from torch.autograd import grad
+import torch
 
 
 def cbf_qp(h, Lfh, Lgh, alpha_func, Q, c, A_u=None, b_u=None):
@@ -76,7 +77,6 @@ def min_intervention_qp_box_constrained(h, Lfh, Lgh, alpha_func, u_des, u_bound)
     Q = 2 * np.eye(u_des.shape[0])
     c = np.array([-2 * u_des])
     return cbf_qp_box_constrained(h, Lfh, Lgh, alpha_func, Q, c, u_bound)
-
 
 def preprocess_constraint(A, b):
     """
