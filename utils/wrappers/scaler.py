@@ -15,7 +15,6 @@ class ActionScalerWrapper(gym.Wrapper):
         # store the original observation space bounds
         if isinstance(self.action_space, Box):
             ac_shape = self.action_space.shape
-            self.ac_lim_old = (self.action_space.low, self.action_space.high)
             # store the original action space bounds
             self.ac_lim_old = (self.action_space.low, self.action_space.high)
             # update action space to new bounds

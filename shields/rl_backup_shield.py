@@ -18,7 +18,58 @@ from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
 _ode_steps = dict(euler=1, rk4=4)
+class BaseReward:
+    def __init__(self):
+        pass
 
+    def get_reward(self, **kwargs):
+        raise NotImplementedError
+
+    def get_batch_reward(self, **kwargs):
+        raise NotImplementedError
+
+
+class TrajHReward(BaseReward):
+    def get_reward(self, **kwargs):
+        return np.full(kwargs['traj_len'], kwargs['h'].item())
+
+    def get_batch_reward(self, **kwargs):
+        return torch.tile(kwargs['h'].view(1, -1), (kwargs['traj_len'], 1))
+
+
+class TrajHWeightedSumReward(BaseReward):
+    def get_reward(self, **kwargs):
+        traj = kwargs['traj']
+        backup_set = kwargs['backup_set']
+        safe_set = kwargs['safe_set']
+        h_b = backup_set.safe_barrier(traj)
+        h_s = safe_set.des_safe_barrier(traj)
+
+        return torch.where(h_s >= 0,
+                           h_b,
+                           h_b + 1000 * h_s).numpy()
+
+    def get_batch_reward(self, **kwargs):
+        raise NotImplementedError
+
+class HJBReward(BaseReward):
+    def get_reward(self, **kwargs):
+        traj = kwargs['traj']
+        safe_set = kwargs['safe_set']
+        h_s = safe_set.des_safe_barrier(traj)
+        # rho = kwargs['softmin_gain']
+        return (kwargs['h'] - h_s).detach().numpy()
+        # return 100 * torch.exp(rho * (kwargs['h'] - h_s)).detach().numpy()
+
+    def get_batch_reward(self, **kwargs):
+        # rho = kwargs['softmin_gain']
+        return kwargs['h'].unsqueeze(dim=0) - kwargs['h_s']
+        # return 100 * torch.exp(rho * (kwargs['h'].unsqueeze(dim=0) - kwargs['h_s']))
+
+
+
+# Select the reward class you want to use
+_reward_cls = HJBReward
 
 class RLBackupShield(BackupShield):
     def initialize(self, params, init_dict=None):
@@ -56,11 +107,12 @@ class RLBackupShield(BackupShield):
         self._backup_horizon = self._backup_t_seq[-1]
         self._plotter_counter = 0
         self._rl_backup_explore = False
-
+        self.reward_cls = _reward_cls()
 
     def rl_backup_melt_into_backup_policies(self, obs, **kwargs):
         ac = self._rl_backup_melt_into_backup_policies(obs, **kwargs)
 
+        # if rl backup is in exploration mode, then add the action taken to the action queue
         if self._rl_backup_explore:
             self._push_ac_to_queue(ac)
 
@@ -195,7 +247,6 @@ class RLBackupShield(BackupShield):
         loss_rl_backup = F.mse_loss(acs_predicted, labels)
         return loss_rl_backup
 
-
     def _get_softmax_softmin_backup_h_grad_h(self, obs):
         obs.requires_grad_()
 
@@ -215,7 +266,26 @@ class RLBackupShield(BackupShield):
 
     def _get_trajs(self, obs):
         # Find the trajectories under all backup policies except for the RL backup using odeint
-        if self.params.add_remained_time_to_obs:
+        # if self.params.add_remained_time_to_obs:
+        #     backup_trajs = odeint(
+        #         func=lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
+        #                                      for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies[:-1])],
+        #                                     dim=0),
+        #         y0=obs.repeat(self._num_backup - 1),
+        #         t=self._backup_t_seq
+        #     ).split(self._obs_dim_backup_policy, dim=1)
+        #
+        #     # TODO: Check and Test this case
+        #     rl_backup_trajs = odeint(
+        #         func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y, traj_time=t)),
+        #         y0=obs,
+        #         t=self._backup_t_seq)
+        #
+        #     trajs = (*backup_trajs, rl_backup_trajs)
+        # else:
+
+
+        if self._rl_backup_explore:
             backup_trajs = odeint(
                 func=lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
                                              for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies[:-1])],
@@ -224,32 +294,15 @@ class RLBackupShield(BackupShield):
                 t=self._backup_t_seq
             ).split(self._obs_dim_backup_policy, dim=1)
 
-            # TODO: Check and Test this case
             rl_backup_trajs = odeint(
-                func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y, traj_time=t)),
+                func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)),
                 y0=obs,
-                t=self._backup_t_seq)
-
+                t=self._backup_t_seq,
+                method=self.params.ode_method_for_explor_mode,
+            )
             trajs = (*backup_trajs, rl_backup_trajs)
         else:
-            if self._rl_backup_explore:
-                backup_trajs = odeint(
-                    func=lambda t, y: torch.cat([self.dynamics.dynamics(yy, policy(yy))
-                                                 for yy, policy in zip(y.split(self._obs_dim_backup_policy), self.backup_policies[:-1])],
-                                                dim=0),
-                    y0=obs.repeat(self._num_backup - 1),
-                    t=self._backup_t_seq
-                ).split(self._obs_dim_backup_policy, dim=1)
-
-                rl_backup_trajs = odeint(
-                    func=lambda t, y: self.dynamics.dynamics(y, self.backup_policies[-1](y)),
-                    y0=obs,
-                    t=self._backup_t_seq,
-                    method=self.params.ode_method_for_explor_mode,
-                )
-                trajs = (*backup_trajs, rl_backup_trajs)
-            else:
-                trajs = super()._get_trajs(obs)
+            trajs = super()._get_trajs(obs)
         return trajs
 
     def _fwd_prop_for_one_timestep_per_id(self, last_obs, id):
@@ -288,10 +341,13 @@ class RLBackupShield(BackupShield):
 
             obs = obs.numpy()
 
-            # make reward
-            # rews = self._get_reward(traj.detach(), id)
-            rews = np.full(traj_len, h_value.item())
-
+            # Get rewards
+            if isinstance(self.reward_cls, TrajHReward):
+                rews = self.reward_cls.get_reward(h=h_value, traj_len=traj_len)
+            if isinstance(self.reward_cls, TrajHWeightedSumReward):
+                rews = self.reward_cls.get_reward(traj=traj.detach(), backup_set=self.backup_sets[id], safe_set=self.safe_set)
+            if isinstance(self.reward_cls, HJBReward):
+                rews = self.reward_cls.get_reward(h=h_value, traj=traj.detach(), safe_set=self.safe_set, softmin_gain=self.params.softmin_gain)
             done = np.zeros(traj_len)
             done[-1] = 1
 
@@ -319,15 +375,6 @@ class RLBackupShield(BackupShield):
 
         # push data to buffer queue
         self._push_to_queue(obs_list, next_obs_list, rew_list, done_list)
-
-    def _get_reward(self, traj, id):
-
-        h_b = self.backup_sets[id].safe_barrier(traj)
-        h_s = self.safe_set.des_safe_barrier(traj)
-
-        return torch.where(h_s >= 0,
-                           h_b,
-                           h_b + 1000 * h_s).numpy()
 
 
     def _reset_buffer_queue(self):
@@ -556,6 +603,7 @@ class RLBackupShield(BackupShield):
         h_b = self.backup_sets[self.rl_backup_id].safe_barrier(obs[-1, :].view(-1, self._obs_dim_backup_policy)).view(1, -1)    # 1 by batch_size
         h = softmin(torch.vstack((h_s, h_b)), self.params.softmin_gain)     # batch_size
 
+
         acs = torch.hstack(self._rl_backup_acs_buf['temp']).t().detach()    # #timesteps by batch_size * ac_dim
 
         # RK45 make 5 calls per timestep to rl_backup_melt_into_backup_policies.
@@ -569,7 +617,9 @@ class RLBackupShield(BackupShield):
         self._reset_temp_ac_queue()
 
         # make reward
-        rews = torch.tile(h.view(1, -1), (traj_len, 1))
+        rews = self.reward_cls.get_batch_reward(h=h, h_s=h_s, h_b=h_b,
+                                                traj_len=traj_len, softmin_gain=self.params.softmin_gain)
+
         stacked_rews = torch.vstack(torch.split(rews, 1, dim=1)).numpy()
 
         # make done
@@ -647,3 +697,8 @@ class RLBackupBackupSet(SafeSetFromBarrierFunction):
     def safe_barrier(self, obs):
         return softmax(torch.stack([backup_set.safe_barrier(obs) for backup_set in self.backup_sets]),
                        self.params.rl_backup_backup_set_softmax_gain)
+
+
+
+
+

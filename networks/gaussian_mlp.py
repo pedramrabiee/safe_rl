@@ -63,8 +63,8 @@ class SquashedGaussianMLP(MLPNetwork):
         log_res = None
         if with_log_prob:
             log_res = res_dist.log_prob(res).sum(axis=-1)
-            log_res -= (2*(np.log(2) - res - F.softplus(-2*res))).sum(axis=1)
-            log_res = log_res.view(res.shape)
+            log_res -= (2*(np.log(2) - res - F.softplus(-2*res))).sum(axis=-1)
+            log_res.unsqueeze_(-1)
 
         res = torch.tanh(res)
 

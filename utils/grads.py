@@ -19,11 +19,31 @@ def get_grad(func, x, **kwargs):
     Returns:
         torch.Tensor: The gradient of 'func' with respect to 'x'.
     """
+    if isinstance(x, tuple):
+        requires_grad = [xx.requires_grad for xx in x]
+        for xx in x:
+            xx.requires_grad_()
+        output = grad(func(*x), x, **kwargs)
+
+        for xx, rg in zip(x, requires_grad):
+            xx.requires_grad_(requires_grad=rg)
+        return output
+
     requires_grad = x.requires_grad
     x.requires_grad_()
     output = grad(func(x), x, **kwargs)
     x.requires_grad_(requires_grad=requires_grad)
     return output[0]
+
+
+def get_batch_hessian(func, x):
+    requires_grad = x.requires_grad
+    x.requires_grad_()
+    output = jacobian(lambda y: grad(func(y), y, create_graph=True)[0].sum(0), x, vectorize=True).swapaxes(0, 1)
+    x.requires_grad_(requires_grad=requires_grad)
+    return output
+
+
 
 def get_value_and_grad(func, x, **kwargs):
     """

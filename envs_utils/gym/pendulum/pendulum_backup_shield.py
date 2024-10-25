@@ -12,6 +12,7 @@ from logger import logger
 from utils.plot_utils import plot_zero_level_sets
 import matplotlib.pyplot as plt
 from utils.misc import e_and
+from utils.plot_utils import from_mcolors_to_rgb_pallete
 
 
 class PendulumBackupSet(SafeSetFromBarrierFunction):
@@ -283,12 +284,28 @@ class PendulumPlotter(CustomPlotter):
         safe_set_func = dump_dict['safe_set_func']
         viability_kernel_funcs = dump_dict['viability_kernel_funcs']
         buffer_data = dump_dict['buffer_data']
+
+        # make color pallete
+        # Sets:
+        # S_s, S_b_1, S_b_2, S_b_3, S_1, S_2, S_3
+        colors = from_mcolors_to_rgb_pallete('CSS4',
+                                             [
+                                                 'red',             # S_s
+                                                 'deepskyblue',     # S_b_1
+                                                 'springgreen',           # S_b_2
+                                                 'rebeccapurple',   # S_b_3
+                                                 'deepskyblue',     # S_1
+                                                 'springgreen',           # S_2
+                                                 'rebeccapurple',   # S_3
+                                             ])
+        linestyles = ['solid', 'solid', 'solid', ':', '-.', '-.', 'solid']
+
         fig, ax = plot_zero_level_sets(
             functions=[safe_set_func, *backup_set_funcs,
                        *viability_kernel_funcs],
             x_label=r'$\theta$', y_label=r'$\dot \theta$',
             funcs_are_torch=True,
-            cmap='gist_rainbow',
+            cmap=colors,
             mesh_density=400,
             font_size=16,
             bounds=(-pi-0.1, pi+0.1),
@@ -298,13 +315,15 @@ class PendulumPlotter(CustomPlotter):
                 r'$\mathcal{S}_{\rm s}$',
                 r'$\mathcal{S}_{{\rm b}_1}$',
                 r'$\mathcal{S}_{{\rm b}_2}$',
-                r'$\mathcal{S}_{{\rm b}_3}$',
+                r'$\mathcal{S}_{{\rm b}_{3}}$',
                 r'$\mathcal{S}_{1}$',
                 r'$\mathcal{S}_{2}$',
-                r'$\mathcal{S}_{3}$',
+                r'$\mathcal{S}_{\rm RLBUS}$',
             ],
+            # filled=True,
+            filled=[False, False, False, *[True] * 4],
             legend_dict=dict(loc='upper center', ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.15), fontsize=14),
-            linestyles=['solid', 'solid', 'solid', '-.', 'solid', 'solid', 'solid'],
+            linestyles=linestyles,
             x_lim=(-3, 3),
             y_lim=(-2.2, 2.2)
             )

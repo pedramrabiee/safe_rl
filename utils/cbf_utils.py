@@ -113,3 +113,13 @@ def preprocess_constraint(A, b):
         # Normalize A and b by dividing only non-zero elements
         return A / norm_vals, b / norm_vals.squeeze()
 
+
+
+def lie_deriv(x, func, field):
+    x.requires_grad_()
+    h_val = func(x)
+    func_deriv = grad(h_val, x)[0]
+    x.requires_grad_(requires_grad=False)
+    field_val = field(x)
+    res = torch.mm(func_deriv.T, field_val)
+    return res

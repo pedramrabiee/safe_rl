@@ -10,6 +10,7 @@ from dynamics.torch_dynamics import get_torch_dyn
 import importlib
 from torch import linspace
 
+
 class BackupShield(BaseSheild):
     """
     Soft-Minimum and Soft-Maximum Barrier Functions Based on https://arxiv.org/abs/2305.10620

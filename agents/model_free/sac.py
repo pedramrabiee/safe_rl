@@ -122,7 +122,7 @@ class SACAgent(BaseAgent):
         with torch.no_grad():
             if self._discrete_action:
                 raise NotImplementedError
-            # target action comes from "current" policy. There is no target policy
+
             target_ac, target_ac_log_prob = self.policy(sample.next_obs)
             target_ac = self._scale_action(target_ac)
 
